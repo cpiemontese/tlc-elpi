@@ -39,10 +39,28 @@ main :-
        A f g x = app f (B f g x),
        B f g x = x).
 
+%%%% UTILS %%%%
+
+length [] 0.
+length [_|TL] L :- length TL L', L is L' + 1.
+
+% An element is nth if its the first of the nth sublist
+nth_element 1 [X|_] X.
+nth_element N [_|TL] X :- 
+    M is N - 1,
+    nth_element M TL X.
+
+%%%% TACTICS %%%%
+
 tactic intro (lam Z F) Vars K :- pi x \ K [([x|Vars],(F x))].
-tactic (app 2) (app H G) Vars K :- Vars = [_,H|_], K [(Vars,G)].
-tactic (app 3) (app H G) Vars K :- Vars = [_,_,H|_], K [(Vars,G)].
-tactic (var 1) H Vars K :- Vars = [H|_], K [].
+%tactic (app 2) (app H G) Vars K :- Vars = [_,H|_], K [(Vars,G)].
+%tactic (app 3) (app H G) Vars K :- Vars = [_,_,H|_], K [(Vars,G)].
+tactic (app N) (app H G) Vars K :- nth_element N Vars H, K [(Vars, G)]. 
+%tactic (var 1) H Vars K :- Vars = [H|_], K [].
+tactic (var N) H Vars K :- nth_element N Vars H, K [].
+
+
+%%%% INTERACTIVE ENVIRONMENT %%%%
 
 interactive :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),

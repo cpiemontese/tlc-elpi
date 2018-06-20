@@ -1,11 +1,22 @@
 % Il tipo dei tipi del lambda-calcolo tipato semplice
 kind typ type.
-type arr typ -> typ -> typ.
+type arr typ -> typ -> typ.     % t1 -> t2
+type prod typ -> typ -> typ.    % t1 * t2
+type sum typ -> typ -> typ.   % t1 + t2
 
 % I termini del lambda-calcolo tipato semplice alla Church
+% problema: posso avere unioni taggate con n elementi così come coppie di n elementi, come lo gestisco?
 kind term type.
 type app term -> term -> term.
 type lam typ -> (term -> term) -> term.
+
+%%%% MIE AGGIUNTE %%%%
+type const typ -> term -> term.
+type pair term -> term -> term.
+type fst term -> term.
+type snd term -> term.
+type struct term -> term -> term. 
+type case struct -> term -> term.
 
 % esempio: lambda x:nat. x x
 % diventa  lam nat (x \ app x x)
@@ -20,24 +31,48 @@ type of term -> typ -> o.
 %   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
 %       | p t1 ... tn | X t1 .. tn
 
-% regole di tipaggio
+%%%% REGOLE DI TIPAGGIO %%%%
 mode (of i o).
 of (uvar as X) B :- declare_constraint (of X B) [X].
 of (app M N) B :- of M (arr A B), of N A.
 of (lam A F) (arr A B) :- pi x \ of x A => of (F x) B.
 
+% MIE REGOLE DI DUBBIA CORRETTEZZA
+% problema: variabili vanno in un ambiente...?
+of (const T V) T.
+
+% AND
+of (pair FST SND) (prod T1 T2) :- of FST T1, of SND T2.
+of (fst P) A :- of P (prod A B). 
+of (snd P) B :- of P (prod A B). 
+
+% OR molto dubbioso
+of (struct S1 S2) (sum T1 T2) :- of S1 T1, of S2 T2.
+of (case E E1 E2) T :- of E1 T, of E2 T, of E (sum T1 T2).
+
+
+%%%% TEST %%%%
+
 % composizione aka \f: A -> B \g: B -> C \x: A . g f x
 main :-
  of X (arr (arr a b) (arr (arr b c) (arr a c))),
  X = lam Z F,
- (pi f \
-   F f = lam Z' (F' f),
-   pi g \
-     F' f g = lam Z'' (F'' f g),
-     pi x \
-       F'' f g x = app g (A f g x),
-       A f g x = app f (B f g x),
-       B f g x = x).
+ (pi x \
+   F x = lam Z' (F' x),
+   pi y \
+     F' x y = lam Z'' (F'' x y),
+     pi z \
+       F'' x y z = app g (A x y z),
+       A x y z = app x (B x y z),
+       B x y z = z).
+
+% ???
+main_pairs X :-
+    of X (arr (prod nat nat) nat),
+    X = lam T F,
+    (pi x \
+        F x = fst x).
+
 
 %%%% UTILS %%%%
 
@@ -50,36 +85,38 @@ nth_element N [_|TL] X :-
     M is N - 1,
     nth_element M TL X.
 
+
 %%%% TACTICS %%%%
 
 tactic intro (lam Z F) Vars K :- pi x \ K [([x|Vars],(F x))].
+tactic (app N) (app H G) Vars K :- nth_element N Vars H, K [(Vars, G)]. 
+tactic (var N) H Vars K :- nth_element N Vars H, K [].
 %tactic (app 2) (app H G) Vars K :- Vars = [_,H|_], K [(Vars,G)].
 %tactic (app 3) (app H G) Vars K :- Vars = [_,_,H|_], K [(Vars,G)].
-tactic (app N) (app H G) Vars K :- nth_element N Vars H, K [(Vars, G)]. 
 %tactic (var 1) H Vars K :- Vars = [H|_], K [].
-tactic (var N) H Vars K :- nth_element N Vars H, K [].
 
 
 %%%% INTERACTIVE ENVIRONMENT %%%%
 
+% interactive withouth script
 interactive :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),
     OutScript = [],
     loop [([],X)] OutScript [].
 
+% interactive with script
 interactive InScript :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),
     OutScript = [],
     loop [([],X)] OutScript InScript.
 
 % Non sono sicuro di aver fatto tutto giusto, anzi...
-% Idea: se non hai meta variabili da istanziare non fare nulla
+% Idea: se non hai meta variabili da istanziare non fare nulla e stampa...
 loop [] OutScript InScript :-   % not so sure about this
     print "Total script:" OutScript.
 
 % Se hai metavariabili ma non hai uno script di input
 loop [(Vars,X)|TL] OutScript [] :-
-    print "vuoto",
     print OutScript,
     print_constraints,
     print, print Vars "⊢" X,
@@ -91,7 +128,6 @@ loop [(Vars,X)|TL] OutScript [] :-
 
 % Se hai metavariabili e hai uno script di input
 loop [(Vars,X)|TL] OutScript [T|InScript] :-
-    print "pieno",
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,
         append Goals TL TL',

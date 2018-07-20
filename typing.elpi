@@ -1,37 +1,25 @@
 % Il tipo dei tipi del lambda-calcolo tipato semplice
 kind typ type.
 type arr typ -> typ -> typ.     % t1 -> t2
-
-%%%% MIE AGGIUNTE %%%%
 type prod typ -> typ -> typ.    % t1 * t2
 type sum typ -> typ -> typ.     % t1 + t2
 
+
 % I termini del lambda-calcolo tipato semplice alla Church
-% problema: posso avere unioni taggate con n elementi così come coppie di n elementi, come lo gestisco?
 kind term type.
-type var typ -> term.
 type app term -> term -> term.
 type lam typ -> (term -> term) -> term.
-
-%%%% MIE AGGIUNTE %%%%
 % product
 type pair term -> term -> term.
 type fst term -> term.
 type snd term -> term.
-
 % sum
-% t1 -> t1 + t2
-type inl typ -> term
-% t2 -> t1 + t2
-type inr typ -> term
-% case m of 
-% | Some x then x + 1
-%   None   then 0
-type case term -> term -> term -> term -> term
+type inl typ -> term -> term.
+type inr typ -> term -> term.
+type case term -> term -> term -> term -> term -> term.
 
 % esempio: lambda x:nat. x x
 % diventa  lam nat (x \ app x x)
-
 
 % un programma Gamma è una lista di clausole
 % una clausola è una formula della logica intuizionista di ordine superiore
@@ -43,16 +31,15 @@ type case term -> term -> term -> term -> term
 
 %%%% REGOLE DI TIPAGGIO %%%%
 type of term -> typ -> o.
-mode (of i o).:w:w
-of (uvar as X) B :- declare_constraint (of X B) [X].
-of (var T V) T :- of V T.
-of (app M N) B :- of M (arr A B), of N A.
-of (lam A F) (arr A B) :- pi x \ of x A => of (F x) B.
+mode (of i o).
+of (uvar as X) T :- declare_constraint (of X T) [X].
+of (app Lam N) S :- of Lam (arr T S), of N T.
+of (lam T Body) (arr T S) :- pi x \ of x T => of (Body x) S.
 
 % product
-of (pair FST SND) (prod T1 T2) :- of FST T1, of SND T2.
-of (fst P) A :- of P (prod A B). 
-of (snd P) B :- of P (prod A B). 
+of (pair Fst Snd) (prod T1 T2) :- of Fst T1, of Snd T2.
+of (fst Pair) T :- of Pair (prod T S). 
+of (snd Pair) S :- of Pair (prod T S). 
 
 % sum
 of (inl T Left) (sum T S) :- of Left T.
@@ -79,22 +66,8 @@ main :-
                 A x y z = app x (B x y z),
                 B x y z = z).
 
-% ???
-main_pairs X :-
-    of X (arr (prod nat nat) nat),
-    X = lam T F,
-    (pi x \
-        F x = fst x).
-
-main_union X :-
-    of (case 
-        (struct (const bool true) (const bool false)) 
-        (const nat x)
-        (const nat y))  X.
-
-main_struct X :-
-    of (struct (const bool true) (const nat x)) X.
-
+main2 :- 
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)).
 
 %%%% UTILS %%%%
 
@@ -110,38 +83,45 @@ nth_element N [_|TL] X :-
 
 %%%% TACTICS %%%%
 
+% aggiungi come ipotesi che ho una \x: Z.(F x) e passa a lavorare su (F x) ricorsivamente 
 tactic intro (lam Z F) Vars K :- pi x \ K [([x|Vars],(F x))].
 tactic (app N) (app H G) Vars K :- nth_element N Vars H, K [(Vars, G)]. 
 tactic (var N) H Vars K :- nth_element N Vars H, K [].
-%tactic (app 2) (app H G) Vars K :- Vars = [_,H|_], K [(Vars,G)].
-%tactic (app 3) (app H G) Vars K :- Vars = [_,_,H|_], K [(Vars,G)].
-%tactic (var 1) H Vars K :- Vars = [H|_], K [].
+tactic (elim N M) () Vars K :- 
+    nth_element N Vars H,
+    nth_element M Vars G.
 
 
 %%%% INTERACTIVE ENVIRONMENT %%%%
 
-% interactive withouth script
+% interactive without script
 interactive :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),
-    OutScript = [],
-    loop [([],X)] OutScript [].
+    loop [([],X)] [] [].
 
 % interactive with script
 interactive InScript :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),
-    OutScript = [],
-    loop [([],X)] OutScript InScript.
+    loop [([],X)] [] InScript.
 
-% Non sono sicuro di aver fatto tutto giusto, anzi...
+% (A -> (B -> C)) -> ((A & B) -> C)
+interactive' :-
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
+    loop [([],X)] [] [].
+
+intercative' InScript :-
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
+    loop [([],X)] [] InScript.
+
 % Idea: se non hai meta variabili da istanziare non fare nulla e stampa...
-loop [] OutScript InScript :-   % not so sure about this
+loop [] OutScript InScript :-
     print "Total script:" OutScript.
 
 % Se hai metavariabili ma non hai uno script di input
 loop [(Vars,X)|TL] OutScript [] :-
     print OutScript,
     print_constraints,
-    print, print Vars "⊢" X,
+    print, print Vars "|-" X,
     read T,
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,

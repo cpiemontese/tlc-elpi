@@ -1,0 +1,68 @@
+mode (step i o).
+step X Y :- print (step X Y), fail.
+step (app (app plus 0) N) N.
+step (app (lam T F) N) (F N).
+step (app M N) U :- steps M (lam T F), step (app (lam T F) N) U.
+
+% Mie aggiunte...
+step (fst (pair M N)) M.
+step (snd (pair M N)) N.
+% Ha senso scrivere che pair può calcolare internamente?
+% Se si lo devo fare per tutti i costrutti?
+step (pair M N) (pair M' N) :- steps M M'.
+step (pair M N) (pair M N') :- steps N N'.
+
+% Non so se ha senso portarsi dietro struct, però non saprei quale caso scegliere
+step (case (struct S1 S2) E E1 E2) E1 :-
+    E is S1. 
+step (case (struct S1 S2) E E1 E2) E2 :-
+    E is S2. 
+
+
+mode (steps i o).
+steps X Y :- print (steps X Y), fail.
+steps M N :- step M M', !, steps M' N.
+steps M M.
+
+
+%%%% NUCLEO %%%%
+%mode (conv i i).
+%conv M N :- steps M M', steps N N', M' = N'.
+
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+conv (app (app plus N) M) M' :- N = 0, M' = M.
+conv M N :- step M M', conv M' N.
+conv M N :- step N N', conv M N'.
+conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
+conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
+conv M N :- M = N. % i i => non vuole istanziare
+
+% Non mi sembra sensato
+% Idea: equivalenza fra costanti della forma (const tipo nome)
+conv (const T (uvar as X)) (const T Y) :- X = Y.
+conv (const T X) (const T (uvar as Y)) :- Y = X.
+conv (const T X) (uvar as Y) :- Y = (const T X).
+conv (uvar as X) (const T Y) :- X = (const T Y).
+
+% Domanda: di cosa ha senso fare il conv?
+conv (case (struct S1 S2) E E1 E2) N :-
+    step (case (struct S1 S2) E E1 E2) U, conv U N.
+conv (case (struct S1 S2) E E1 E2) (case (struct R1 R2) F F1 F2) :-
+    S1 is R1, S2 is R2, E is F, conv E1 F1, conv E2 F2.
+
+
+main X Y :-
+    conv (app (app plus X) n) (app (lam nat x \ x) Y).
+
+main_pairs X :-
+    conv (fst (pair (const nat x) (const nat y))) X.
+
+main_pairs_doesntwork X :-
+    conv (fst (pair x y)) X.
+
+main_const X :-
+    conv (const nat x) X.
+
+main_struct :-
+    conv (case (struct some none) some x y) (case (struct some none) some (app (lam nat (x \ x)) x ) y).

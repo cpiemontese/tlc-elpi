@@ -1,27 +1,37 @@
 % Il tipo dei tipi del lambda-calcolo tipato semplice
 kind typ type.
 type arr typ -> typ -> typ.     % t1 -> t2
+
+%%%% MIE AGGIUNTE %%%%
 type prod typ -> typ -> typ.    % t1 * t2
-type sum typ -> typ -> typ.   % t1 + t2
+type sum typ -> typ -> typ.     % t1 + t2
 
 % I termini del lambda-calcolo tipato semplice alla Church
 % problema: posso avere unioni taggate con n elementi così come coppie di n elementi, come lo gestisco?
 kind term type.
+type var typ -> term.
 type app term -> term -> term.
 type lam typ -> (term -> term) -> term.
 
 %%%% MIE AGGIUNTE %%%%
-type const typ -> term -> term.
+% product
 type pair term -> term -> term.
 type fst term -> term.
 type snd term -> term.
-type struct term -> term -> term. 
-type case struct -> term -> term.
+
+% sum
+% t1 -> t1 + t2
+type inl typ -> term
+% t2 -> t1 + t2
+type inr typ -> term
+% case m of 
+% | Some x then x + 1
+%   None   then 0
+type case term -> term -> term -> term -> term
 
 % esempio: lambda x:nat. x x
 % diventa  lam nat (x \ app x x)
 
-type of term -> typ -> o.
 
 % un programma Gamma è una lista di clausole
 % una clausola è una formula della logica intuizionista di ordine superiore
@@ -32,39 +42,42 @@ type of term -> typ -> o.
 %       | p t1 ... tn | X t1 .. tn
 
 %%%% REGOLE DI TIPAGGIO %%%%
-mode (of i o).
+type of term -> typ -> o.
+mode (of i o).:w:w
 of (uvar as X) B :- declare_constraint (of X B) [X].
+of (var T V) T :- of V T.
 of (app M N) B :- of M (arr A B), of N A.
 of (lam A F) (arr A B) :- pi x \ of x A => of (F x) B.
 
-% MIE REGOLE DI DUBBIA CORRETTEZZA
-% problema: variabili vanno in un ambiente...?
-of (const T V) T.
-
-% AND
+% product
 of (pair FST SND) (prod T1 T2) :- of FST T1, of SND T2.
 of (fst P) A :- of P (prod A B). 
 of (snd P) B :- of P (prod A B). 
 
-% OR molto dubbioso
-of (struct S1 S2) (sum T1 T2) :- of S1 T1, of S2 T2.
-of (case E E1 E2) T :- of E1 T, of E2 T, of E (sum T1 T2).
+% sum
+of (inl T Left) (sum T S) :- of Left T.
+of (inr S Right) (sum T S) :- of Right S.
+of (case Sum Left X Right Y) T :- 
+    of Sum (sum T1 T2), 
+    (pi x \ of x T1 => of X T),
+    (pi y \ of y T2 => of Y T). 
+    
 
 
 %%%% TEST %%%%
 
 % composizione aka \f: A -> B \g: B -> C \x: A . g f x
 main :-
- of X (arr (arr a b) (arr (arr b c) (arr a c))),
- X = lam Z F,
- (pi x \
-   F x = lam Z' (F' x),
-   pi y \
-     F' x y = lam Z'' (F'' x y),
-     pi z \
-       F'' x y z = app g (A x y z),
-       A x y z = app x (B x y z),
-       B x y z = z).
+    of X (arr (arr a b) (arr (arr b c) (arr a c))),
+    X = lam Z F,
+    (pi x \
+        F x = lam Z' (F' x),
+        pi y \
+            F' x y = lam Z'' (F'' x y),
+            pi z \
+                F'' x y z = app g (A x y z),
+                A x y z = app x (B x y z),
+                B x y z = z).
 
 % ???
 main_pairs X :-
@@ -73,11 +86,20 @@ main_pairs X :-
     (pi x \
         F x = fst x).
 
+main_union X :-
+    of (case 
+        (struct (const bool true) (const bool false)) 
+        (const nat x)
+        (const nat y))  X.
+
+main_struct X :-
+    of (struct (const bool true) (const nat x)) X.
+
 
 %%%% UTILS %%%%
 
-length [] 0.
-length [_|TL] L :- length TL L', L is L' + 1.
+%length [] 0.
+%length [_|TL] L :- length TL L', L is L' + 1.
 
 % An element is nth if its the first of the nth sublist
 nth_element 1 [X|_] X.

@@ -84,12 +84,23 @@ nth_element N [_|TL] X :-
 %%%% TACTICS %%%%
 
 % aggiungi come ipotesi che ho una \x: Z.(F x) e passa a lavorare su (F x) ricorsivamente 
-tactic intro (lam Z F) Vars K :- pi x \ K [([x|Vars],(F x))].
-tactic (app N) (app H G) Vars K :- nth_element N Vars H, K [(Vars, G)]. 
-tactic (var N) H Vars K :- nth_element N Vars H, K [].
-tactic (elim N M) () Vars K :- 
-    nth_element N Vars H,
-    nth_element M Vars G.
+tactic intro (lam Z F) Vars K :-
+    pi x \ K [([x|Vars], (F x))].
+tactic (app N) (app H G) Vars K :- 
+    nth_element N Vars H, 
+    K [(Vars, G)]. 
+tactic app (app H G) Vars K :-
+    K [(Vars, G), (Vars, H)].
+
+tactic first (fst X) Vars K :-
+    K [(Vars, X)].
+
+tactic second (snd X) Vars K :-
+    K [(Vars, X)].
+
+tactic (var N) H Vars K :- 
+    nth_element N Vars H, 
+    K [].
 
 
 %%%% INTERACTIVE ENVIRONMENT %%%%

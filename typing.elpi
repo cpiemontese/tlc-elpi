@@ -3,10 +3,8 @@ kind typ type.
 type arr typ -> typ -> typ.     % t1 -> t2
 type prod typ -> typ -> typ.    % t1 * t2
 type sum typ -> typ -> typ.     % t1 + t2
-type true typ.
-type false typ.
-type neg typ -> typ.
-
+type unit typ.
+type void typ.
 
 % I termini del lambda-calcolo tipato semplice alla Church
 kind term type.
@@ -17,9 +15,19 @@ type pair term -> term -> term.
 type fst term -> term.
 type snd term -> term.
 % sum
-type inl typ -> term -> term.
-type inr typ -> term -> term.
+type inl term -> term.
+type inr term -> term.
+% case m of x: Some -> x + 1 | y: Nothing -> 0
 type case term -> term -> term -> term -> term -> term.
+
+% abort_A i.e. given a type we can abort
+%type abort typ -> term -> term.
+type abort term -> term.
+% singleton, only inhabitant of unit
+type singl -> term.
+% TODO: not
+% not ... boh
+type not typ -> (term -> term) -> term.
 
 % esempio: lambda x:nat. x x
 % diventa  lam nat (x \ app x x)
@@ -45,14 +53,21 @@ of (fst Pair) T :- of Pair (prod T S).
 of (snd Pair) S :- of Pair (prod T S). 
 
 % sum
-of (inl T1 InL) (sum T1 T2) :- of InL T.
-of (inr T2 InR) (sum T1 T2) :- of InR S.
+of (inl InL) (sum T1 T2) :- of InL T1.
+of (inr InR) (sum T1 T2) :- of InR T2.
+% TODO: fix
 of (case Sum InL X InR Y) T :- 
     of Sum (sum T1 T2), 
-    (pi InL \ of InL T1 => of X T),
-    (pi InR \ of InR T2 => of Y T). 
-    
+    of InL T1 => of (X InL) T,
+    of InR T2 => of (Y InR) T.
 
+% ex falso
+%of (abort T X) T :- of X void.
+of (abort X) T :- of X void.
+% neg A -> bot
+of (not T B) (arr T void) :-
+    pi x \ of x T => of (B x) void.
+of unit true.
 
 %%%% TEST %%%%
 
@@ -111,23 +126,24 @@ tactic pair (pair A B) Vars K :-
     K [(Vars, A), (Vars, B)].
 
 % or tactics
-tactic suml (sum A B) Vars K :-
-    K [(Vars, A)].
-tactic sumr (sum A B) Vars K :-
-    K [(Vars, B)].
-% (case Sum Left X Right Y)
+tactic suml (inl X) Vars K :-
+    K [(Vars, X)].
+tactic sumr (inr X) Vars K :-
+    K [(Vars, X)].
+% TODO: fix
 tactic case (case Sum InL F InR G) Vars K :-
-    pi InL \
-        pi InR \
-            K [(Vars, Sum), ([InL|Vars], F), ([InR|Vars], G)]. 
+    K [(Vars, Sum), ([InL|Vars], (F InL)), ([InR|Vars], (G InR))]. 
 
+
+% not and bools
+tactic not (not T X) Vars K :-
+    pi x \ K [(x|Vars), (F x)].
+tactic exfalso C Vars K :-
+    K [(Vars, false)].
 
 % hypothesis use
 tactic (var N) H Vars K :- 
     nth_element N Vars H, 
-    print H,
-    print K,
-    print Vars,
     K [].
 
 
@@ -144,6 +160,7 @@ interactive InScript :-
     loop [([],X)] [] InScript.
 
 % (A -> (B -> C)) -> ((A & B) -> C)
+% TODO: I don't remember what tactic is tested
 interactivea :-
     of X (arr (arr a (arr b c)) (arr (prod a b) c)),
     loop [([],X)] [] [].
@@ -153,6 +170,7 @@ intercativea InScript :-
     loop [([],X)] [] InScript.
 
 % (A & B -> C) -> (A -> B -> C) 
+% pairs test
 interactiveb :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] [].
@@ -163,6 +181,7 @@ interactiveb InScript :-
 
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
+% case test
 interactivec :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
     loop [([],X)] [] [].
@@ -170,6 +189,13 @@ interactivec :-
 interactivec InScript :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
     loop [([],X)] [] InScript.
+
+% suml test
+interactived :-
+    of X (arr a (sum a b)),
+    loop [([],X)] [] [].
+
+
 
 
 % ITP loop

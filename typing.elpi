@@ -31,8 +31,8 @@ of (case M F G) T :-
     (pi u \ of u T1 => of (F u) T), 
     (pi v \ of v T2 => of (G v) T). 
 
-% ex falso
 of singl unit.
 of (abort T X) T :- of X void.
-of (not T F) (arr T void) :-
-    pi x \ of x T => of (F x) void.
+
+of (not T F) (neg T) :- pi x \ of x T => of (F x) void.
+of (notApp S M N) S :- of M T, of N (neg T).

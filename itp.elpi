@@ -65,8 +65,10 @@ interactive_suml :-
     of X (arr a (sum a b)),
     loop [([],X)] [] [].
     
+% not test
+% [intro, notE, andEL 1, andER 1]
 interactive_not :-
-    of X (arr (pair a (arr a void)) c),
+    of X (arr (prod a (neg a)) c),
     loop [([],X)] [] [].
         
 

@@ -1,0 +1,18 @@
+% ---- Utils lib ----
+
+%length [] 0.
+%length [_|TL] L :- length TL L', L is L' + 1.
+
+% An element is nth if its the first of the nth sublist
+nth_element 1 [X|_] X.
+nth_element N [_|TL] X :- 
+    M is N - 1,
+    nth_element M TL X.
+
+append [] L L.
+append [X|XS] L [X|YS] :- append XS L YS.
+
+reverse [] [].
+reverse [X|XS] L :-
+    reverse XS L',
+    append L' [X] L.

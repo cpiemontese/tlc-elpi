@@ -2,7 +2,7 @@
 % x fix case
 % - fix not
 % - test not, bot, top
-% - 
+% - separate files
 
 % un programma Gamma è una lista di clausole
 % una clausola è una formula della logica intuizionista di ordine superiore
@@ -12,38 +12,11 @@
 %   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
 %       | p t1 ... tn | X t1 .. tn
 
-% Il tipo dei tipi del lambda-calcolo tipato semplice
-kind typ type.
-type arr typ -> typ -> typ.     % t1 -> t2
-type prod typ -> typ -> typ.    % t1 * t2
-type sum typ -> typ -> typ.     % t1 + t2
-type unit typ.
-type void typ.
+accumulate tlc_terms.
+accumulate utils.
 
-% I termini del lambda-calcolo tipato semplice alla Church
-kind term type.
-type app term -> term -> term.
-type lam typ -> (term -> term) -> term.
-% product
-type pair term -> term -> term.
-type fst term -> term.
-type snd term -> term.
-% sum
-type inl term -> term.
-type inr term -> term.
-type case term -> (term -> term) -> (term -> term) -> term.
+% ---- Typing rules for terms defined in tlc_terms ----
 
-% abort_A i.e. given a type we can abort
-type abort typ -> term -> term.
-% singleton, only inhabitant of unit
-type singl term.
-type not typ -> (term -> term) -> term.
-
-% esempio: lambda x:nat. x x
-% diventa  lam nat (x \ app x x)
-
-
-%%%% REGOLE DI TIPAGGIO %%%%
 type of term -> typ -> o.
 mode (of i o).
 of (uvar as X) T :- declare_constraint (of X T) [X].
@@ -64,10 +37,10 @@ of (case M F G) T :-
     (pi v \ of v T2 => of (G v) T). 
 
 % ex falso
-%of singl unit.
-%of (abort T X) T :- of X void.
-%of (not T B) (arr T void) :-
-%    pi x \ of x T => of (B x) void.
+of singl unit.
+of (abort T X) T :- of X void.
+of (not T F) (arr T void) :-
+    pi x \ of x T => of (F x) void.
 
 %%%% TEST %%%%
 
@@ -83,18 +56,6 @@ main :-
                 F'' x y z = app g (A x y z),
                 A x y z = app x (B x y z),
                 B x y z = z).
-
-
-%%%% UTILS %%%%
-
-%length [] 0.
-%length [_|TL] L :- length TL L', L is L' + 1.
-
-% An element is nth if its the first of the nth sublist
-nth_element 1 [X|_] X.
-nth_element N [_|TL] X :- 
-    M is N - 1,
-    nth_element M TL X.
 
 
 %%%% TACTICS %%%%
@@ -131,7 +92,6 @@ tactic orE (case M F G) Vars K :-
     pi u \ 
         pi v \
             K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
-
 
 % not 
 % [A] ... \bot / -A
@@ -177,7 +137,7 @@ intercativea InScript :-
 
 % (A & B -> C) -> (A -> B -> C) 
 % pairs test
-% sol: [var 3, var 1, var 2, andI, app, intro, intro, intro]
+% [intro, intro, intro, app, andI, var 2, var 1, var 3]
 interactive_pairs :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] [].
@@ -231,11 +191,3 @@ loop [(Vars,X)|TL] OutScript [T|InScript] :-
         X = TE,
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
-
-append [] L L.
-append [X|XS] L [X|YS] :- append XS L YS.
-
-reverse [] [].
-reverse [X|XS] L :-
-    reverse XS L',
-    append L' [X] L.

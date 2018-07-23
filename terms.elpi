@@ -1,0 +1,25 @@
+accumulate tlc_types.
+
+% I termini del lambda-calcolo tipato semplice alla Church
+
+kind term type.
+
+% introduction
+type app term -> term -> term.
+type lam typ -> (term -> term) -> term.
+
+% product
+type pair term -> term -> term.
+type fst term -> term.
+type snd term -> term.
+
+% sum
+type inl term -> term.
+type inr term -> term.
+type case term -> (term -> term) -> (term -> term) -> term.
+
+type not typ (term -> term) -> term.
+
+% bottom and top
+type abort typ -> term -> term.
+type singl term.

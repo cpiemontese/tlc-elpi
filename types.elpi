@@ -1,0 +1,8 @@
+% Il tipo dei tipi del lambda-calcolo tipato semplice
+kind typ type.
+type arr typ -> typ -> typ.     % t1 -> t2
+type prod typ -> typ -> typ.    % t1 * t2
+type sum typ -> typ -> typ.     % t1 + t2
+type unit typ.
+type void typ.
+

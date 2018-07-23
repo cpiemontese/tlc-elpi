@@ -1,15 +1,38 @@
 mode (step i o).
 step X Y :- print (step X Y), fail.
-step (app (app plus 0) N) N.
+%step (app (app plus 0) N) N.
 step (app (lam T F) N) (F N).
 step (app M N) U :- steps M (lam T F), step (app (lam T F) N) U.
 
-step (fst (pair M N)) M.
-step (snd (pair M N)) N.
-% Ha senso scrivere che pair può calcolare internamente?
-% Se si lo devo fare per tutti i costrutti? Si
+% ---- PRODUCTS ----
+% pairs can reduce internally
 step (pair M N) (pair M' N) :- steps M M'.
 step (pair M N) (pair M N') :- steps N N'.
+% first and second of a pair reduce immediately.
+step (fst (pair M N)) M.
+step (snd (pair M N)) N.
+% first and second of P reduce to the first/second component if P reduces to a pair
+step (fst P) M :- steps P (pair M N).
+step (snd P) N :- steps P (pair M N).
+% first and second can reduce internally
+step (fst P) (fst P') :- steps P P'.
+step (snd P) (snd P') :- steps P P'.
+
+
+% ---- SUMS ----
+step (inl S) (inl S') :- steps S S'.
+step (inr S) (inr S') :- steps S S'.
+
+% devo ridurre anche F e G oppure faccio lazy ed eventualmente 
+% si ridurranto se case si riduce a F o G?
+step (case (inl U) F G) (F U).
+step (case (inr V) F G) (G V).
+step (case M F G) (case M' F G) :- steps M M'.
+
+% not, top abort a che riducono...?
+% step (abort T X) void :- steps X X', X' = void. ???
+step (abort T X) (abort T X') :- steps X X'.
+step (abort T X) void :- steps X void.
 
 
 mode (steps i o).
@@ -18,20 +41,52 @@ steps M N :- step M M', !, steps M' N.
 steps M M.
 
 
-%%%% NUCLEO %%%%
+
+% ---- NUCLEO ---- 
+% rules for term equivalence
+
 %mode (conv i i).
 %conv M N :- steps M M', steps N N', M' = N'.
 
 mode (conv i i).
 conv X Y :- print (conv X Y), fail.
-conv (app (app plus N) M) M' :- N = 0, M' = M.
-conv M N :- step M M', conv M' N.
-conv M N :- step N N', conv M N'.
+%conv (app (app plus N) M) M' :- N = 0, M' = M.
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
 conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
+
+% banali...?
+conv (pair M1 N1) (pair M2 N2) :- conv M1 M2, conv N1 N2.
+
+conv (fst P1) (fst P2) :- conv P1 P2.
+conv (snd P1) (snd P2) :- conv P1 P2.
+
+conv (inl S1) (inl S2) :- conv S1 S2.
+conv (inr S1) (inr S2) :- conv S1 S2.
+
+conv (case M1 F1 G1) (case M2 F2 G2) :- conv M1 M2, conv F1 F2, conv G1 G2.
+
+% not, bot e top...?
+
 conv M N :- M = N. % i i => non vuole istanziare
+conv M N :- step M M', conv M' N.
+conv M N :- step N N', conv M N'.
 
 
-main X Y :-
-    conv (app (app plus X) n) (app (lam nat x \ x) Y).
+% ---- TESTS ----
 
+main_app X Y :-
+    conv (app (lam nat x \ x) X) (app Y a).  
+main_lam X :-
+    conv (lam nat x \ (pair x x)) (lam nat x \ (X x)).
+main_pair X :-
+    conv (pair (app (lam nat x \ x) 0) X) (pair 0 b).
+main_fst X :-
+    conv (fst (pair X b)) a. 
+main_snd X :-
+    conv (snd (pair a X)) b. 
+main_inl X :-
+    conv (inl (just x)) (inl X).
+main_inr X :-
+    conv (inr X) (inr none).
+main_case X :-
+    conv (case (inl X) (y \ y) (z \ (pair z z))) x.

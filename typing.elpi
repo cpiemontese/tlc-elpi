@@ -1,3 +1,17 @@
+% TODO:
+% x fix case
+% - fix not
+% - test not, bot, top
+% - 
+
+% un programma Gamma è una lista di clausole
+% una clausola è una formula della logica intuizionista di ordine superiore
+% ristretta alla sintassi
+%   P ::= Q => P | P :- Q | P,P | true | pi X \ P | exists x \ P
+%       | p t1 ... tn | X t1 ... tn
+%   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
+%       | p t1 ... tn | X t1 .. tn
+
 % Il tipo dei tipi del lambda-calcolo tipato semplice
 kind typ type.
 type arr typ -> typ -> typ.     % t1 -> t2
@@ -15,14 +29,12 @@ type pair term -> term -> term.
 type fst term -> term.
 type snd term -> term.
 % sum
-type inl typ -> term -> term.
-type inr typ -> term -> term.
-%type case term -> term -> term -> term.
-type case term -> lam -> lam -> term.
+type inl term -> term.
+type inr term -> term.
+type case term -> (term -> term) -> (term -> term) -> term.
 
 % abort_A i.e. given a type we can abort
-%type abort typ -> term -> term.
-type abort term -> term.
+type abort typ -> term -> term.
 % singleton, only inhabitant of unit
 type singl term.
 type not typ -> (term -> term) -> term.
@@ -30,13 +42,6 @@ type not typ -> (term -> term) -> term.
 % esempio: lambda x:nat. x x
 % diventa  lam nat (x \ app x x)
 
-% un programma Gamma è una lista di clausole
-% una clausola è una formula della logica intuizionista di ordine superiore
-% ristretta alla sintassi
-%   P ::= Q => P | P :- Q | P,P | true | pi X \ P | exists x \ P
-%       | p t1 ... tn | X t1 ... tn
-%   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
-%       | p t1 ... tn | X t1 .. tn
 
 %%%% REGOLE DI TIPAGGIO %%%%
 type of term -> typ -> o.
@@ -51,20 +56,18 @@ of (fst Pair) T :- of Pair (prod T S).
 of (snd Pair) S :- of Pair (prod T S). 
 
 % sum
-% type annotation so that each inl/r proves just one T1 v T2
-of (inl T2 InL) (sum T1 T2) :- of InL T1.
-of (inr T1 InR) (sum T1 T2) :- of InR T2.
-% NOTE: it works but meh...
+of (inl InL) (sum T1 T2) :- of InL T1.
+of (inr InR) (sum T1 T2) :- of InR T2.
 of (case M F G) T :-
     of M (sum T1 T2),
-    of F (arr T1 T),
-    of G (arr T2 T).
+    (pi u \ of u T1 => of (F u) T), 
+    (pi v \ of v T2 => of (G v) T). 
 
 % ex falso
-of singl unit.
-of (abort X) T :- of X void.
-of (not T B) (arr T void) :-
-    pi x \ of x T => of (B x) void.
+%of singl unit.
+%of (abort T X) T :- of X void.
+%of (not T B) (arr T void) :-
+%    pi x \ of x T => of (B x) void.
 
 %%%% TEST %%%%
 
@@ -81,8 +84,6 @@ main :-
                 A x y z = app x (B x y z),
                 B x y z = z).
 
-main2 :- 
-    of X (arr (arr a (arr b c)) (arr (prod a b) c)).
 
 %%%% UTILS %%%%
 
@@ -98,7 +99,6 @@ nth_element N [_|TL] X :-
 
 %%%% TACTICS %%%%
 
-% impl tactics
 % return a lambda abstraction, prove (F x) 
 tactic intro (lam Z F) Vars K :-
     pi x \ K [([x|Vars], (F x))].
@@ -109,7 +109,7 @@ tactic intro (lam Z F) Vars K :-
 tactic app (app H G) Vars K :-
     K [(Vars, G), (Vars, H)].
 
-% one step concrete app aka I have a function
+% one step concrete app aka I have a function that already proves the A => B part
 tactic (app N) (app H G) Vars K :- 
     nth_element N Vars H, 
     K [(Vars, G)]. 
@@ -128,24 +128,24 @@ tactic orIL (inl T2 X) Vars K :-
 tactic orIR (inr T1 X) Vars K :-
     K [(Vars, X)].
 tactic orE (case M F G) Vars K :-
-    K [(Vars, M), (Vars, F), (Vars, G)]. 
+    pi u \ 
+        pi v \
+            K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
 
 
-% TODO: test this
 % not 
 % [A] ... \bot / -A
-tactic notI (not T F) Vars K :-
-    pi x \ K [([x|Vars]), (F x)].
+%tactic notI (not T F) Vars K :-
+%    pi x \ K [([x|Vars]), (F x)].
 % A -A / C
-% TODO: fix not
-tactic (notE N) C Vars K :-
-    nth_element N Vars A,
-    K [(Vars, A), (Vars, (not T A))].
+%tactic (notE N In) In Vars K :-
+%    nth_element N Vars A,
+%    K [(Vars, A), (Vars, (not T A))].
 % \bot / C
-tactic botE (abort C) Vars K :-
-    K [(Vars, C)].
+%tactic botE (abort X T) Vars K :-
+%    K [(Vars, X)].
 % / \top
-tactic topI singl Vars K.
+%tactic topI singl Vars K.
 
 % hypothesis use
 tactic (var N) H Vars K :- 
@@ -178,27 +178,28 @@ intercativea InScript :-
 % (A & B -> C) -> (A -> B -> C) 
 % pairs test
 % sol: [var 3, var 1, var 2, andI, app, intro, intro, intro]
-interactiveb :-
+interactive_pairs :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] [].
 
-interactiveb InScript :-
+interactive_pairs InScript :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] InScript.
 
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
 % case test
-interactivec :-
+% [intro, intro, intro, orE, var 3, app 3, var 1, app 2, var 1]
+interactive_case :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
     loop [([],X)] [] [].
 
-interactivec InScript :-
+interactive_case InScript :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
     loop [([],X)] [] InScript.
 
 % suml test
-interactived :-
+interactive_suml :-
     of X (arr a (sum a b)),
     loop [([],X)] [] [].
     
@@ -211,7 +212,8 @@ interactive_not :-
 
 % Idea: se non hai meta variabili da istanziare non fare nulla e stampa...
 loop [] OutScript InScript :-
-    print "Total script:" OutScript.
+    reverse OutScript OutReversed,
+    print "Total script:" OutReversed.
 
 % Se hai metavariabili ma non hai uno script di input
 loop [(Vars,X)|TL] OutScript [] :-
@@ -232,3 +234,8 @@ loop [(Vars,X)|TL] OutScript [T|InScript] :-
 
 append [] L L.
 append [X|XS] L [X|YS] :- append XS L YS.
+
+reverse [] [].
+reverse [X|XS] L :-
+    reverse XS L',
+    append L' [X] L.

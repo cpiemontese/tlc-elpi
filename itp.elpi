@@ -28,30 +28,31 @@ interactive InScript :-
     loop [([],X)] [] InScript.
 
 % (A -> (B -> C)) -> ((A & B) -> C)
-% TODO: I don't remember what tactic is tested
-interactivea :-
+% and elim test
+% [intro, intro, app, andER 1, app, andEL 1, var 2]
+interactive_pairElim :-
     of X (arr (arr a (arr b c)) (arr (prod a b) c)),
     loop [([],X)] [] [].
 
-intercativea InScript :-
+intercative_pairElim InScript :-
     of X (arr (arr a (arr b c)) (arr (prod a b) c)),
     loop [([],X)] [] InScript.
 
 % (A & B -> C) -> (A -> B -> C) 
-% pairs test
-% [intro, intro, intro, app, andI, var 2, var 1, var 3]
-interactive_pairs :-
+% and intro test
+% [intro, intro, intro, app 3, andI 2 1]
+interactive_pairIntro :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] [].
 
-interactive_pairs InScript :-
+interactive_pairIntro InScript :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
     loop [([],X)] [] InScript.
 
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
 % case test
-% [intro, intro, intro, orE, var 3, app 3, var 1, app 2, var 1]
+% [intro, intro, intro, orE 3, app 3 1, app 2 1]
 interactive_case :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
     loop [([],X)] [] [].

@@ -1,0 +1,95 @@
+accumulate utils.
+accumulate types.
+accumulate tactics.
+
+
+% composizione aka \f: A -> B \g: B -> C \x: A . g f x
+main :-
+    of X (arr (arr a b) (arr (arr b c) (arr a c))),
+    X = lam Z F,
+    (pi x \
+        F x = lam Z' (F' x),
+        pi y \
+            F' x y = lam Z'' (F'' x y),
+            pi z \
+                F'' x y z = app g (A x y z),
+                A x y z = app x (B x y z),
+                B x y z = z).
+
+
+% interactive without script
+interactive :-
+    of X (arr (arr a b) (arr (arr b c) (arr a c))),
+    loop [([],X)] [] [].
+
+% interactive with script
+interactive InScript :-
+    of X (arr (arr a b) (arr (arr b c) (arr a c))),
+    loop [([],X)] [] InScript.
+
+% (A -> (B -> C)) -> ((A & B) -> C)
+% TODO: I don't remember what tactic is tested
+interactivea :-
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
+    loop [([],X)] [] [].
+
+intercativea InScript :-
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
+    loop [([],X)] [] InScript.
+
+% (A & B -> C) -> (A -> B -> C) 
+% pairs test
+% [intro, intro, intro, app, andI, var 2, var 1, var 3]
+interactive_pairs :-
+    of X (arr (arr (prod a b) c) (arr a (arr b c))),
+    loop [([],X)] [] [].
+
+interactive_pairs InScript :-
+    of X (arr (arr (prod a b) c) (arr a (arr b c))),
+    loop [([],X)] [] InScript.
+
+
+% (A v B) -> (A -> C) -> (B -> C) -> C
+% case test
+% [intro, intro, intro, orE, var 3, app 3, var 1, app 2, var 1]
+interactive_case :-
+    of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
+    loop [([],X)] [] [].
+
+interactive_case InScript :-
+    of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
+    loop [([],X)] [] InScript.
+
+% suml test
+interactive_suml :-
+    of X (arr a (sum a b)),
+    loop [([],X)] [] [].
+    
+interactive_not :-
+    of X (arr (pair a (arr a void)) c),
+    loop [([],X)] [] [].
+        
+
+% ITP loop
+
+% Idea: se non hai meta variabili da istanziare non fare nulla e stampa...
+loop [] OutScript InScript :-
+    reverse OutScript OutReversed,
+    print "Total script:" OutReversed.
+
+% Se hai metavariabili ma non hai uno script di input
+loop [(Vars,X)|TL] OutScript [] :-
+    print_constraints,
+    print, print Vars "|-" X,
+    read T,
+    tactic T TE Vars (Goals \ sigma TL' \
+        X = TE,
+        append Goals TL TL',
+        loop TL' [T|OutScript] []).
+
+% Se hai metavariabili e hai uno script di input
+loop [(Vars,X)|TL] OutScript [T|InScript] :-
+    tactic T TE Vars (Goals \ sigma TL' \
+        X = TE,
+        append Goals TL TL',
+        loop TL' [T|OutScript] InScript).

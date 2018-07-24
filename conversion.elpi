@@ -24,15 +24,32 @@ step (inl S) (inl S') :- steps S S'.
 step (inr S) (inr S') :- steps S S'.
 
 % devo ridurre anche F e G oppure faccio lazy ed eventualmente 
-% si ridurranto se case si riduce a F o G?
+% si ridurranno se case si riduce a F o G?
 step (case (inl U) F G) (F U).
 step (case (inr V) F G) (G V).
 step (case M F G) (case M' F G) :- steps M M'.
 
+% non capisco se possono essere utili, in generale forse dovrei capire meglio cosa si sta cercando di fare e come
+step (fst (case M F G)) (case M (fst F) (fst G)).
+step (snd (case M F G)) (case M (snd F) (snd G)).
+step (app (case M F G) W) (case M (F W) (G W)).
+step (abort W (case M F G)) (case M (abort W F) (abort W G)).
+step (case (case M F G) X Y) (case M (case F X Y) (case G X Y)).
+
+
 % not, top abort a che riducono...?
 % step (abort T X) void :- steps X X', X' = void. ???
-step (abort T X) (abort T X') :- steps X X'.
-step (abort T X) void :- steps X void.
+%step (abort T X) void :- steps X void.
+%step (abort T X) (abort T X') :- steps X X'.
+
+% p. 79 Proof and Types
+% c'e' un misto di tipi e calcolo, non so se ha senso...
+step (fst (abort (prod U V) X)) (abort U X).
+step (snd (abort (prod U V) X)) (abort V X).
+step (app (abort (arr U V) X) N) (abort V X). 
+step (abort U (abort void X)) (abort U X).
+% non so da dove tirare fuori U, forse dovrei scrivere case come case U M F G con case, F, G: U.
+%step (case (abort (sum R S) F G) (abort U X) :- ....
 
 
 mode (steps i o).

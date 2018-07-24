@@ -1,0 +1,38 @@
+accumulate conversion, terms.
+
+% ---- TESTS ----
+
+test_steps_fst X :-
+    steps (fst (pair a b)) X.
+test_steps_snd X :-
+    steps (snd (pair a b)) X.
+% cicla non so perche'
+test_steps_pair X :-
+    steps_debug (pair (app (lam nat x \ x) 0) true) X.
+
+
+test_app X Y :-
+    conv (app (lam nat x \ x) X) (app Y a).  
+test_lam X :-
+    conv (lam nat x \ (pair x x)) (lam nat x \ (X x)).
+test_pair X :-
+    conv (pair (app (lam nat x \ x) 0) X) (pair 0 b).
+test_fst X :-
+    conv (fst (pair X b)) a. 
+test_snd X :-
+    conv (snd (pair a X)) b. 
+test_inl X :-
+    conv (inl (just x)) (inl X).
+test_inr X :-
+    conv (inr X) (inr none).
+test_case X :-
+    conv (case (inl X) (y \ y) (z \ (pair z z))) x.
+test_fstcase X :-
+    step (snd (case (inr x) (pair a b) (pair c d))) X.
+
+
+test :-
+    print "What do you want to test?",
+    read Test,
+    Test,
+    test.

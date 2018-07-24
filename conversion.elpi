@@ -4,10 +4,20 @@ step X Y :- print (step X Y), fail.
 step (app (lam T F) N) (F N).
 step (app M N) U :- steps M (lam T F), step (app (lam T F) N) U.
 
+
+% ---- COMMUTATIONS ----
+% non capisco se possono essere utili, in generale forse dovrei capire meglio cosa si sta cercando di fare e come
+step (fst (case M F G)) (case M (fst F) (fst G)).
+step (snd (case M F G)) (case M (snd F) (snd G)).
+step (app (case M F G) W) (case M (F W) (G W)).
+step (abort W (case M F G)) (case M (abort W F) (abort W G)).
+step (case (case M F G) X Y) (case M (case F X Y) (case G X Y)).
+
+
 % ---- PRODUCTS ----
 % pairs can reduce internally
-step (pair M N) (pair M' N) :- steps M M'.
-step (pair M N) (pair M N') :- steps N N'.
+step (pair M N) (pair M' N') :- steps M M', steps N N'.
+%step (pair M N) (pair M N') :- steps N N'.
 % first and second of a pair reduce immediately.
 step (fst (pair M N)) M.
 step (snd (pair M N)) N.
@@ -28,13 +38,6 @@ step (inr S) (inr S') :- steps S S'.
 step (case (inl U) F G) (F U).
 step (case (inr V) F G) (G V).
 step (case M F G) (case M' F G) :- steps M M'.
-
-% non capisco se possono essere utili, in generale forse dovrei capire meglio cosa si sta cercando di fare e come
-step (fst (case M F G)) (case M (fst F) (fst G)).
-step (snd (case M F G)) (case M (snd F) (snd G)).
-step (app (case M F G) W) (case M (F W) (G W)).
-step (abort W (case M F G)) (case M (abort W F) (abort W G)).
-step (case (case M F G) X Y) (case M (case F X Y) (case G X Y)).
 
 
 % not, top abort a che riducono...?
@@ -57,6 +60,10 @@ steps X Y :- print (steps X Y), fail.
 steps M N :- step M M', !, steps M' N.
 steps M M.
 
+mode (steps_debug i o).
+steps_debug X Y :- print (steps_debug X Y), fail.
+steps_debug M N :- step M M', !, print "Input something to go on", read Something, steps_debug M' N.
+steps_debug M M.
 
 
 % ---- NUCLEO ---- 
@@ -89,21 +96,3 @@ conv M N :- step M M', conv M' N.
 conv M N :- step N N', conv M N'.
 
 
-% ---- TESTS ----
-
-main_app X Y :-
-    conv (app (lam nat x \ x) X) (app Y a).  
-main_lam X :-
-    conv (lam nat x \ (pair x x)) (lam nat x \ (X x)).
-main_pair X :-
-    conv (pair (app (lam nat x \ x) 0) X) (pair 0 b).
-main_fst X :-
-    conv (fst (pair X b)) a. 
-main_snd X :-
-    conv (snd (pair a X)) b. 
-main_inl X :-
-    conv (inl (just x)) (inl X).
-main_inr X :-
-    conv (inr X) (inr none).
-main_case X :-
-    conv (case (inl X) (y \ y) (z \ (pair z z))) x.

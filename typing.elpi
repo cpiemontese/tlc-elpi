@@ -33,6 +33,3 @@ of (case M F G) T :-
 
 of singl unit.
 of (abort T X) T :- of X void.
-
-of (except Pred T F) (neg T) :- pi x \ of x T => of (F x) Pred.
-of (catch C M N) S :- of M T, of N (neg T).

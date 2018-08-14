@@ -3,6 +3,5 @@ kind typ type.
 type arr typ -> typ -> typ.     % T1 -> T2
 type prod typ -> typ -> typ.    % T1 * T2
 type sum typ -> typ -> typ.     % T1 + T2
-type neg typ -> typ.            % -T
 type unit typ.
 type void typ.

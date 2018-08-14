@@ -18,9 +18,6 @@ type inl typ -> term -> term.
 type inr typ -> term -> term.
 type case term -> (term -> term) -> (term -> term) -> term.
 
-type except (typ -> typ) -> typ -> (term -> term) -> term.
-type catch typ -> term -> term -> term.
-
 % bottom and top
 type abort typ -> term -> term.
 type singl term.

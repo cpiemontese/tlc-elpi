@@ -76,7 +76,7 @@ tactic (orE N) (case H F G) Vars K :-
 
 
 % ---- NOT TACTICS ----
-tactic notI (except T F) Vars K :-
+tactic notI (except Pred T F) Vars K :-
     pi x \ K [([x|Vars]), (F x)].
 tactic notE (catch C M N) Vars K :-
     K [(Vars, M), (Vars, N)].

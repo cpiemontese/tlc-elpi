@@ -78,7 +78,7 @@ tactic (orE N) (case H F G) Vars K :-
 % ---- TOP/BOT TACTICS ----
 tactic botE (abort X T) Vars K :-
     K [(Vars, X)].
-tactic topI singl _ K :-
+tactic topI singleton _ K :-
     K []. % ???
 
 

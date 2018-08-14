@@ -20,4 +20,4 @@ type case term -> (term -> term) -> (term -> term) -> term.
 
 % bottom and top
 type abort typ -> term -> term.
-type singl term.
+type singleton term.

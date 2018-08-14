@@ -31,5 +31,5 @@ of (case M F G) T :-
     (pi u \ of u T1 => of (F u) T), 
     (pi v \ of v T2 => of (G v) T). 
 
-of singl unit.
+of singleton unit.
 of (abort T X) T :- of X void.

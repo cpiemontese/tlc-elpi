@@ -9,6 +9,8 @@ accumulate types, terms, typing.
 % 1. direct i.e. I already have what I need to reduce
 % 2. indirect i.e. I need to compute to reduce further
 
+% NOTE: manca riduzione interna aka se ho coppie o cose che non riducono di per se, potrei comunque avere robe dentro, come gestisco?
+
 mode (step i o).
 step X Y :- print (step X Y), fail.
 
@@ -32,12 +34,12 @@ step (case Sum U V) (V S) :- steps Sum (inr T1 S).
 % -------------------
 % ---- ETA RULES ----
 % -------------------
-mode (eta_step i o).
-eta_step (of M (arr A B)) (lam A (u \ M u)).
-eta_step (of M (prod A B)) (pair (fst M) (snd M)).
-eta_step (of M (sum A B)) (case M (u \ inl B u) (v \ inr A w)).
-eta_step (of M unit) singleton.
-eta_step (of M void) (abort void M).
+%mode (eta_step i o).
+%eta_step (of M (arr A B)) (lam A (u \ M u)).
+%eta_step (of M (prod A B)) (pair (fst M) (snd M)).
+%eta_step (of M (sum A B)) (case M (u \ inl B u) (v \ inr A w)).
+%eta_step (of M unit) singleton.
+%eta_step (of M void) (abort void M).
 
 
 mode (steps i o).

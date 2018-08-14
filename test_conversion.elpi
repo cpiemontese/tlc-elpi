@@ -2,13 +2,19 @@ accumulate conversion, terms.
 
 % ---- TESTS ----
 
-test_steps_fst X :-
+
+steps_app X :-
+    steps (app (app (lam (arr nat nat) x \ x) (lam nat y \ y)) a) X.
+
+steps_fst X :-
     steps (fst (pair a b)) X.
-test_steps_snd X :-
+steps_snd X :-
     steps (snd (pair a b)) X.
-% cicla non so perche'
-test_steps_pair X :-
-    steps_debug (pair (app (lam nat x \ x) 0) true) X.
+
+steps_caseL X :-
+    steps (case (inl T2 x) (u \ u) (v \ v)) X.
+steps_caseR X :-
+    steps (case (inr T1 y) (u \ u) (v \ v)) X.
 
 
 test_app X Y :-
@@ -22,13 +28,13 @@ test_fst X :-
 test_snd X :-
     conv (snd (pair a X)) b. 
 test_inl X :-
-    conv (inl (just x)) (inl X).
+    conv (inl T2 (just x)) (inl T2 X).
 test_inr X :-
-    conv (inr X) (inr none).
+    conv (inr T1 X) (inr none).
 test_case X :-
-    conv (case (inl X) (y \ y) (z \ (pair z z))) x.
+    conv (case (inl T2 X) (y \ y) (z \ (pair z z))) x.
 test_fstcase X :-
-    step (snd (case (inr x) (pair a b) (pair c d))) X.
+    step (snd (case (inr T1 x) (u \ pair a b) (v \ pair c d))) X.
 
 
 test :-

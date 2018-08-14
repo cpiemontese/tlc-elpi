@@ -6,4 +6,3 @@ type sum typ -> typ -> typ.     % T1 + T2
 type neg typ -> typ.            % -T
 type unit typ.
 type void typ.
-

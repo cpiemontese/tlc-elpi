@@ -24,8 +24,8 @@ of (fst Pair) T :- of Pair (prod T S).
 of (snd Pair) S :- of Pair (prod T S). 
 
 % sum
-of (inl InL) (sum T1 T2) :- of InL T1.
-of (inr InR) (sum T1 T2) :- of InR T2.
+of (inl T2 InL) (sum T1 T2) :- of InL T1.
+of (inr T1 InR) (sum T1 T2) :- of InR T2.
 of (case M F G) T :-
     of M (sum T1 T2),
     (pi u \ of u T1 => of (F u) T), 
@@ -34,5 +34,5 @@ of (case M F G) T :-
 of singl unit.
 of (abort T X) T :- of X void.
 
-of (not T F) (neg T) :- pi x \ of x T => of (F x) void.
-of (notApp S M N) S :- of M T, of N (neg T).
+of (except T F) (neg T) :- pi x \ of x T => of (F x) void.
+of (catch S M N) S :- of M T, of N (neg T).

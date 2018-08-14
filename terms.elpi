@@ -14,13 +14,12 @@ type fst term -> term.
 type snd term -> term.
 
 % sum
-type inl term -> term.
-type inr term -> term.
+type inl typ -> term -> term.
+type inr typ -> term -> term.
 type case term -> (term -> term) -> (term -> term) -> term.
 
-% TODO: rename
-type not typ -> (term -> term) -> term.
-type notApp typ -> term -> term -> term.
+type except typ -> (term -> term) -> term.
+type catch typ -> term -> term -> term.
 
 % bottom and top
 type abort typ -> term -> term.

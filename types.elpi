@@ -5,3 +5,4 @@ type prod typ -> typ -> typ.    % T1 * T2
 type sum typ -> typ -> typ.     % T1 + T2
 type unit typ.
 type void typ.
+type nat typ.

@@ -21,3 +21,8 @@ type case term -> (term -> term) -> (term -> term) -> term.
 % bottom and top
 type abort typ -> term -> term.
 type singleton term.
+
+% nat
+type zero term.
+type succ term -> term.
+type plus term -> term -> term.

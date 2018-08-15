@@ -25,4 +25,5 @@ type singleton term.
 % nat
 type zero term.
 type succ term -> term.
+type prec term -> term.
 type plus term -> term -> term.

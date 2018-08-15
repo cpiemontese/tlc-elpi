@@ -8,7 +8,7 @@
 
 accumulate types.
 accumulate terms.
-accumulate utils.
+accumulate ..utils.
 
 % ---- Typing rules for terms defined in tlc_terms ----
 
@@ -34,8 +34,3 @@ of (case M F G) T :-
 % T e bot
 of singleton unit.
 of (abort T X) T :- of X void.
-
-% nat
-of zero nat.
-of (succ N) nat :- of N nat.
-of (plus M N) nat :- of M nat, of N nat.

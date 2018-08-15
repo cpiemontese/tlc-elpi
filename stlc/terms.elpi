@@ -1,10 +1,12 @@
 accumulate types.
 
-% I termini del lambda-calcolo tipato semplice alla Church
-
 kind term type.
 
-% introduction
+% --------------
+% ---- STLC ----
+% --------------
+
+% functions 
 type app term -> term -> term.
 type lam typ -> (term -> term) -> term.
 
@@ -22,7 +24,11 @@ type case term -> (term -> term) -> (term -> term) -> term.
 type abort typ -> term -> term.
 type singleton term.
 
+% --------------------
+% ---- MARTIN-LOF ----
+% --------------------
+
 % nat
 type zero term.
 type succ term -> term.
-type plus term -> term -> term.
+type plus term -> term -> term. % TODO: sostituire con nat_rec aka ricorsione sui naturali, poi la somma segue

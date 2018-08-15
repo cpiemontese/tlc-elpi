@@ -1,6 +1,6 @@
 accumulate utils.
-accumulate types.
-accumulate tactics.
+accumulate stlc/stlc_types.
+accumulate stlc/tactics.
 
 
 % composizione aka \f: A -> B \g: B -> C \x: A . g f x

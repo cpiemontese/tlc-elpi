@@ -1,0 +1,34 @@
+accumulate types.
+
+kind term type.
+
+% --------------
+% ---- STLC ----
+% --------------
+
+% functions 
+type app term -> term -> term.
+type lam typ -> (term -> term) -> term.
+
+% product
+type pair term -> term -> term.
+type fst term -> term.
+type snd term -> term.
+
+% sum
+type inl typ -> term -> term.
+type inr typ -> term -> term.
+type case term -> (term -> term) -> (term -> term) -> term.
+
+% bottom and top
+type abort typ -> term -> term.
+type singleton term.
+
+% --------------------
+% ---- MARTIN-LOF ----
+% --------------------
+
+% nat
+type zero term.
+type succ term -> term.
+type plus term -> term -> term. % TODO: sostituire con nat_rec aka ricorsione sui naturali, poi la somma segue

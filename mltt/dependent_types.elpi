@@ -1,0 +1,6 @@
+kind typ type.
+kind term type.
+
+type forall typ -> (term -> typ) -> typ.
+type lam typ -> (term -> term) -> term.
+type app term -> term -> term.

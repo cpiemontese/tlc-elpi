@@ -1,0 +1,41 @@
+% un programma Gamma è una lista di clausole
+% una clausola è una formula della logica intuizionista di ordine superiore
+% ristretta alla sintassi
+%   P ::= Q => P | P :- Q | P,P | true | pi X \ P | exists x \ P
+%       | p t1 ... tn | X t1 ... tn
+%   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
+%       | p t1 ... tn | X t1 .. tn
+
+accumulate types.
+accumulate terms.
+accumulate ../utils.
+
+% ---- Typing rules for terms defined in tlc_terms ----
+
+type of term -> typ -> o.
+mode (of i o).
+of (uvar as X) T :- declare_constraint (of X T) [X].
+of (app Lam N) S :- of Lam (arr T S), of N T.
+of (lam T Body) (arr T S) :- pi x \ of x T => of (Body x) S.
+
+% product
+of (pair Fst Snd) (prod T1 T2) :- of Fst T1, of Snd T2.
+of (fst Pair) T :- of Pair (prod T S). 
+of (snd Pair) S :- of Pair (prod T S). 
+
+% sum
+of (inl T2 InL) (sum T1 T2) :- of InL T1.
+of (inr T1 InR) (sum T1 T2) :- of InR T2.
+of (case M F G) T :-
+    of M (sum T1 T2),
+    (pi u \ of u T1 => of (F u) T), 
+    (pi v \ of v T2 => of (G v) T). 
+
+% T e bot
+of singleton unit.
+of (abort T X) T :- of X void.
+
+% nat
+of zero nat.
+of (succ N) nat :- of N nat.
+of (plus M N) nat :- of M nat, of N nat.

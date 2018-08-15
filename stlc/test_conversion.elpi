@@ -1,0 +1,44 @@
+accumulate conversion, terms.
+
+% ---- TESTS ----
+
+
+steps_app X :-
+    steps (app (app (lam (arr nat nat) x \ x) (lam nat y \ y)) a) X.
+
+steps_fst X :-
+    steps (fst (pair a b)) X.
+steps_snd X :-
+    steps (snd (pair a b)) X.
+
+steps_caseL X :-
+    steps (case (inl T2 x) (u \ u) (v \ v)) X.
+steps_caseR X :-
+    steps (case (inr T1 y) (u \ u) (v \ v)) X.
+
+
+test_app X Y :-
+    conv (app (lam nat x \ x) X) (app Y a).  
+test_lam X :-
+    conv (lam nat x \ (pair x x)) (lam nat x \ (X x)).
+test_pair X :-
+    conv (pair (app (lam nat x \ x) 0) X) (pair 0 b).
+test_fst X :-
+    conv (fst (pair X b)) a. 
+test_snd X :-
+    conv (snd (pair a X)) b. 
+test_inl X :-
+    conv (inl T2 (just x)) (inl T2 X).
+test_inr X :-
+    conv (inr T1 X) (inr none).
+test_case X :-
+    conv (case (inl T2 X) (y \ y) (z \ (pair z z))) x.
+test_fstcase X :-
+    step (snd (case (inr T1 x) (u \ pair a b) (v \ pair c d))) X.
+
+
+test :-
+    print "What do you want to test?",
+    read Test,
+    Test,
+    test.

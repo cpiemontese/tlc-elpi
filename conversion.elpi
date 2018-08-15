@@ -31,14 +31,13 @@ step (case Sum U V) (U R) :- steps Sum (inl T2 R).
 step (case Sum U V) (V S) :- steps Sum (inr T1 S).
 
 % Nat
-step (prec zero) zero.
-step (prec (succ N)) N.
-step (succ (prec N)) N.
+%step (prec zero) zero.
+%step (prec (succ N)) N.
+%step (succ (prec N)) N.
 
 step (plus M zero) M.
-step (plus zero N) N.
-% non esattamente corretto, credo che dovrei scrivere (m + n) ~> succ (m + (prec n)) solo che poi succ non calcola dentro e mi chiude tutto troppo presto :(
-step (plus M N) S :- steps (succ M) M', steps (prec N) N', steps (plus M' N') S.
+step (plus zero N) N. % for maximum speed and efficiency
+step (plus M (succ N)) (plus (succ M) N). 
 
 
 % -------------------

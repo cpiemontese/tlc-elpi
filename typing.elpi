@@ -38,5 +38,4 @@ of (abort T X) T :- of X void.
 % nat
 of zero nat.
 of (succ N) nat :- of N nat.
-of (prec N) nat :- of N nat.
 of (plus M N) nat :- of M nat, of N nat.

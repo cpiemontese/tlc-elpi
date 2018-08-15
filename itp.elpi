@@ -1,5 +1,5 @@
 accumulate utils.
-accumulate stlc/stlc_types.
+accumulate stlc/types.
 accumulate stlc/tactics.
 
 

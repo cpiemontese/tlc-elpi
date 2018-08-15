@@ -8,9 +8,8 @@
 
 accumulate types.
 accumulate terms.
-accumulate ..utils.
 
-% ---- Typing rules for terms defined in tlc_terms ----
+% ---- Typing rules for terms defined in terms ----
 
 type of term -> typ -> o.
 mode (of i o).

@@ -1,0 +1,27 @@
+kind typ type.
+
+type arr typ -> typ -> typ.
+type forall (typ -> typ) -> typ.
+
+kind term type.
+
+type lam typ -> (term -> term) -> term.
+type app term -> term -> term.
+type lamT (typ -> term) -> term.
+type appT term -> typ -> term.
+
+
+type of term -> typ -> o.
+mode (of i o).
+of (uvar as X) T :- declare_constraint (of X T) [X].
+of (lam T M) (arr T S) :- pi x \ of x T => of (M x) S.
+of (app M N) S :- of M (arr T S), of N T.
+of (lamT A) (forall U) :- pi x \ of (A x) (U x).
+of (appT M T) (U T) :- of M (forall U).
+
+% (lamT (a \ lam a (x \ x)))
+
+% nat
+%of zero nat.
+%of (succ N) nat :- of N nat.
+%of (plus M N) nat :- of M nat, of N nat.

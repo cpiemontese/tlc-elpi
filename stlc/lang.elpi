@@ -1,0 +1,37 @@
+% --------------------
+% ---- STLC TYPES ----
+% --------------------
+
+% Il tipo dei tipi del lambda-calcolo tipato semplice
+kind typ type.
+
+type arr typ -> typ -> typ.     % T1 -> T2
+type prod typ -> typ -> typ.    % T1 * T2
+type sum typ -> typ -> typ.     % T1 + T2
+type unit typ.
+type void typ.
+
+
+% ---------------------
+% ---- STLC TERMS -----
+% ---------------------
+
+kind term type.
+
+% functions 
+type app term -> term -> term.
+type lam typ -> (term -> term) -> term.
+
+% product
+type pair term -> term -> term.
+type fst term -> term.
+type snd term -> term.
+
+% sum
+type inl typ -> term -> term.
+type inr typ -> term -> term.
+type case term -> (term -> term) -> (term -> term) -> term.
+
+% bottom and top
+type abort typ -> term -> term.
+type singleton term.

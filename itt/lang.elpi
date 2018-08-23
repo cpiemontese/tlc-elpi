@@ -1,0 +1,93 @@
+kind term type. % everything is a term
+
+% Proc definitions (intro and elim will define of, eq will define step, steps, conv)
+
+% typing
+type of term -> term -> o.
+mode (of i o).
+of T T' :- print (of T T'), fail. 
+of (uvar as X) T :- declare_constraint (of X T) [X].
+
+% one step conversion
+mode (step i o).
+step X Y :- print (step X Y), fail.
+
+% multiple step conversion
+mode (steps i o).
+steps X Y :- print (steps X Y), fail.
+steps M N :- step M M', !, steps M' N.
+steps M M.
+
+% rules for term equivalence
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+%mode (conv i i).
+%conv M N :- steps M M', steps N N', M' = N'.
+
+% --------------------------- %
+% ---- CARTESIAN PRODUCT ---- %
+% --------------------------- %
+
+% FORMATION
+type prod term -> (term -> term) -> term.
+
+% INTRODUCTION
+type lam term -> (term -> term) -> term.
+of (lam A F) (prod A B) :- pi x\ of x A => of (F x) (B x).
+
+% ELIMINATION
+type app term -> term -> term.
+of (app F G) BG :- of G A, of F (prod A B), BG = (B G).
+
+% EQUALITY
+
+% ------------------------ %
+% ---- DISJOINT UNION ---- %
+% ------------------------ %
+
+% FORMATION
+type sum term -> (term -> term) -> term.
+
+% INTRODUCTION
+type pair term -> (term -> term) -> term -> term -> term.
+of (pair A B X Y) (sum A B).
+
+% type pair term -> term -> term.
+% of (pair X Y) (sum A B) :- of X A, of Y (B X).
+% vorrei scrivere questo ^ ma quando vado a fare il tipaggio tipo a: A, b: B(a) ==> questo fallisce
+% es pair zero zero: sum nat (x\ nat) ma quando vado a tipare si trova a risolvere (X zero) = nat e dovrebbe capire che X = (x\ nat)
+
+% ELIMINATION
+type let term -> (term -> term -> term) -> term.
+of (let X F) (C X) :- 
+    of X (sum A B), 
+    pi x\ 
+        pi y\ 
+            of x A, of y (B x) =>
+                 of (F x y) (C (pair x y)).
+
+% EQUALITY
+
+% -------------------------------- %
+% ---- PROPOSITIONAL EQUALITY ---- %
+% -------------------------------- %
+
+% dubbio: I(A, a, b) si rifa' a =_A b, che ho inteso come riduzione. vuol dire che devo implementare la riduzione per poter tipare e quindi il tipaggio riduce?
+type eq term -> term -> term -> term.
+
+% ------------------ %
+% ---- NATURALS ---- %
+% ------------------ %
+
+% FORMATION
+type nat term.
+
+% INTRODUCTION
+type zero term.
+type succ term -> term.
+of zero nat.
+of (succ N) nat :- of N nat.
+
+%type nat_elim ...
+
+% EQUALITY

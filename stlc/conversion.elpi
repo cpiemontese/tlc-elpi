@@ -1,5 +1,4 @@
-accumulate types, terms, typing.
-
+accumulate lang, typing.
 
 % --------------------
 % ---- BETA RULES ----
@@ -31,9 +30,9 @@ step (case Sum U V) (U R) :- steps Sum (inl T2 R).
 step (case Sum U V) (V S) :- steps Sum (inr T1 S).
 
 
-% -------------------
-% ---- ETA RULES ----
-% -------------------
+% ------------------- %
+% ---- ETA RULES ---- %
+% ------------------- %
 %mode (eta_step i o).
 %eta_step (of M (arr A B)) (lam A (u \ M u)).
 %eta_step (of M (prod A B)) (pair (fst M) (snd M)).
@@ -53,9 +52,9 @@ steps_debug M N :- step M M', !, print "Input something to go on", read Somethin
 steps_debug M M.
 
 
-% ----------------
-% ---- NUCLEO ---- 
-% ----------------
+% ---------------- %
+% ---- NUCLEO ---- %
+% ---------------- %
 % rules for term equivalence
 
 %mode (conv i i).
@@ -64,8 +63,6 @@ steps_debug M M.
 mode (conv i i).
 conv X Y :- print (conv X Y), fail.
 
-%conv (app (app plus N) M) M' :- N = 0, M' = M.
-
 conv (succ M) (succ M') :- conv M M'.
 conv (prec M) (prec M') :- conv M M'.
 conv (plus M N) (plus X Y) :- steps (plus M N) S1, steps (plus X Y) S2, conv S1 S2.
@@ -73,7 +70,6 @@ conv (plus M N) (plus X Y) :- steps (plus M N) S1, steps (plus X Y) S2, conv S1 
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
 conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
 
-% correttezza dubbia
 conv (pair M1 N1) (pair M2 N2) :- conv M1 M2, conv N1 N2.
 
 conv (fst P1) (fst P2) :- conv P1 P2.

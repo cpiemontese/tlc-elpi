@@ -1,3 +1,4 @@
+% IDEA: creare kind set, type star set, poi tipare term -> set -> o i tipi
 kind term type. % everything is a term
 
 % Proc definitions (intro and elim will define of, eq will define step, steps, conv)
@@ -34,39 +35,40 @@ type prod term -> (term -> term) -> term.
 % INTRODUCTION
 type lam term -> (term -> term) -> term.
 of (lam A F) (prod A B) :- pi x\ of x A => of (F x) (B x).
+conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
 
 % ELIMINATION
 type app term -> term -> term.
-of (app F G) BG :- of G A, of F (prod A B), BG = (B G).
+of (app F G) (B G) :- of G A, of F (prod A B).
+conv (app M N) (app M' N') :- conv M M', conv N N'.
 
 % EQUALITY
+step (app (lam _A F) X) (F X).
+step (app L X) R :- steps L (lam _A F), step (app (lam _A F) X) R.
+% eta eq. rule how...? it should be like: if you type something as a function then it must be a lambda abstraction
+conv (lam _A (x\ app S x)) S.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
 % ------------------------ %
+
+% PROBLEMA: praticamente bisogna specificare tutto a mano, non c'e' altro modo?
 
 % FORMATION
 type sum term -> (term -> term) -> term.
 
 % INTRODUCTION
 type pair term -> (term -> term) -> term -> term -> term.
-of (pair A B X Y) (sum A B).
-
-% type pair term -> term -> term.
-% of (pair X Y) (sum A B) :- of X A, of Y (B X).
-% vorrei scrivere questo ^ ma quando vado a fare il tipaggio tipo a: A, b: B(a) ==> questo fallisce
-% es pair zero zero: sum nat (x\ nat) ma quando vado a tipare si trova a risolvere (X zero) = nat e dovrebbe capire che X = (x\ nat)
+of (pair A B _X _Y) (sum A B).
 
 % ELIMINATION
-type let term -> (term -> term -> term) -> term.
-of (let X F) (C X) :- 
-    of X (sum A B), 
-    pi x\ 
-        pi y\ 
-            of x A, of y (B x) =>
-                 of (F x y) (C (pair x y)).
+type split term -> (term -> term -> term) -> (term -> term -> term) -> term.
+of (split (pair A B X Y) C F) (C X Y) :- 
+    pi x y\ (of x A, of y (B x)) => of (F x y) (C x y).
 
 % EQUALITY
+step (split (pair _A _B X Y) _C F) (F X Y).
+step (split P _C F) R :- steps P (pair _A _B X Y), step (split (pair P _A _B X Y) _C F) R.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %

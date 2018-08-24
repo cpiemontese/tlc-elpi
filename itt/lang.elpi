@@ -31,6 +31,7 @@ conv X Y :- print (conv X Y), fail.
 
 % FORMATION
 type prod term -> (term -> term) -> term.
+macro @arr A B :- prod A (x\ B).
 
 % INTRODUCTION
 type lam term -> (term -> term) -> term.
@@ -57,17 +58,23 @@ conv (lam _A (x\ app S x)) S.
 type sum term -> (term -> term) -> term.
 
 % INTRODUCTION
+%type pair term -> term -> term.
+%of (pair X Y) (sum A B) :- of X A, of Y (B X).
 type pair term -> (term -> term) -> term -> term -> term.
 of (pair A B _X _Y) (sum A B).
 
 % ELIMINATION
-type split term -> (term -> term -> term) -> (term -> term -> term) -> term.
-of (split (pair A B X Y) C F) (C X Y) :- 
+type split term -> (term -> term -> term) -> term.
+of (split P F) (C X Y) :- 
+    of P (sum A B),
+    P = pair A B X Y,
     pi x y\ (of x A, of y (B x)) => of (F x y) (C x y).
 
 % EQUALITY
-step (split (pair _A _B X Y) _C F) (F X Y).
-step (split P _C F) R :- steps P (pair _A _B X Y), step (split (pair P _A _B X Y) _C F) R.
+step (split (pair _A _B X Y) F) (F X Y).
+step (split P F) R :-
+    steps P (pair _A _B X Y), 
+    step (split (pair _A _B X Y) F) R.
 % eta rule? we don't have first and second projection given these rules
 
 % -------------------------------- %

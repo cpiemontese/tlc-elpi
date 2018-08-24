@@ -45,7 +45,6 @@ conv (app M N) (app M' N') :- conv M M', conv N N'.
 % EQUALITY
 step (app (lam _A F) X) (F X).
 step (app L X) R :- steps L (lam _A F), step (app (lam _A F) X) R.
-% eta eq. rule how...? it should be like: if you type something as a function then it must be a lambda abstraction
 conv (lam _A (x\ app S x)) S.
 
 % ------------------------ %
@@ -69,13 +68,26 @@ of (split (pair A B X Y) C F) (C X Y) :-
 % EQUALITY
 step (split (pair _A _B X Y) _C F) (F X Y).
 step (split P _C F) R :- steps P (pair _A _B X Y), step (split (pair P _A _B X Y) _C F) R.
+% eta rule? we don't have first and second projection given these rules
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
-% dubbio: I(A, a, b) si rifa' a =_A b, che ho inteso come riduzione. vuol dire che devo implementare la riduzione per poter tipare e quindi il tipaggio riduce?
+% FORMATION
 type eq term -> term -> term -> term.
+
+% INTRODUCTION
+% ML dice che non importa cosa sia r \in Id(A, a, b) se a =_A b, quindi boh 
+type refl term -> term -> term.
+of (refl A X) (eq A X X) :- conv X X. % ???
+
+% ELIMINATION
+% C da dove lo tiro fuori?
+conv X Y :- of C (eq _A X Y).
+
+% EQUALITY
+
 
 % ------------------ %
 % ---- NATURALS ---- %

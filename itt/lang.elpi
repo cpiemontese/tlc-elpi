@@ -6,7 +6,7 @@ kind term type. % everything is a term
 % typing
 type of term -> term -> o.
 mode (of i o).
-of T T' :- print (of T T'), fail. 
+%of T T' :- print (of T T'), fail. 
 of (uvar as X) T :- declare_constraint (of X T) [X].
 
 % one step conversion
@@ -25,28 +25,35 @@ conv X Y :- print (conv X Y), fail.
 %mode (conv i i).
 %conv M N :- steps M M', steps N N', M' = N'.
 
+macro @typ :- term.
+macro @dtyp :- (term -> @typ).
+
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
 % FORMATION
-type prod term -> (term -> term) -> term.
-macro @arr A B :- prod A (x\ B).
+type prod @typ -> @dtyp -> term.
+%macro @arr A B :- prod A (x\ B).
 
 % INTRODUCTION
-type lam term -> (term -> term) -> term.
+%type lam term -> (term -> term) -> term.
+type lam @typ -> (term -> term) -> term.
 of (lam A F) (prod A B) :- pi x\ of x A => of (F x) (B x).
-conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
+%conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
 
 % ELIMINATION
-type app term -> term -> term.
-of (app F G) (B G) :- of G A, of F (prod A B).
-conv (app M N) (app M' N') :- conv M M', conv N N'.
+type app @typ -> term -> term -> term.
+of (app (prod A B) F G) (B G) :- of F (prod A B), of G A.
+% app with annotation to help unification
+%type app term -> term -> term.
+%of (app F G) (B G) :- of F (prod A B), of G A.
+%conv (app M N) (app M' N') :- conv M M', conv N N'.
 
 % EQUALITY
-step (app (lam _A F) X) (F X).
-step (app L X) R :- steps L (lam _A F), step (app (lam _A F) X) R.
-conv (lam _A (x\ app S x)) S.
+%step (app (lam _A F) X) (F X).
+%step (app L X) R :- steps L (lam _A F), step (app (lam _A F) X) R.
+%conv (lam _A (x\ app S x)) S.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -60,8 +67,8 @@ type sum term -> (term -> term) -> term.
 % INTRODUCTION
 %type pair term -> term -> term.
 %of (pair X Y) (sum A B) :- of X A, of Y (B X).
-type pair term -> (term -> term) -> term -> term -> term.
-of (pair A B _X _Y) (sum A B).
+type pair @typ -> (term -> term) -> term -> term -> term.
+of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
 
 % ELIMINATION
 type split term -> (term -> term -> term) -> term.
@@ -82,16 +89,16 @@ step (split P F) R :-
 % -------------------------------- %
 
 % FORMATION
-type eq term -> term -> term -> term.
+%type eq term -> term -> term -> term.
 
 % INTRODUCTION
 % ML dice che non importa cosa sia r \in Id(A, a, b) se a =_A b, quindi boh 
-type refl term -> term -> term.
-of (refl A X) (eq A X X) :- conv X X. % ???
+%type refl term -> term -> term.
+%of (refl A X) (eq A X X) :- conv X X. % ???
 
 % ELIMINATION
 % C da dove lo tiro fuori?
-conv X Y :- of C (eq _A X Y).
+%conv X Y :- of C (eq _A X Y).
 
 % EQUALITY
 
@@ -101,13 +108,13 @@ conv X Y :- of C (eq _A X Y).
 % ------------------ %
 
 % FORMATION
-type nat term.
+%type nat term.
 
 % INTRODUCTION
-type zero term.
-type succ term -> term.
-of zero nat.
-of (succ N) nat :- of N nat.
+%type zero term.
+%type succ term -> term.
+%of zero nat.
+%of (succ N) nat :- of N nat.
 
 %type nat_elim ...
 

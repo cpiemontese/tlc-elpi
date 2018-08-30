@@ -1,85 +1,25 @@
-accumulate terms.
-accumulate typing.
-
+%accumulate lang.
 
 % return a lambda abstraction, prove (F x)
-tactic intro (lam Z F) Vars K :-
+tactic intro (lam A F) Vars K :-
     pi x \ K [([x|Vars], (F x))].
 
 
 % ---- APP TACTICS ----
 % app when I don't have an immediate function
-tactic app (app H G) Vars K :-
-    K [(Vars, G), (Vars, H)].
+tactic app (app (prod A B) H G) Vars K :-
+    K [(Vars, H), (Vars, G)].
 
 % app when I have a function as an hypothesis
-tactic (app N) (app H G) Vars K :-
+tactic (app N) (app P H G) Vars K :-
     nth_element N Vars H,
     K [(Vars, G)].
 
 % app when I know everything
-tactic (app N M) (app H G) Vars K :-
+tactic (app N M) (app P H G) Vars K :-
     nth_element N Vars H,
     nth_element M Vars G,
     K [].
-
-
-% ---- AND TACTICS ----
-tactic andEL (fst X) Vars K :-
-    K [(Vars, X)].
-tactic andER (snd X) Vars K :-
-    K [(Vars, X)].
-
-% and elimination but with hypothesis use
-tactic (andEL N) (fst H) Vars K :-
-    nth_element N Vars H,
-    K [].
-tactic (andER N) (snd H) Vars K :-
-    nth_element N Vars H,
-    K [].
-
-tactic andI (pair A B) Vars K :-
-    K [(Vars, A), (Vars, B)].
-
-% and intro with hyp use
-tactic (andI N M) (pair H I) Vars K :-
-    nth_element N Vars H,
-    nth_element M Vars I,
-    K [].
-
-
-% ---- OR TACTICS ----
-tactic orIL (inl X) Vars K :-
-    K [(Vars, X)].
-tactic orIR (inr X) Vars K :-
-    K [(Vars, X)].
-
-% or where element is hyp
-tactic (orIL N) (inl T2 H) Vars K :-
-    nth_element N Vars H,
-    K [].
-tactic (orIR N) (inr T1 H) Vars K :-
-    nth_element N Vars H,
-    K [].
-
-tactic orE (case M F G) Vars K :-
-    pi u \
-        pi v \
-            K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
-
-% or where sum is hyp
-tactic (orE N) (case H F G) Vars K :-
-    nth_element N Vars H,
-    pi u \
-        pi v \
-            K [([u|Vars], (F u)), ([v|Vars], (G v))].    
-
-
-% ---- TOP/BOT TACTICS ----
-tactic botE (abort X T) Vars K :-
-    K [(Vars, X)].
-tactic topI singleton _ K :-
-    K []. % ???
 
 
 % ---- HYPOTHESIS ----
@@ -89,8 +29,8 @@ tactic (var N) H Vars K :-
 
 
 % Error
-tactic Name H Vars K :- 
-    print "Error, either" Name "is not a tactic or something was wrong with its args",
-    print H,
-    print Vars,
-    print K.
+%tactic Name H Vars K :- 
+%    print "Error, either" Name "is not a tactic or something was wrong with its args",
+%    print H,
+%    print Vars,
+%    print K.

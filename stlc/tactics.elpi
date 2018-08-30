@@ -1,6 +1,4 @@
-accumulate terms.
-accumulate typing.
-
+accumulate lang, typing.
 
 % return a lambda abstraction, prove (F x)
 tactic intro (lam Z F) Vars K :-

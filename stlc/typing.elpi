@@ -6,8 +6,7 @@
 %   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
 %       | p t1 ... tn | X t1 .. tn
 
-accumulate types.
-accumulate terms.
+accumulate lang.
 
 % ---- Typing rules for terms defined in terms ----
 

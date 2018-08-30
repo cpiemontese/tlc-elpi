@@ -1,0 +1,23 @@
+accumulate itt/lang.
+accumulate itt/tactics.
+accumulate itp.
+
+interactive_identity X :-
+    of X (prod a (x\ a)),
+    loop [([],X)] [] [].
+
+interactive_identity X InScript :-
+    of X (prod a (x\ a)),
+    loop [([],X)] [] InScript.
+
+
+% K combinator
+% [intro, intro, intro, app, app, var 3, var 1, app, var 2, var 1]
+interactive_K X :-
+%    of X (prod (prod a (x\ prod (B x) (y\ C x y))) (_\ prod (prod a (x\ (B x))) (f\ prod a (x\ (C x (app f x)))))),
+    of X (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))),
+    loop [([],X)] [] [].
+
+interactive_K X InScript :-
+    of X (prod (prod a (x\ prod b (y\ c))) (z\ prod (prod a (x\ b)) (f\ prod a (x\ c)))),
+    loop [([],X)] [] InScript.

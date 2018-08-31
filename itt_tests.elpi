@@ -15,13 +15,13 @@ interactive_stupid X :-
     of X (prod a (x\ prod (prod a (y\ b)) (f\ b))),
     loop [([],X)] [] [].
 
-% K combinator
+% S combinator
 % [intro, intro, intro, app, app 3 1, app 2 1]
-interactive_K X :-
+interactive_S X :-
 %    of X (prod (prod a (x\ prod (B x) (y\ C x y))) (_\ prod (prod a (x\ (B x))) (f\ prod a (x\ (C x (app f x)))))),
     of X (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))),
     loop [([],X)] [] [].
 
-interactive_K X InScript :-
+interactive_S X InScript :-
     of X (prod (prod a (x\ prod b (y\ c))) (z\ prod (prod a (x\ b)) (f\ prod a (x\ c)))),
     loop [([],X)] [] InScript.

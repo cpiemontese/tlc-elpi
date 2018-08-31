@@ -11,12 +11,12 @@ tactic app (app (prod A B) H G) Vars K :-
     K [(Vars, H), (Vars, G)].
 
 % app when I have a function as an hypothesis
-tactic (app N) (app P H G) Vars K :-
+tactic (app N) (app (prod A B) H G) Vars K :-
     nth_element N Vars H,
     K [(Vars, G)].
 
 % app when I know everything
-tactic (app N M) (app P H G) Vars K :-
+tactic (app N M) (app (prod A B) H G) Vars K :-
     nth_element N Vars H,
     nth_element M Vars G,
     K [].

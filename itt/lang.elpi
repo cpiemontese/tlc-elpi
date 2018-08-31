@@ -108,13 +108,13 @@ step (split P F) R :-
 % ------------------ %
 
 % FORMATION
-%type nat term.
+type nat term.
 
 % INTRODUCTION
-%type zero term.
-%type succ term -> term.
-%of zero nat.
-%of (succ N) nat :- of N nat.
+type zero term.
+type succ term -> term.
+of zero nat.
+of (succ N) nat :- of N nat.
 
 %type nat_elim ...
 

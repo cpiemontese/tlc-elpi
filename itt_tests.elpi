@@ -10,12 +10,23 @@ interactive_identity X InScript :-
     of X (prod a (x\ a)),
     loop [([],X)] [] InScript.
 
-% [intro, intro, app 1 2]
-interactive_stupid X :-
-    of X (prod a (x\ prod (prod a (y\ b)) (f\ b))),
+% ---------------------- %
+% ---- K combinator ---- %
+% ---------------------- %
+
+% [intro, intro, var 2]
+interactive_K X :-
+    of X (prod a (x\ prod b (y\ a))),
     loop [([],X)] [] [].
 
-% S combinator
+interactive_K X InScript :-
+    of X (prod a (x\ prod b (y\ a))),
+    loop [([],X)] [] InScript.
+
+% ---------------------- %
+% ---- S combinator ---- %
+% ---------------------- %
+
 % [intro, intro, intro, app, app 3 1, app 2 1]
 interactive_S X :-
 %    of X (prod (prod a (x\ prod (B x) (y\ C x y))) (_\ prod (prod a (x\ (B x))) (f\ prod a (x\ (C x (app f x)))))),
@@ -24,4 +35,32 @@ interactive_S X :-
 
 interactive_S X InScript :-
     of X (prod (prod a (x\ prod b (y\ c))) (z\ prod (prod a (x\ b)) (f\ prod a (x\ c)))),
+    loop [([],X)] [] InScript.
+
+% axioms of conjunction
+% [intro, intro, andI 2 1]
+interactive_andIntro X :-
+    of X (prod a (x\ prod b (y\ sum a (z\ b)))),
+    loop [([],X)] [] [].
+
+interactive_andIntro X InScript :-
+    of X (prod a (x\ prod b (y\ sum a (z\ b)))),
+    loop [([],X)] [] InScript.
+
+% [intro, andEL 1]
+interactive_andElimL X :-
+    of X (prod (sum a (x\ b)) (y\ a)),
+    loop [([],X)] [] [].
+
+% [intro, andER 1]
+interactive_andElimR X :-
+    of X (prod (sum a (x\ b)) (y\ b)),
+    loop [([],X)] [] [].
+
+interactive_implAnd X :-
+    of X (prod (prod a (x\ prod b (y\ c))) (_\ prod (sum a (x\ b)) (z\ c))),
+    loop [([],X)] [] [].
+
+interactive_implAnd X InScript :-
+    of X (prod (prod a (x\ prod b (y\ c))) (_\ prod (sum a (x\ b)) (z\ c))),
     loop [([],X)] [] InScript.

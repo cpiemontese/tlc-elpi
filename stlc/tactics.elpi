@@ -61,16 +61,14 @@ tactic (orIR N) (inr T1 H) Vars K :-
     K [].
 
 tactic orE (case M F G) Vars K :-
-    pi u \
-        pi v \
-            K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
+    pi u v \
+        K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
 
 % or where sum is hyp
 tactic (orE N) (case H F G) Vars K :-
     nth_element N Vars H,
-    pi u \
-        pi v \
-            K [([u|Vars], (F u)), ([v|Vars], (G v))].    
+    pi u v \
+        K [([u|Vars], (F u)), ([v|Vars], (G v))].    
 
 
 % ---- TOP/BOT TACTICS ----

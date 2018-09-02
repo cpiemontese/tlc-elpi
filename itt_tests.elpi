@@ -1,6 +1,16 @@
 accumulate itt/lang.
 accumulate itt/tactics.
+accumulate itt/pp.
 accumulate itp.
+
+interactive TestName S :-
+    TestName X,
+    pp X S.
+
+interactive TestName TestInput S :-
+    TestName X TestInput,
+    pp X S.
+
 
 interactive_identity X :-
     of X (prod a (x\ a)),

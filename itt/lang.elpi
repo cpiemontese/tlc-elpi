@@ -36,14 +36,14 @@ type prod term -> (term -> term) -> term.
 
 % INTRODUCTION
 % type lam term -> (term -> term) -> term.
-type lam term -> (term -> term) -> (term -> term) -> term.
-of (lam A B F) (prod A B) :- pi x\ of x A => of (F x) (B x).
+type lam string -> term -> (term -> term) -> (term -> term) -> term.
+of (lam Name T1 T2 Body) (prod T1 T2) :- pi x\ of x T1 => of (Body x) (T2 x).
 %conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
 
 % ELIMINATION
 %type app term -> term -> term -> term.
 type app term -> (term -> term) -> term -> term -> term.
-of (app A B F G) (B G) :- of F (prod A B), of G A.
+of (app T1 T2 Lambda Arg) (T2 Arg) :- of Lambda (prod T1 T2), of Arg T1.
 %conv (app M N) (app M' N') :- conv M M', conv N N'.
 
 % EQUALITY
@@ -62,18 +62,18 @@ type sum term -> (term -> term) -> term.
 
 % INTRODUCTION
 type pair term -> (term -> term) -> term -> term -> term.
-of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
+of (pair Tl Tr El Er) (sum Tl Tr) :- of El Tl, of Er (Tr El).
 
 % ELIMINATION
 type split term -> (term -> term) -> (term -> term) -> term -> (term -> term -> term) -> term.
-of (split A B C P F) (C P) :- 
-    of P (sum A B),
-    pi x y\ (of x A, of y (B x)) => of (F x y) (C (pair A B x y)).
+of (split Tl Tr T Pair Func) (T Pair) :- 
+    of Pair (sum Tl Tr),
+    pi x y\ (of x Tl, of y (Tr x)) => of (Func x y) (T (pair Tl Tr x y)).
 
 type fst term -> term.
 type snd term -> term.
-of (fst P) A :- of P (sum A B).
-of (snd P) (B (snd P)) :- of P (sum A B).
+of (fst Pair) Tl :- of Pair (sum Tl Tr).
+of (snd Pair) (Tr (snd Pair)) :- of Pair (sum Tl Tr).
 
 % EQUALITY
 %step (split _C (pair _A _B X Y) F) (F X Y).

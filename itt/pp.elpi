@@ -1,0 +1,16 @@
+accumulate lang.
+
+% Pretty printing module, basic code borrowed from: https://github.com/LPCIC/elpi/blob/master/ELPI.md
+
+mode (pp i o).
+
+pp (lam Name T1 T2 Body) S :-
+    (pi x\ pp x Name => pp (Body x) S1),
+    pp T1 Typename,
+    S is "λ" ^ Name ^ ":" ^ Typename ^ "." ^ S1.
+pp (app T1 T2 Lambda Arg) S :-
+    pp Lambda S1,
+    pp Arg S2,
+    S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+pp uvar "_".
+pp Term S :- term_to_string Term S. % no special rules, just print the term

@@ -1,28 +1,35 @@
 accumulate lang.
 
+% This is not the code you are looking for
+get_var_name Name :-
+    print "lambda var name: ",
+    read VarName, term_to_string VarName Name.
+
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
+
 % return a lambda abstraction, prove (F x)
-tactic intro (lam A B F) Vars K :-
-    pi x \ K [([x|Vars], (F x))].
+tactic intro (lam Name T1 T2 Body) Vars K :-
+    get_var_name Name,
+    pi x \ K [([x|Vars], (Body x))].
 
 
 % ---- APP TACTICS ----
 % app when I don't have an immediate function
-tactic app (app A B H G) Vars K :-
-    K [(Vars, H), (Vars, G)].
+tactic app (app T1 T2 Lambda Arg) Vars K :-
+    K [(Vars, Lambda), (Vars, Arg)].
 
 % app when I have a function as an hypothesis
-tactic (app N) (app A B H G) Vars K :-
-    nth_element N Vars H,
-    K [(Vars, G)].
+tactic (app N) (app T1 T2 Lambda Arg) Vars K :-
+    nth_element N Vars Lambda,
+    K [(Vars, Arg)].
 
 % app when I know everything
-tactic (app N M) (app A B H G) Vars K :-
-    nth_element N Vars H,
-    nth_element M Vars G,
+tactic (app N M) (app T1 T2 Lambda Arg) Vars K :-
+    nth_element N Vars Lambda,
+    nth_element M Vars Arg,
     K [].
 
 

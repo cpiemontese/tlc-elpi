@@ -1,9 +1,8 @@
 accumulate lang.
 
 % This is not the code you are looking for
-get_var_name Name :-
-    print "lambda var name: ",
-    read VarName, term_to_string VarName Name.
+get_var_name Msg Name :-
+    print Msg, read VarName, term_to_string VarName Name.
 
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
@@ -12,7 +11,7 @@ get_var_name Name :-
 
 % return a lambda abstraction, prove (F x)
 tactic intro (lam Name T1 T2 Body) Vars K :-
-    get_var_name Name,
+    get_var_name "input lambda var name" Name,
     pi x \ K [([x|Vars], (Body x))].
 
 
@@ -53,7 +52,9 @@ tactic (andER N) (snd H) Vars K :-
     nth_element N Vars H,
     K [].
 
-tactic andE (split A B C P F) Vars K :-
+tactic andE (split A B C P VarName1 VarName2 F) Vars K :-
+    get_var_name "input func var name 1" VarName1,
+    get_var_name "input func var name 2" VarName2,
     pi x y\
         K [(Vars, P), ([x, y|Vars], (F x y))].
 

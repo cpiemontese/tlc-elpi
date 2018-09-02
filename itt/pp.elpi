@@ -20,10 +20,10 @@ pp (pair Tl Tr El Er) S :-
     pp El Sl,
     pp Er Sr,
     S is "<" ^ Sl ^ ", " ^ Sr ^ ">".
-pp (split Tl Tr T Pair Func) S :-
+pp (split Tl Tr T Pair VarName1 VarName2 Func) S :-
     pp Pair SPair,
-    pi x y\ pp (pair Tl Tr x y) SPair => pp (Func x y) SFunc,
-    S is "E(" ^ SPair  ^ "," ^ SFunc  ^ ")".
+    pi x y\ (pp x VarName1, pp y VarName2) => pp (Func x y) SFunc,
+    S is "E(" ^ SPair  ^ ", (" ^ VarName1 ^ ", " ^ VarName2 ^ ")" ^ SFunc ^ ")".
 pp (fst Pair) S :-
     pp Pair SPair,
     S is "π₁(" ^ SPair ^ ")".

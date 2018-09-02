@@ -35,13 +35,15 @@ type prod term -> (term -> term) -> term.
 %macro @arr A B :- prod A (x\ B).
 
 % INTRODUCTION
-type lam term -> (term -> term) -> term.
-of (lam A F) (prod A B) :- pi x\ of x A => of (F x) (B x).
+% type lam term -> (term -> term) -> term.
+type lam term -> (term -> term) -> (term -> term) -> term.
+of (lam A B F) (prod A B) :- pi x\ of x A => of (F x) (B x).
 %conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
 
 % ELIMINATION
-type app term -> term -> term -> term.
-of (app (prod A B) F G) (B G) :- of F (prod A B), of G A.
+%type app term -> term -> term -> term.
+type app term -> (term -> term) -> term -> term -> term.
+of (app A B F G) (B G) :- of F (prod A B), of G A.
 %conv (app M N) (app M' N') :- conv M M', conv N N'.
 
 % EQUALITY
@@ -63,10 +65,10 @@ type pair term -> (term -> term) -> term -> term -> term.
 of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
 
 % ELIMINATION
-type split (term -> term) -> term -> (term -> term -> term) -> term.
-of (split C P F) (C P) :- 
+type split term -> (term -> term) -> (term -> term) -> term -> (term -> term -> term) -> term.
+of (split A B C P F) (C P) :- 
     of P (sum A B),
-    pi x y\ [of x A, of y (B x)] => of (F x y) (C (pair A B x y)).
+    pi x y\ (of x A, of y (B x)) => of (F x y) (C (pair A B x y)).
 
 type fst term -> term.
 type snd term -> term.
@@ -74,10 +76,10 @@ of (fst P) A :- of P (sum A B).
 of (snd P) (B (snd P)) :- of P (sum A B).
 
 % EQUALITY
-step (split _C (pair _A _B X Y) F) (F X Y).
-step (split _C P F) R :-
-    steps P (pair _A _B X Y), 
-    step (split _C (pair _A _B X Y) F) R.
+%step (split _C (pair _A _B X Y) F) (F X Y).
+%step (split _C P F) R :-
+%    steps P (pair _A _B X Y), 
+%    step (split _C (pair _A _B X Y) F) R.
 % step e conv anche di first e second
 
 % -------------------------------- %

@@ -5,22 +5,22 @@ accumulate lang.
 % --------------------------- %
 
 % return a lambda abstraction, prove (F x)
-tactic intro (lam A F) Vars K :-
+tactic intro (lam A B F) Vars K :-
     pi x \ K [([x|Vars], (F x))].
 
 
 % ---- APP TACTICS ----
 % app when I don't have an immediate function
-tactic app (app (prod A B) H G) Vars K :-
+tactic app (app A B H G) Vars K :-
     K [(Vars, H), (Vars, G)].
 
 % app when I have a function as an hypothesis
-tactic (app N) (app (prod A B) H G) Vars K :-
+tactic (app N) (app A B H G) Vars K :-
     nth_element N Vars H,
     K [(Vars, G)].
 
 % app when I know everything
-tactic (app N M) (app (prod A B) H G) Vars K :-
+tactic (app N M) (app A B H G) Vars K :-
     nth_element N Vars H,
     nth_element M Vars G,
     K [].
@@ -46,7 +46,7 @@ tactic (andER N) (snd H) Vars K :-
     nth_element N Vars H,
     K [].
 
-tactic andE (split C P F) Vars K :-
+tactic andE (split A B C P F) Vars K :-
     pi x y\
         K [(Vars, P), ([x, y|Vars], (F x y))].
 

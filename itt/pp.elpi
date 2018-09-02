@@ -6,11 +6,33 @@ mode (pp i o).
 
 pp (lam Name T1 T2 Body) S :-
     (pi x\ pp x Name => pp (Body x) S1),
-    pp T1 Typename,
-    S is "λ" ^ Name ^ ":" ^ Typename ^ "." ^ S1.
+    pp T1 SType,
+    S is "λ" ^ Name ^ ":" ^ SType ^ "." ^ S1.
 pp (app T1 T2 Lambda Arg) S :-
     pp Lambda S1,
     pp Arg S2,
     S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+pp (prod T1 T2) S :-
+    pp T1 S1,
+    (pi x\ pp x S1 => pp (T2 x) S2),
+    S is "∏(" ^ S1 ^ ", " ^ S2 ^ ")".
+pp (pair Tl Tr El Er) S :-
+    pp El Sl,
+    pp Er Sr,
+    S is "<" ^ Sl ^ ", " ^ Sr ^ ">".
+pp (split Tl Tr T Pair Func) S :-
+    pp Pair SPair,
+    pi x y\ pp (pair Tl Tr x y) SPair => pp (Func x y) SFunc,
+    S is "E(" ^ SPair  ^ "," ^ SFunc  ^ ")".
+pp (fst Pair) S :-
+    pp Pair SPair,
+    S is "π₁(" ^ SPair ^ ")".
+pp (snd Pair) S :-
+    pp Pair SPair,
+    S is "π₂(" ^ SPair ^ ")".
+pp (sum Tl Tr) S :-
+    pp Tl Sl,
+    (pi x\ pp x Sl => pp (Tr x) Sr),
+    S is "∑(" ^ Sl ^ ", " ^ Sr ^ ")".
 pp uvar "_".
 pp Term S :- term_to_string Term S. % no special rules, just print the term

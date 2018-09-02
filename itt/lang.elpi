@@ -25,29 +25,23 @@ conv X Y :- print (conv X Y), fail.
 %mode (conv i i).
 %conv M N :- steps M M', steps N N', M' = N'.
 
-macro @typ :- term.
-macro @dtyp :- (term -> @typ).
 
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
 % FORMATION
-type prod @typ -> @dtyp -> term.
+type prod term -> (term -> term) -> term.
 %macro @arr A B :- prod A (x\ B).
 
 % INTRODUCTION
-%type lam term -> (term -> term) -> term.
-type lam @typ -> (term -> term) -> term.
+type lam term -> (term -> term) -> term.
 of (lam A F) (prod A B) :- pi x\ of x A => of (F x) (B x).
 %conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
 
 % ELIMINATION
-type app @typ -> term -> term -> term.
+type app term -> term -> term -> term.
 of (app (prod A B) F G) (B G) :- of F (prod A B), of G A.
-% app with annotation to help unification
-%type app term -> term -> term.
-%of (app F G) (B G) :- of F (prod A B), of G A.
 %conv (app M N) (app M' N') :- conv M M', conv N N'.
 
 % EQUALITY
@@ -65,24 +59,26 @@ of (app (prod A B) F G) (B G) :- of F (prod A B), of G A.
 type sum term -> (term -> term) -> term.
 
 % INTRODUCTION
-%type pair term -> term -> term.
-%of (pair X Y) (sum A B) :- of X A, of Y (B X).
-type pair @typ -> (term -> term) -> term -> term -> term.
+type pair term -> (term -> term) -> term -> term -> term.
 of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
 
 % ELIMINATION
-type split term -> (term -> term -> term) -> term.
-of (split P F) (C X Y) :- 
+type split (term -> term) -> term -> (term -> term -> term) -> term.
+of (split C P F) (C P) :- 
     of P (sum A B),
-    P = pair A B X Y,
-    pi x y\ (of x A, of y (B x)) => of (F x y) (C x y).
+    pi x y\ [of x A, of y (B x)] => of (F x y) (C (pair A B x y)).
+
+type fst term -> term.
+type snd term -> term.
+of (fst P) A :- of P (sum A B).
+of (snd P) (B (snd P)) :- of P (sum A B).
 
 % EQUALITY
-step (split (pair _A _B X Y) F) (F X Y).
-step (split P F) R :-
+step (split _C (pair _A _B X Y) F) (F X Y).
+step (split _C P F) R :-
     steps P (pair _A _B X Y), 
-    step (split (pair _A _B X Y) F) R.
-% eta rule? we don't have first and second projection given these rules
+    step (split _C (pair _A _B X Y) F) R.
+% step e conv anche di first e second
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %

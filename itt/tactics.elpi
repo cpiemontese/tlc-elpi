@@ -1,4 +1,8 @@
-%accumulate lang.
+accumulate lang.
+
+% --------------------------- %
+% ---- CARTESIAN PRODUCT ---- %
+% --------------------------- %
 
 % return a lambda abstraction, prove (F x)
 tactic intro (lam A F) Vars K :-
@@ -22,7 +26,44 @@ tactic (app N M) (app (prod A B) H G) Vars K :-
     K [].
 
 
-% ---- HYPOTHESIS ----
+% ------------------------ %
+% ---- DISJOINT UNION ---- %
+% ------------------------ %
+
+% of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
+% of (split (pair A B X Y) F) (C X Y) :-
+
+tactic andEL (fst P) Vars K :-
+    K [(Vars, P)].
+tactic andER (snd P) Vars K :-
+    K [(Vars, P)].
+
+% and elimination but with hypothesis use
+tactic (andEL N) (fst H) Vars K :-
+    nth_element N Vars H,
+    K [].
+tactic (andER N) (snd H) Vars K :-
+    nth_element N Vars H,
+    K [].
+
+tactic andE (split C P F) Vars K :-
+    pi x y\
+        K [(Vars, P), ([x, y|Vars], (F x y))].
+
+tactic andI (pair A B X Y) Vars K :-
+    K [(Vars, X), (Vars, Y)].
+
+% and intro with hyp use
+tactic (andI N M) (pair A B H G) Vars K :-
+    nth_element N Vars H,
+    nth_element M Vars G,
+    K [].
+
+
+% -------------------- %
+% ---- HYPOTHESIS ---- %
+% -------------------- %
+
 tactic (var N) H Vars K :-
     nth_element N Vars H,
     K [].
@@ -30,7 +71,7 @@ tactic (var N) H Vars K :-
 
 % Error
 %tactic Name H Vars K :- 
-%    print "Error, either" Name "is not a tactic or something was wrong with its args",
+%    print "Error, something went wrong with " Name,
 %    print H,
 %    print Vars,
 %    print K.

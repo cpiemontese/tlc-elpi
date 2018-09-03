@@ -50,7 +50,7 @@ step (app _A _B Lam Arg) Res :-
     steps Lam (lam _Name _A _B Bd),
     step (app _A _B (lam _Name _A _B Bd) Arg) Res.
 % eta-equality
-%conv (lam _Name _A _B (x\ app F x)) F. % conv o step? e in che direzione i.e. F si riduce a lam o lam a F?
+conv (lam _Name _A _B (x\ app F x)) F.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -100,20 +100,24 @@ step (snd P) Y :- steps P (pair _ _ _X Y).
 % -------------------------------- %
 
 % FORMATION
-%type id term -> term -> term -> term.
+type id term -> term -> term -> term.
 
 % INTRODUCTION
-% T e x El(T) ==> Id(T, x, x)
-%type refl term -> term -> term.
-%of (refl T X) (id T X X) :- of X T.
+type refl term -> term -> term.
+of (refl T X) (id T X X) :- of X T.
+%of (refl A X) (id A X Y) :- of X A, of Y A, conv X Y. % ??????
 
 % ELIMINATION
-%type idpeel term -> term -> term -> term -> (term -> term -> term -> term) -> (term -> term) -> term.
-%of (idpeel A X Y Proof C Func) (C X Y Proof) :-
-%    of Proof (id A X Y),
-%    pi x\ of (Func x) (C x x (refl A x)).
+type idpeel term -> term -> term -> term -> (term -> term -> term -> term) -> (term -> term) -> term.
+of (idpeel A X Y Proof C Func) (C X Y Proof) :-
+    of Proof (id A X Y),
+    pi x\ of (Func x) (C x x (refl A x)).
 
 % EQUALITY
+step (idpeel _A X _Y (refl _A X) _C Func) (Func X).
+step (idpeel _A X _Y Proof _C Func) R :-
+    steps Proof (refl _ X),
+    step (idpeel _ X _ (refl _ X) _ Func) R.
 
 
 % ------------------ %

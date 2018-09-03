@@ -133,20 +133,20 @@ conv zero zero.
 conv (succ N) (succ M) :- conv N M.
 
 % ELIMINATION
-type natrec term -> term -> (term -> term -> term).
-of (natrec N ZeroElement RecFun) (T N) :-
+type natrec term -> term -> string -> string -> (term -> term -> term).
+of (natrec N ZeroElement VarName1 VarName2 RecFun) (T N) :-
     of N nat,
     of ZeroElement (T zero),
-    pi x y\ (of x nat, of y (T x)) => of (RecFun x y) (C (succ x)).
+    pi x y\ (of x nat, of y (T x)) => of (RecFun x y) (T (succ x)).
 
 % EQUALITY
-step (natrec zero ZeroElement RecFun) ZeroElement.
-step (natrec N ZeroElement RecFun) ZeroElement :- steps N zero.
+step (natrec zero ZeroElement _ _ RecFun) ZeroElement.
+step (natrec N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
 
-step (natrec (succ N) ZeroElement RecFun) (RecFun N (natrec N ZeroElement RecFun)).
-step (natrec M ZeroElement RecFun) R :- steps M (succ N), step (natrec (succ N) ZeroElement RecFun) R.
+step (natrec (succ N) ZeroElement _ _ RecFun) (RecFun N (natrec N ZeroElement _ _ RecFun)).
+step (natrec M ZeroElement _ _ RecFun) R :- steps M (succ N), step (natrec (succ N) ZeroElement _ _ RecFun) R.
 
-conv (natrec N1 ZeroElement1 RecFun1) (natrec N2 ZeroElement2 RecFun2) :-
+conv (natrec N1 ZeroElement1 _ _ RecFun1) (natrec N2 ZeroElement2 _ _ RecFun2) :-
     conv N1 N2,
     conv ZeroElement1 ZeroElement2,
     pi x y\ conv (RecFun1 x y) (RecFun2 x y). % ??? 

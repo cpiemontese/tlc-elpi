@@ -34,5 +34,15 @@ pp (sum Tl Tr) S :-
     pp Tl Sl,
     (pi x\ pp x Sl => pp (Tr x) Sr),
     S is "∑(" ^ Sl ^ ", " ^ Sr ^ ")".
+pp zero "Z".
+pp (succ N) S :-
+    pp N SN,
+    S is "S " ^ SN.
+pp (natrec N ZeroElement VarName1 VarName2 RecFun) S :-
+    pp N SN,
+    pp ZeroElement SZero,
+    pi x y\ (pp x VarName1, pp y VarName2) => pp (RecFun x y) SRecFun,
+    S is "R(" ^ SN ^ ", " ^ SZero ^ ", " ^ "(" ^ VarName1 ^ ", " ^ VarName2 ^ ") " ^ SRecFun ^ ")".
+pp nat "Nat".
 pp uvar "_".
 pp Term S :- term_to_string Term S. % no special rules, just print the term

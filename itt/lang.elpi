@@ -37,19 +37,21 @@ type prod term -> (term -> term) -> term.
 % INTRODUCTION
 % type lam term -> (term -> term) -> term.
 type lam string -> term -> (term -> term) -> (term -> term) -> term.
-of (lam Name T1 T2 Body) (prod T1 T2) :- pi x\ of x T1 => of (Body x) (T2 x).
-%conv (lam A F) (lam A G) :- pi x\ conv (F x) (G x).
+of (lam Name T1 T2 Bd) (prod T1 T2) :- pi x\ of x T1 => of (Bd x) (T2 x).
+conv (lam _Name _T Bd) (lam _Name' _T' _Bd') :- pi x\ conv (Bd x) (Bd' x). % assumendo che T1 = T2?
 
 % ELIMINATION
-%type app term -> term -> term -> term.
 type app term -> (term -> term) -> term -> term -> term.
-of (app T1 T2 Lambda Arg) (T2 Arg) :- of Lambda (prod T1 T2), of Arg T1.
-%conv (app M N) (app M' N') :- conv M M', conv N N'.
+of (app T1 T2 Lam Arg) (T2 Arg) :- of Lam (prod T1 T2), of Arg T1.
+conv (app _T1 _T2 Lam Arg) (app _T1' T2' Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
 
 % EQUALITY
-%step (app (lam _A F) X) (F X).
-%step (app L X) R :- steps L (lam _A F), step (app (lam _A F) X) R.
-%conv (lam _A (x\ app S x)) S.
+step (app _A _B (lam _Name _A _B Bd) Arg) (Bd Arg).
+step (app _A _B Lam Arg) Res :-
+    steps Lam (lam _Name _A _B Bd),
+    step (app (lam _Name _A _B Bd) Arg) Res.
+% eta-equality
+%conv (lam _Name _A _B (x\ app F x)) F. % conv o step? e in che direzione i.e. F si riduce a lam o lam a F?
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -61,24 +63,38 @@ type sum term -> (term -> term) -> term.
 % INTRODUCTION
 type pair term -> (term -> term) -> term -> term -> term.
 of (pair Tl Tr El Er) (sum Tl Tr) :- of El Tl, of Er (Tr El).
+conv (pair _ _ El Er) (pair _ _ El' Er') :- conv El El', conv Er Er'.
 
 % ELIMINATION
 type split term -> (term -> term) -> (term -> term) -> term -> string -> string -> (term -> term -> term) -> term.
 of (split Tl Tr T Pair VarName1 VarName2 Func) (T Pair) :- 
     of Pair (sum Tl Tr),
     pi x y\ (of x Tl, of y (Tr x)) => of (Func x y) (T (pair Tl Tr x y)).
+conv (split _ _ _ Pair _ _ Func) (split  _ _ _ Pair' _ _ Func') :-
+    conv Pair Pair',
+    pi x y\ conv (Func x y) (Func' x y).
 
 type fst term -> term.
 type snd term -> term.
 of (fst Pair) Tl :- of Pair (sum Tl Tr).
 of (snd Pair) (Tr (snd Pair)) :- of Pair (sum Tl Tr).
 
+conv (fst P) (fst P') :- conv P P'.
+conv (snd P) (snd P') :- conv P P'.
+
 % EQUALITY
-%step (split _C (pair _A _B X Y) F) (F X Y).
-%step (split _C P F) R :-
-%    steps P (pair _A _B X Y), 
-%    step (split _C (pair _A _B X Y) F) R.
-% step e conv anche di first e second
+% sento che non ci sono abbastanza _ ancora, ne aggiungo qualcuno di seguito: _ _ _ _ _ _ _ _ _ _ _ 
+step (split _ _ _ (pair _ _ X Y) _ _ F) (F X Y).
+step (split _ _ _ P _ _ F) R :-
+    steps P (pair _ _ X Y),
+    step (split  _ _ _ (pair _ _ X Y) _ _ F) R.
+
+step (fst (pair _ _ X Y)) X.
+step (fst P) X :- steps P (pair _ _ X _Y).
+step (snd (pair _ _ X Y)) Y.
+step (snd P) Y :- steps P (pair _ _ _X Y).
+
+% conv P (pair _ _ (fst P) (snd P)). % eta sulle coppie
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %

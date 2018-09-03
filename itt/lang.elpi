@@ -85,16 +85,18 @@ of (snd Pair) (Tr (snd Pair)) :- of Pair (sum Tl Tr).
 % -------------------------------- %
 
 % FORMATION
-%type eq term -> term -> term -> term.
+%type id term -> term -> term -> term.
 
 % INTRODUCTION
-% ML dice che non importa cosa sia r \in Id(A, a, b) se a =_A b, quindi boh 
+% T e x El(T) ==> Id(T, x, x)
 %type refl term -> term -> term.
-%of (refl A X) (eq A X X) :- conv X X. % ???
+%of (refl T X) (id T X X) :- of X T.
 
 % ELIMINATION
-% C da dove lo tiro fuori?
-%conv X Y :- of C (eq _A X Y).
+%type idpeel term -> term -> term -> term -> (term -> term -> term -> term) -> (term -> term) -> term.
+%of (idpeel A X Y Proof C Func) (C X Y Proof) :-
+%    of Proof (id A X Y),
+%    pi x\ of (Func x) (C x x (refl A x)).
 
 % EQUALITY
 
@@ -112,6 +114,24 @@ type succ term -> term.
 of zero nat.
 of (succ N) nat :- of N nat.
 
-%type nat_elim ...
+conv zero zero.
+conv (succ N) (succ M) :- conv N M.
+
+% ELIMINATION
+type natrec term -> term -> (term -> term -> term).
+of (natrec N ZeroElement RecFun) (T N) :-
+    of N nat,
+    of ZeroElement (T zero),
+    pi x y\ (of x nat, of y (T x)) => of (RecFun x y) (C (succ x)).
 
 % EQUALITY
+step (natrec zero ZeroElement RecFun) ZeroElement.
+step (natrec N ZeroElement RecFun) ZeroElement :- steps N zero.
+
+step (natrec (succ N) ZeroElement RecFun) (RecFun N (natrec N ZeroElement RecFun)).
+step (natrec M ZeroElement RecFun) R :- steps M (succ N), step (natrec (succ N) ZeroElement RecFun) R.
+
+conv (natrec N1 ZeroElement1 RecFun1) (natrec N2 ZeroElement2 RecFun2) :-
+    conv N1 N2,
+    conv ZeroElement1 ZeroElement2,
+    pi x y\ conv (RecFun1 x y) (RecFun2 x y). % ??? 

@@ -35,10 +35,9 @@ type prod term -> (term -> term) -> term.
 %macro @arr A B :- prod A (x\ B).
 
 % INTRODUCTION
-% type lam term -> (term -> term) -> term.
 type lam string -> term -> (term -> term) -> (term -> term) -> term.
 of (lam Name T1 T2 Bd) (prod T1 T2) :- pi x\ of x T1 => of (Bd x) (T2 x).
-conv (lam _Name _T Bd) (lam _Name' _T' _Bd') :- pi x\ conv (Bd x) (Bd' x). % assumendo che T1 = T2?
+conv (lam _Name _T1 _T2 Bd) (lam _Name' _T1' _T2' _Bd') :- pi x\ conv (Bd x) (Bd' x). % assumendo che T1 = T2?
 
 % ELIMINATION
 type app term -> (term -> term) -> term -> term -> term.
@@ -49,7 +48,7 @@ conv (app _T1 _T2 Lam Arg) (app _T1' T2' Lam' Arg') :- conv Lam Lam', conv Arg A
 step (app _A _B (lam _Name _A _B Bd) Arg) (Bd Arg).
 step (app _A _B Lam Arg) Res :-
     steps Lam (lam _Name _A _B Bd),
-    step (app (lam _Name _A _B Bd) Arg) Res.
+    step (app _A _B (lam _Name _A _B Bd) Arg) Res.
 % eta-equality
 %conv (lam _Name _A _B (x\ app F x)) F. % conv o step? e in che direzione i.e. F si riduce a lam o lam a F?
 

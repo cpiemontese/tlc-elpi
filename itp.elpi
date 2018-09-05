@@ -14,6 +14,7 @@ loop [(Vars,X)|TL] OutScript [] :-
     read T,
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,
+print "foooooo",
         append Goals TL TL',
         loop TL' [T|OutScript] []).
 

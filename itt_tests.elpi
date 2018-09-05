@@ -1,4 +1,4 @@
-accumulate itt/lang.
+%accumulate itt/lang.
 accumulate itt/tactics.
 accumulate itt/pp.
 accumulate itp.
@@ -8,9 +8,12 @@ interactive TestName S :-
 
 interactive TestName TestInput S :-
     TestName Type,
-    of X Type,
+    of X Type X',
     loop [([],X)] [] TestInput,
-    pp X STerm, pp Type SType,
+    print_pt X' STerm Type SType.
+
+print_pt X STerm Type SType :-
+    pp X STerm, pp Type SType, !,
     S is STerm ^ " :: " ^ SType.
 
 
@@ -28,6 +31,7 @@ interactive_K (prod a (x\ prod b (y\ a))).
 % ---------------------- %
 
 % [intro, intro, intro, app, app 3 1, app 2 1]
+% [intro f, intro g, intro h, app f, app g, app h, app h]
 interactive_S (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))).
 
 % axioms of conjunction

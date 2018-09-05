@@ -1,32 +1,42 @@
 accumulate lang.
 
-% This is not the code you are looking for
-get_var_name Msg Name :-
-    print Msg, read VarName, term_to_string VarName Name.
-
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
 
 % return a lambda abstraction, prove (F x)
-tactic intro (lam Name T1 T2 Body) Vars K :-
-    get_var_name "input lambda var name" Name,
-    pi x \ K [([x|Vars], (Body x))].
+tactic (intro Name) (lam Name T1 Body) Vars K :-
+    pi x \ K [([(x,Name)|Vars], (Body x))].
 
 
 % ---- APP TACTICS ----
 % app when I don't have an immediate function
-tactic app (app T1 T2 Lambda Arg) Vars K :-
+tactic app (app Lambda Arg) Vars K :-
     K [(Vars, Lambda), (Vars, Arg)].
 
 % app when I have a function as an hypothesis
-tactic (app N) (app T1 T2 Lambda Arg) Vars K :-
+tactic (oapp N) (app Lambda Arg) Vars K :-
     nth_element N Vars Lambda,
     K [(Vars, Arg)].
 
+% app when I have a function as an hypothesis
+tactic (mapp N) (app Lambda dots) Vars K :-
+    get_named N Vars Lambda,
+    K []. % wrong: recuperare le meta
+
+% app when I have a function as an hypothesis
+tactic (app N) T Vars K :-
+    get_named N Vars Lambda,
+    many_args Vars Lambda T L,
+    K L.
+
+many_args Vars Lambda Lambda [].
+many_args Vars Lambda (app Lambda' Arg) [(Vars, Arg)|L] :-
+  many_args Vars Lambda Lambda' L.
+
 % app when I know everything
-tactic (app N M) (app T1 T2 Lambda Arg) Vars K :-
+tactic (app N M) (app Lambda Arg) Vars K :-
     nth_element N Vars Lambda,
     nth_element M Vars Arg,
     K [].

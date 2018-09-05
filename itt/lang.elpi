@@ -3,11 +3,32 @@ kind term type. % everything is a term
 
 % Proc definitions (intro and elim will define of, eq will define step, steps, conv)
 
-% typing
-type of term -> term -> o.
-mode (of i o).
-%of T T' :- print (of T T'), fail. 
-of (uvar as X) T :- declare_constraint (of X T) [X].
+% type inference
+type of term -> term -> term -> o.
+mode (of i o o).
+of T T' X :- print (of T T' X), fail. 
+of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+
+% type checking
+type isa term -> term -> term -> o.
+mode (isa i o o).
+isa T T' X :- print (isa T T' X), fail. 
+isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+
+% -------------- %
+% ---- DOTS ---- %
+% -------------- %
+
+isa (app Lam dots) T O :- isa Lam T O.
+isa (app Lam dots) T O :- !,
+ of Lam TY _,
+ steps TY (prod _ _),
+ isa (app (app Lam Arg) dots) T O.
+
+
+isa Te Ty OTe :-
+ of Te Ty' OTe,
+ conv Ty Ty' .
 
 % one step conversion
 mode (step i o).
@@ -22,9 +43,15 @@ steps M M.
 % rules for term equivalence
 mode (conv i i).
 conv X Y :- print (conv X Y), fail.
-%mode (conv i i).
-%conv M N :- steps M M', steps N N', M' = N'.
+conv X X :- !.
+conv (uvar as X) Y :- !, print "XXXXXXXXXXXXXXX", X = Y.
+conv X (uvar as Y) :- !, print "XXXXXXXXXXXXXXX", X = Y.
+conv M N :- step M M', !, conv M' N.
+conv M N :- step N N', !, conv M N'.
 
+% Invariant: conv t1 t2 is called only when
+% it is known that conv ty1 ty2 where
+% tyi is the type of ti
 
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
@@ -32,25 +59,29 @@ conv X Y :- print (conv X Y), fail.
 
 % FORMATION
 type prod term -> (term -> term) -> term.
-%macro @arr A B :- prod A (x\ B).
+macro @arrow A B :- prod A (x\ B).
+
+% TYPE
+ofType (prod A B) :- ofType A, pi x \ of x A x => ofType (B x).
+conv (prod T1 Bd) (prod T1' Bd') :- conv T1 T1', pi x\ of x T1 x => conv (Bd x) (Bd' x).
 
 % INTRODUCTION
-type lam string -> term -> (term -> term) -> (term -> term) -> term.
-of (lam Name T1 T2 Bd) (prod T1 T2) :- pi x\ of x T1 => of (Bd x) (T2 x).
-conv (lam _Name _T1 _T2 Bd) (lam _Name' _T1' _T2' _Bd') :- pi x\ conv (Bd x) (Bd' x). % assumendo che T1 = T2?
+type lam string -> term -> (term -> term) -> term.
+of (lam Name T1 Bd) (prod T1 T2) (lam Name T1 Bd') :- pi x\ of x T1 x => of (Bd x) (T2 x) (Bd' x).
+conv (lam _Name T1 Bd) (lam _Name' _T1' _Bd') :- pi x\ of x T1 x => conv (Bd x) (Bd' x).
 
 % ELIMINATION
-type app term -> (term -> term) -> term -> term -> term.
-of (app T1 T2 Lam Arg) (T2 Arg) :- of Lam (prod T1 T2), of Arg T1.
-conv (app _T1 _T2 Lam Arg) (app _T1' T2' Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
+type app term -> term -> term.
+of (app Lam Arg) T2_Arg (app Lam' Arg') :-
+  isa Lam (prod T1 T2) Lam',
+  isa Arg T1 Arg',
+  T2_Arg = T2 Arg'.
+conv (app Lam Arg) (app Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
 
 % EQUALITY
-step (app _A _B (lam _Name _A _B Bd) Arg) (Bd Arg).
-step (app _A _B Lam Arg) Res :-
-    steps Lam (lam _Name _A _B Bd),
-    step (app _A _B (lam _Name _A _B Bd) Arg) Res.
+step (app Lam Arg) Res :- steps Lam (lam _Name _A Bd), Res = Bd Arg.
 % eta-equality
-conv (lam _Name _A _B (x\ app F x)) F.
+conv (lam _Name A F) F' , conv F' (lam _Name _A F) :- pi x \ of x A x => conv (F x) (app F' x).
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %

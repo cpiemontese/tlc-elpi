@@ -7,7 +7,7 @@ accumulate lang.
 
 % return a lambda abstraction, prove (F x)
 tactic (intro Name) (lam Name T1 Body) Vars K :-
-    pi x \ K [([(x,Name)|Vars], (Body x))].
+    pi x \ K [([(x, Name)|Vars], (Body x))].
 
 
 % ---- APP TACTICS ----
@@ -16,9 +16,9 @@ tactic app (app Lambda Arg) Vars K :-
     K [(Vars, Lambda), (Vars, Arg)].
 
 % app when I have a function as an hypothesis
-tactic (oapp N) (app Lambda Arg) Vars K :-
-    nth_element N Vars Lambda,
-    K [(Vars, Arg)].
+%tactic (oapp N) (app Lambda Arg) Vars K :-
+%    nth_element N Vars Lambda,
+%    K [(Vars, Arg)].
 
 % app when I have a function as an hypothesis
 tactic (mapp N) (app Lambda dots) Vars K :-

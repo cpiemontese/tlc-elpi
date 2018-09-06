@@ -35,3 +35,9 @@ loop [(Vars,X)|TL] OutScript [T|InScript] :-
         X = TE,
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
+
+
+get_var_names [] [].
+get_var_names [(X, N)|TL] TL' :- 
+    get_var_names TL VNTL,
+    append [N] VNTL TL'.

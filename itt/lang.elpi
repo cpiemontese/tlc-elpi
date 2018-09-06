@@ -6,13 +6,13 @@ kind term type. % everything is a term
 % type inference
 type of term -> term -> term -> o.
 mode (of i o o).
-of T T' X :- print (of T T' X), fail. 
+%of T T' X :- print (of T T' X), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 % type checking
 type isa term -> term -> term -> o.
-mode (isa i o o).
-isa T T' X :- print (isa T T' X), fail. 
+/ode (isa i o o).
+%isa T T' X :- print (isa T T' X), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 % -------------- %
@@ -21,18 +21,18 @@ isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 isa (app Lam dots) T O :- isa Lam T O.
 isa (app Lam dots) T O :- !,
- of Lam TY _,
- steps TY (prod _ _),
- isa (app (app Lam Arg) dots) T O.
+    of Lam TY _,
+    steps TY (prod _ _),
+    isa (app (app Lam Arg) dots) T O.
 
 
 isa Te Ty OTe :-
- of Te Ty' OTe,
- conv Ty Ty' .
+    of Te Ty' OTe,
+    conv Ty Ty' .
 
 % one step conversion
 mode (step i o).
-step X Y :- print (step X Y), fail.
+%step X Y :- print (step X Y), fail.
 
 % multiple step conversion
 mode (steps i o).
@@ -42,10 +42,10 @@ steps M M.
 
 % rules for term equivalence
 mode (conv i i).
-conv X Y :- print (conv X Y), fail.
+%conv X Y :- print (conv X Y), fail.
 conv X X :- !.
-conv (uvar as X) Y :- !, print "XXXXXXXXXXXXXXX", X = Y.
-conv X (uvar as Y) :- !, print "XXXXXXXXXXXXXXX", X = Y.
+conv (uvar as X) Y :- !, X = Y.
+conv X (uvar as Y) :- !, X = Y.
 conv M N :- step M M', !, conv M' N.
 conv M N :- step N N', !, conv M N'.
 

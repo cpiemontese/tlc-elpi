@@ -1,24 +1,35 @@
 accumulate utils.
 
-% ITP loop
+interactive TestName OutputTerm :-
+    interactive TestName [] OutputTerm.
 
-% Idea: se non hai meta variabili da istanziare non fare nulla e stampa...
+interactive TestName TestInput OutputTerm :-
+    TestName Type,
+    of X Type X',
+    loop [([],X)] [] TestInput,
+    print_pt X' Type OutputTerm.
+
+print_pt Term Type S :-
+    pp Term TermPP, pp Type TypePP, !,
+    S is TermPP ^ " :: " ^ TypePP.
+
+% ------------------ %
+% ---- ITP LOOP ---- %
+% ------------------ %
+
 loop [] OutScript InScript :-
     reverse OutScript OutReversed,
     print "Total script:" OutReversed.
 
-% Se hai metavariabili ma non hai uno script di input
 loop [(Vars,X)|TL] OutScript [] :-
     print_constraints,
     print, print Vars "|-" X,
     read T,
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,
-print "foooooo",
         append Goals TL TL',
         loop TL' [T|OutScript] []).
 
-% Se hai metavariabili e hai uno script di input
 loop [(Vars,X)|TL] OutScript [T|InScript] :-
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,

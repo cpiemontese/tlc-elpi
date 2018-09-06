@@ -1,0 +1,34 @@
+%accumulate itt/lang.
+accumulate itp.
+accumulate itt/tactics.
+accumulate itt/pp.
+
+identity (prod a (x\ a)).
+
+% ---------------------- %
+% ---- K combinator ---- %
+% ---------------------- %
+
+% [intro, intro, var 2]
+comb_K (prod a (x\ prod b (y\ a))).
+
+% ---------------------- %
+% ---- S combinator ---- %
+% ---------------------- %
+
+% [intro, intro, intro, app, app 3 1, app 2 1]
+% [intro f, intro g, intro h, app f, app g, app h, app h]
+comb_S (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))).
+
+% axioms of conjunction
+% [intro, intro, andI 2 1]
+andIntro (prod a (x\ prod b (y\ sum a (z\ b)))).
+
+% [intro, andEL 1]
+andElimL (prod (sum a (x\ b)) (y\ a)).
+
+% [intro, andER 1]
+andElimR (prod (sum a (x\ b)) (y\ b)).
+
+% [intro, intro, andE, var 1, app, app 4 1, var 2]
+implAnd (prod (prod a (x\ prod b (y\ c))) (_\ prod (sum a (x\ b)) (z\ c))).

@@ -22,7 +22,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 type isa term -> term -> term -> o.
 mode (isa i o o). % non dovrbbe essere i anche il tipo? perche' abbiamo detto che type checking e' _Gamma |- _t : _T
-%isa T T' X :- print (isa T T' X), fail. 
+%isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
     % -------------- %
@@ -38,7 +38,7 @@ isa (app Lam dots) T O :- !,
 
 isa Te Ty OTe :-
     of Te Ty' OTe,
-    conv Ty Ty' .
+    conv Ty Ty'.
 
 % --------------- %
 % ---- STEPS ---- %
@@ -67,8 +67,8 @@ steps M M.
 mode (conv i i).
 %conv X Y :- print (conv X Y), fail.
 conv X X :- !.                      % reflexivity
-conv X Y :- conv Y X.               % symmetry
-(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???
+%conv X Y :- conv Y X.               % symmetry loops, is it needed?
+%(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???
 
 conv (uvar as X) Y :- !, X = Y.
 conv X (uvar as Y) :- !, X = Y.
@@ -101,11 +101,12 @@ of (app Lam Arg) B_Arg (app Lam' Arg') :-
   B_Arg = B Arg'.
 conv (app Lam Arg) (app Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
 
-% EQUALITY
+% BETA EQUALITY
 step (app Lam Arg) Res :- steps Lam (lam _Name _A Bd), Res = Bd Arg.
-% eta-equality
-conv (lam _Name A F) F', conv F' (lam _Name A F) :- pi x \ of x A x => conv (F x) (app F' x).
-% ^ non ho capito bene se sta cosa funziona, ma se aggiungo la transitivita' non serve giusto...?
+
+% ETA EQUALITY
+conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
+conv F' (lam _Name A F) :- pi x \ of x A x => conv (F x) (app F' x).
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -126,47 +127,65 @@ conv (pair Left Right) (pair Left' Right') :- conv Left Left', conv Right Right'
 
 % ELIMINATION
 type split term -> string -> string -> (term -> term -> term) -> term.
-of (split Pair Name1 Name2 Func) (T Pair) (split Pair' Name1 Name2 Func') :- 
+of (split Pair Name1 Name2 Func) (T_Pair) (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (of x A, of y (B x)) => isa (Func x y) (T (pair x y)) (Func' x y).
+    pi x y\ (isa x A x, isa y B y) => isa (Func x y) (T (pair x y)) (Func' x y),
+    T_Pair = T Pair.
 conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
     conv Pair Pair',
-    pi x y\ conv (Func x y) (Func' x y).
+    isa Pair (sum A B) _,
+    pi x y\ (of x A x, of y B y) => conv (Func x y) (Func' x y).
+%                           ^ forse dovrebbe essere (B x)? ma no non credo...
 
-% fst e snd come macro, non so bene come fare con i nomi
-macro @fst P :- split P "x" "y" (x \ y \ x).
-macro @snd P :- split P "x" "y" (x \ y \ y).
+type fst term -> term.
+of (fst Pair) A (fst Pair') :-
+    of Pair (sum A B) Pair'.
+conv (fst Pair) (fst Pair') :-
+    conv Pair Pair'.
+
+type snd term -> term.
+of (snd Pair) B_Fst (snd Pair') :-
+    of Pair (sum A B) Pair',
+    B_Fst = B (fst Pair).
+conv (snd Pair) (snd Pair') :-
+    conv Pair Pair'.
 
 % EQUALITY
 steps (split P _ _ F) R :-
     steps P (pair X Y),
     R = (F X Y).
+steps (fst P) X :-
+    steps P (pair X Y).
+steps (snd P) Y :-
+    steps P (pair X Y).
 
-% conv P (pair _ _ (fst P) (snd P)). % eta sulle coppie, servono fst e snd no?
+% ???
+conv P (pair (fst P) (snd P)).
+conv (pair (fst P) (snd P)) P.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
 % FORMATION
-type id term -> term -> term -> term.
+%type id term -> term -> term -> term.
 
 % INTRODUCTION
-type refl term -> term -> term.
-of (refl T X) (id T X X) :- of X T.
+%type refl term -> term -> term.
+%of (refl T X) (id T X X) :- of X T.
 %of (refl A X) (id A X Y) :- of X A, of Y A, conv X Y. % ??????
 
 % ELIMINATION
-type idpeel term -> term -> term -> term -> (term -> term -> term -> term) -> (term -> term) -> term.
-of (idpeel A X Y Proof C Func) (C X Y Proof) :-
-    of Proof (id A X Y),
-    pi x\ of (Func x) (C x x (refl A x)).
+%type idpeel term -> term -> term -> term -> (term -> term -> term -> term) -> (term -> term) -> term.
+%of (idpeel A X Y Proof C Func) (C X Y Proof) :-
+%    of Proof (id A X Y),
+%    pi x\ of (Func x) (C x x (refl A x)).
 
 % EQUALITY
-step (idpeel _A X _Y (refl _A X) _C Func) (Func X).
-step (idpeel _A X _Y Proof _C Func) R :-
-    steps Proof (refl _ X),
-    step (idpeel _ X _ (refl _ X) _ Func) R.
+%step (idpeel _A X _Y (refl _A X) _C Func) (Func X).
+%step (idpeel _A X _Y Proof _C Func) R :-
+%    steps Proof (refl _ X),
+%    step (idpeel _ X _ (refl _ X) _ Func) R.
 
 
 % ------------------ %

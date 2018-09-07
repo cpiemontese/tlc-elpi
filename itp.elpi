@@ -21,8 +21,6 @@ loop [] OutScript InScript :-
     reverse OutScript OutReversed,
     print "Total script:" OutReversed.
 
-% names L ==> lista nomi variabili generate es x0, x1, x2, ...
-
 loop [(Vars,X)|TL] OutScript [] :-
     print_constraints,
     print, print Vars "|-" X,

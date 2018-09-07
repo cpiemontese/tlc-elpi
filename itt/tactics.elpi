@@ -11,21 +11,18 @@ tactic (intro Name) (lam Name T1 Body) Vars K :-
 
 
 % ---- APP TACTICS ----
-% app when I don't have an immediate function
 tactic app (app Lambda Arg) Vars K :-
     K [(Vars, Lambda), (Vars, Arg)].
 
-% app when I have a function as an hypothesis
 %tactic (oapp N) (app Lambda Arg) Vars K :-
 %    nth_element N Vars Lambda,
 %    K [(Vars, Arg)].
 
-% app when I have a function as an hypothesis
 tactic (mapp N) (app Lambda dots) Vars K :-
     get_named N Vars Lambda,
+    print K, print Vars,
     K []. % wrong: recuperare le meta
 
-% app when I have a function as an hypothesis
 tactic (app N) T Vars K :-
     get_named N Vars Lambda,
     many_args Vars Lambda T L,
@@ -33,48 +30,41 @@ tactic (app N) T Vars K :-
 
 many_args Vars Lambda Lambda [].
 many_args Vars Lambda (app Lambda' Arg) [(Vars, Arg)|L] :-
-  many_args Vars Lambda Lambda' L.
+    many_args Vars Lambda Lambda' L.
 
-% app when I know everything
-tactic (app N M) (app Lambda Arg) Vars K :-
-    nth_element N Vars Lambda,
-    nth_element M Vars Arg,
-    K [].
-
+%tactic (app N M) (app Lambda Arg) Vars K :-
+%    nth_element N Vars Lambda,
+%    nth_element M Vars Arg,
+%    K [].
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
 % ------------------------ %
 
-% of (pair A B X Y) (sum A B) :- of X A, of Y (B X).
-% of (split (pair A B X Y) F) (C X Y) :-
-
-tactic andEL (fst P) Vars K :-
+tactic (andEL) (fst P) Vars K :-
     K [(Vars, P)].
-tactic andER (snd P) Vars K :-
+tactic (andER) (snd P) Vars K :-
     K [(Vars, P)].
 
 % and elimination but with hypothesis use
 tactic (andEL N) (fst H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 tactic (andER N) (snd H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 
-tactic andE (split A B C P VarName1 VarName2 F) Vars K :-
-    get_var_name "input func var name 1" VarName1,
-    get_var_name "input func var name 2" VarName2,
+tactic (andE Name1 Name2) (split P Name1 Name2 F) Vars K :-
     pi x y\
         K [(Vars, P), ([x, y|Vars], (F x y))].
 
-tactic andI (pair A B X Y) Vars K :-
+tactic andI (pair X Y) Vars K :-
     K [(Vars, X), (Vars, Y)].
 
 % and intro with hyp use
-tactic (andI N M) (pair A B H G) Vars K :-
-    nth_element N Vars H,
-    nth_element M Vars G,
+tactic (andI N M) (pair H G) Vars K :-
+    get_named N Vars H,
+    get_named M Vars G,
     K [].
 
 
@@ -83,7 +73,7 @@ tactic (andI N M) (pair A B H G) Vars K :-
 % -------------------- %
 
 tactic (var N) H Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 
 

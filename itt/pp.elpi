@@ -17,14 +17,16 @@ pp (prod T1 T2) S :-
     pp T1 S1,
     (pi x\ pp x S1 => pp (T2 x) S2),
     S is "∏(" ^ S1 ^ ", " ^ S2 ^ ")".
-pp (pair Tl Tr El Er) S :-
-    pp El Sl,
-    pp Er Sr,
-    S is "<" ^ Sl ^ ", " ^ Sr ^ ">".
-pp (split Tl Tr T Pair VarName1 VarName2 Func) S :-
+pp (pair Left Right) S :-
+    pp Left SLeft,
+    pp Right SRight,
+    S is "<" ^ SLeft ^ ", " ^ SRight ^ ">".
+pp (split Pair Name1 Name2 Func) S :-
     pp Pair SPair,
-    pi x y\ (pp x VarName1, pp y VarName2) => pp (Func x y) SFunc,
-    S is "E(" ^ SPair  ^ ", (" ^ VarName1 ^ ", " ^ VarName2 ^ ")" ^ SFunc ^ ")".
+    term_to_string Name1 Name1',
+    term_to_string Name2 Name2',
+    pi x y\ (pp x Name1', pp y Name2') => pp (Func x y) SFunc,
+    S is "E(" ^ SPair  ^ ", (" ^ Name1' ^ ", " ^ Name2' ^ ")" ^ SFunc ^ ")".
 pp (fst Pair) S :-
     pp Pair SPair,
     S is "π₁(" ^ SPair ^ ")".

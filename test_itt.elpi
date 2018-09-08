@@ -18,11 +18,11 @@ comb_K (prod a (x\ prod b (y\ a))).
 % ---- S combinator ---- %
 % ---------------------- %
 
-% [intro f, intro g, intro h, app f, app g, app h, app h]
+% [intro g, intro f, intro x, app g, app f, app x, app x]
 comb_S (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))).
 
 % axioms of conjunction
-% [intro, intro, andI 2 1]
+% [intro f, intro g, andI f g]
 andIntro (prod a (x\ prod b (y\ sum a (z\ b)))).
 
 % [intro p, andEL p]
@@ -31,5 +31,5 @@ andElimL (prod (sum a (x\ b)) (y\ a)).
 % [intro p, andER p]
 andElimR (prod (sum a (x\ b)) (y\ b)).
 
-% [intro, intro, andE, var 1, app, app 4 1, var 2]
-implAnd (prod (prod a (x\ prod b (y\ c))) (_\ prod (sum a (x\ b)) (z\ c))).
+% [intro f, intro z, andE x y z, app, app, app f, app x, app y]
+implAnd (@arrow (prod a (x\ prod b (y\ c))) (prod (sum a (x\ b)) (z\ c))).

@@ -11,7 +11,7 @@ kind term type. % everything is a term
 
 type of term -> term -> term -> o.
 mode (of i o o).
-%of T T' X :- print (of T T' X), fail. 
+of T T' X :- print (of T T' X), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 % of X B X' :- of X A X', conv A B. % ==> non syntax directed form
 
@@ -22,7 +22,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 type isa term -> term -> term -> o.
 mode (isa i o o). % non dovrbbe essere i anche il tipo? perche' abbiamo detto che type checking e' _Gamma |- _t : _T
-%isa X T Y :- print (isa X T Y), fail. 
+isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
     % -------------- %
@@ -65,7 +65,7 @@ steps M M.
 
 % term equivalence
 mode (conv i i).
-%conv X Y :- print (conv X Y), fail.
+conv X Y :- print (conv X Y), fail.
 conv X X :- !.                      % reflexivity
 %conv X Y :- conv Y X.               % symmetry loops, is it needed?
 %(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???
@@ -90,15 +90,23 @@ conv (prod A B) (prod A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 % INTRODUCTION
 type lam string -> term -> (term -> term) -> term.
-of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => of (Bd x) (B x) (Bd' x). % non ho capito perche' qui of e in app isa...
+of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => of (Bd x) (B x) (Bd' x).
 conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd' x).
 
 % ELIMINATION
 type app term -> term -> term.
 of (app Lam Arg) B_Arg (app Lam' Arg') :-
-  isa Lam (prod A B) Lam',
-  isa Arg A Arg',
-  B_Arg = B Arg'.
+    isa Lam (prod A B) Lam',
+    isa Arg A Arg',
+    B_Arg = B Arg'.
+% la syntax directed form dovrebbe essere cosi'?
+%of (app Lam Arg) B_Arg (app Lam' Arg') :-
+%    of Lam F Lam',
+%    steps F (prod A B),
+%    of Arg A' Arg',
+%    conv A' A,
+%    B_M = B_Arg. 
+
 conv (app Lam Arg) (app Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
 
 % BETA EQUALITY
@@ -122,20 +130,23 @@ conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 % INTRODUCTION
 type pair term -> term -> term.
-of (pair Left Right) (sum A B) (pair Left' Right') :- of Left A Left', of Right (B Left) Right'.
-conv (pair Left Right) (pair Left' Right') :- conv Left Left', conv Right Right'.
+of (pair Left Right) (sum A B) (pair Left' Right') :- 
+    of Left A Left',
+    of Right (B Left) Right'.
+conv (pair Left Right) (pair Left' Right') :-
+    conv Left Left',
+    conv Right Right'.
 
 % ELIMINATION
 type split term -> string -> string -> (term -> term -> term) -> term.
 of (split Pair Name1 Name2 Func) (T_Pair) (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (isa x A x, isa y B y) => isa (Func x y) (T (pair x y)) (Func' x y),
+    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T (pair x y)) (Func' x y),
     T_Pair = T Pair.
 conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
     conv Pair Pair',
     isa Pair (sum A B) _,
-    pi x y\ (of x A x, of y B y) => conv (Func x y) (Func' x y).
-%                           ^ forse dovrebbe essere (B x)? ma no non credo...
+    pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-

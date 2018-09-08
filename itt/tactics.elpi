@@ -58,14 +58,14 @@ tactic (andE Name1 Name2) (split P Name1 Name2 F) Vars K :-
     pi x y\
         K [(Vars, P), ([(x, Name1), (y, Name2)|Vars], (F x y))].
 
+tactic (andE Name1 Name2 N) (split H Name1 Name2 F) Vars K :-
+    get_named N Vars H,
+    pi x y\ K [([(x, Name1), (y, Name2)|Vars], (F x y))].
+
 tactic (andE Name1 Name2 N M) (split H Name1 Name2 G) Vars K :-
     get_named N Vars H,
     get_named M Vars G,
     K [].
-
-tactic (andE Name1 Name2 N) (split H Name1 Name2 F) Vars K :-
-    get_named N Vars H,
-    pi x y\ K [([(x, Name1), (y, Name2)|Vars], (F x y))].
 
 tactic andI (pair X Y) Vars K :-
     K [(Vars, X), (Vars, Y)].

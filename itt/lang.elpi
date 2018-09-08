@@ -165,10 +165,8 @@ conv (snd Pair) (snd Pair') :-
 steps (split P _ _ F) R :-
     steps P (pair X Y),
     R = (F X Y).
-steps (fst P) X :-
-    steps P (pair X Y).
-steps (snd P) Y :-
-    steps P (pair X Y).
+steps (fst P) X :- steps P (pair X Y).
+steps (snd P) Y :- steps P (pair X Y).
 
 % ???
 conv P (pair (fst P) (snd P)).
@@ -216,20 +214,19 @@ conv zero zero.
 conv (succ N) (succ M) :- conv N M.
 
 % ELIMINATION
-type natrec term -> term -> string -> string -> (term -> term -> term).
-of (natrec N ZeroElement VarName1 VarName2 RecFun) (T N) :-
-    of N nat,
-    of ZeroElement (T zero),
-    pi x y\ (of x nat, of y (T x)) => of (RecFun x y) (T (succ x)).
+type natrec (term -> term) -> term -> term -> string -> string -> (term -> term -> term) -> term.
+of (natrec T N ZeroElement Name1 Name2 RecFun) (T N) (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
+    of N nat N',
+    of ZeroElement (T zero) ZeroElement',
+    pi x y\ (of x nat x, of y (T x) y) => of (RecFun x y) (T (succ x)) (RecFun' x y).
 
-% EQUALITY
-step (natrec zero ZeroElement _ _ RecFun) ZeroElement.
-step (natrec N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
-
-step (natrec (succ N) ZeroElement _ _ RecFun) (RecFun N (natrec N ZeroElement _ _ RecFun)).
-step (natrec M ZeroElement _ _ RecFun) R :- steps M (succ N), step (natrec (succ N) ZeroElement _ _ RecFun) R.
-
-conv (natrec N1 ZeroElement1 _ _ RecFun1) (natrec N2 ZeroElement2 _ _ RecFun2) :-
+conv (natrec T N1 ZeroElement1 _ _ RecFun1) (natrec T N2 ZeroElement2 _ _ RecFun2) :-
     conv N1 N2,
     conv ZeroElement1 ZeroElement2,
-    pi x y\ conv (RecFun1 x y) (RecFun2 x y). % ??? 
+    pi x y\ (isa x nat x, isa y (T x) y) => conv (RecFun1 x y) (RecFun2 x y). % mi manca T
+
+% EQUALITY
+step (natrec _ N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
+step (natrec _ M ZeroElement _ _ RecFun) R :-
+    steps M (succ N),
+    R = (RecFun N (natrec N ZeroElement _ _ RecFun)).

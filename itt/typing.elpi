@@ -33,6 +33,8 @@ isa Te Ty OTe :-
     of Te Ty' OTe,
     conv Ty Ty'.
 
+of_type T :- print (of_type T), fail.
+
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
@@ -46,7 +48,7 @@ of_type (prod A B) :- of_type A, pi x \ of x A x => of_type (B x).
 
 % INTRODUCTION
 type lam string -> term -> (term -> term) -> term.
-of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => of (Bd x) (B x) (Bd' x).
+of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ isa x A x => isa (Bd x) (B x) (Bd' x).
 
 % ELIMINATION
 type app term -> term -> term.
@@ -69,15 +71,17 @@ of_type (sum A B) :- of_type A, pi x \ of x A x => of_type (B x).
 % INTRODUCTION
 type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
-    of Left A Left',
-    of Right (B Left) Right'.
+    isa Left A Left',
+    isa Right (B Left) Right'.
 
 % ELIMINATION
+% Update: split ora unifica ma ho dovuto aggiungere conv e T x y anziche T <x, y> come da ML
 type split term -> string -> string -> (term -> term -> term) -> term.
 of (split Pair Name1 Name2 Func) (T_Pair) (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T (pair x y)) (Func' x y),
-    T_Pair = T Pair.
+    conv Pair (pair X Y),
+    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T x y) (Func' x y),
+    T_Pair = T X Y.
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
@@ -106,12 +110,13 @@ of (refl A X) (id A X Y) (refl A X') :- of X A X', of Y A _, conv X Y.
 
 % FORMATION
 type nat term.
+of_type nat.
 
 % INTRODUCTION
 type zero term.
 type succ term -> term.
-of zero nat.
-of (succ N) nat :- of N nat.
+of zero nat zero.
+of (succ N) nat (succ N') :- of N nat N'.
 
 % ELIMINATION
 type natrec (term -> term) -> term -> term -> string -> string -> (term -> term -> term) -> term.

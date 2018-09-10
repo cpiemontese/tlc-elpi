@@ -1,6 +1,7 @@
 %accumulate itt/lang.
 accumulate itp.
-accumulate itt/tactics.
+%accumulate itt/tactics.
+accumulate itt/theory.
 accumulate itt/pp.
 
 %main :- interactive andElimR [intro f, andER f] S.

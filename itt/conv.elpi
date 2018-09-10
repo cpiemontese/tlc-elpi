@@ -1,0 +1,108 @@
+% --------------- %
+% ---- STEPS ---- %
+% --------------- %
+
+% one step conversion
+mode (step i o).
+%step X Y :- print (step X Y), fail.
+
+% multiple step conversion
+mode (steps i o).
+steps X Y :- print (steps X Y), fail.
+steps M N :- step M M', !, steps M' N.
+steps M M.
+
+% -------------- %
+% ---- CONV ---- %
+% -------------- %
+
+% Invariant: conv t1 t2 is called only when
+% it is known that conv ty1 ty2 where
+% tyi is the type of ti
+% altrimenti dovremmo scrivere conv X X :- isa X A X?
+
+% term equivalence
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+conv X X :- !.                      % reflexivity
+%conv X Y :- conv Y X.               % symmetry loops, is it needed?
+%(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???
+
+conv (uvar as X) Y :- !, X = Y.
+conv X (uvar as Y) :- !, X = Y.
+conv M N :- step M M', !, conv M' N.
+conv M N :- step N N', !, conv M N'.
+
+% --------------------------- %
+% ---- CARTESIAN PRODUCT ---- %
+% --------------------------- %
+
+%type prod term -> (term -> term) -> term.
+
+conv (prod A B)       (prod A' B')         :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd' x).
+conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
+
+% BETA
+step (app Lam Arg) Res :- steps Lam (lam _Name _A Bd), Res = Bd Arg.
+
+% ETA EQUALITY
+conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
+conv F' (lam _Name A F) :- pi x \ of x A x => conv (F x) (app F' x).
+
+% ------------------------ %
+% ---- DISJOINT UNION ---- %
+% ------------------------ %
+
+conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+
+conv (pair Left Right) (pair Left' Right') :-
+    conv Left Left',
+    conv Right Right'.
+
+conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
+    conv Pair Pair',
+    isa Pair (sum A B) _,
+    pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
+
+conv (fst Pair) (fst Pair') :-
+    conv Pair Pair'.
+
+conv (snd Pair) (snd Pair') :-
+    conv Pair Pair'.
+
+% BETA
+steps (split P _ _ F) R :-
+    steps P (pair X Y),
+    R = (F X Y).
+steps (fst P) X :- steps P (pair X Y).
+steps (snd P) Y :- steps P (pair X Y).
+
+% ETA EQUALITY
+conv P (pair (fst P) (snd P)).
+conv (pair (fst P) (snd P)) P.
+
+% -------------------------------- %
+% ---- PROPOSITIONAL EQUALITY ---- %
+% -------------------------------- %
+
+%conv X Y :- of Magic (id A X Y) _. % If I leave this typing doesn't work.
+conv Magic (refl A X) :- of Magic (id A X Y) _.
+
+% ------------------ %
+% ---- NATURALS ---- %
+% ------------------ %
+
+conv zero zero.
+conv (succ N) (succ M) :- conv N M.
+
+conv (natrec _T N1 ZeroElement1 _ _ RecFun1) (natrec _T N2 ZeroElement2 _ _ RecFun2) :-
+    conv N1 N2,
+    conv ZeroElement1 ZeroElement2,
+    pi x y\ (isa x nat x, isa y (T x) y) => conv (RecFun1 x y) (RecFun2 x y).
+
+% BETA
+step (natrec _ N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
+step (natrec _ M ZeroElement _ _ RecFun) R :-
+    steps M (succ N),
+    R = (RecFun N (natrec N ZeroElement _ _ RecFun)).

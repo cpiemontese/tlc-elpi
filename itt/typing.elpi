@@ -1,19 +1,13 @@
 kind term type. % everything is a term
 
-% Problemi:
-% (1) non capisco quando usare isa e quando usare of
-% (2) isa non dovrebbe prendere il tipo in input?
-% (3) la syntax directed form sarebbe da scrivere per ogni singolo tipo nelle regole di tipaggio...?
-
 % ------------------------ %
 % ---- TYPE INFERENCE ---- %
 % ------------------------ %
 
 type of term -> term -> term -> o.
 mode (of i o o).
-of T T' X :- print (of T T' X), fail. 
+of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
-
 
 % ----------------------- %
 % ---- TYPE CHECKING ---- %
@@ -24,9 +18,9 @@ mode (isa i o o).
 isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
-    % -------------- %
-    % ---- DOTS ---- %
-    % -------------- %
+% -------------- %
+% ---- DOTS ---- %
+% -------------- %
 
 isa (app Lam dots) T O :- isa Lam T O.
 isa (app Lam dots) T O :- !,
@@ -39,42 +33,6 @@ isa Te Ty OTe :-
     of Te Ty' OTe,
     conv Ty Ty'.
 
-% --------------- %
-% ---- STEPS ---- %
-% --------------- %
-
-% one step conversion
-mode (step i o).
-%step X Y :- print (step X Y), fail.
-
-% multiple step conversion
-mode (steps i o).
-steps X Y :- print (steps X Y), fail.
-steps M N :- step M M', !, steps M' N.
-steps M M.
-
-% -------------- %
-% ---- CONV ---- %
-% -------------- %
-
-% Invariant: conv t1 t2 is called only when
-% it is known that conv ty1 ty2 where
-% tyi is the type of ti
-% altrimenti dovremmo scrivere conv X X :- isa X A X?
-
-% term equivalence
-mode (conv i i).
-conv X Y :- print (conv X Y), fail.
-conv X X :- !.                      % reflexivity
-%conv X Y :- conv Y X.               % symmetry loops, is it needed?
-%(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???
-
-conv (uvar as X) Y :- !, X = Y.
-conv X (uvar as Y) :- !, X = Y.
-conv M N :- step M M', !, conv M' N.
-conv M N :- step N N', !, conv M N'.
-
-
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
@@ -85,28 +43,17 @@ macro @arrow A B :- prod A (x\ B).
 
 % TYPE
 of_type (prod A B) :- of_type A, pi x \ of x A x => of_type (B x).
-conv (prod A B) (prod A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 % INTRODUCTION
 type lam string -> term -> (term -> term) -> term.
 of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => of (Bd x) (B x) (Bd' x).
-conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd' x).
 
 % ELIMINATION
 type app term -> term -> term.
 of (app Lam Arg) B_Arg (app Lam' Arg') :-
     isa Lam (prod A B) Lam',
     isa Arg A Arg',
-    B_Arg = B Arg'.
-
-conv (app Lam Arg) (app Lam' Arg') :- conv Lam Lam', conv Arg Arg'.
-
-% BETA EQUALITY
-step (app Lam Arg) Res :- steps Lam (lam _Name _A Bd), Res = Bd Arg.
-
-% ETA EQUALITY
-conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
-conv F' (lam _Name A F) :- pi x \ of x A x => conv (F x) (app F' x).
+    B_Arg = B Arg.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -118,16 +65,12 @@ macro @cross A B :- sum A (x\ B).
 
 % TYPE
 of_type (sum A B) :- of_type A, pi x \ of x A x => of_type (B x).
-conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 % INTRODUCTION
 type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
     of Left A Left',
     of Right (B Left) Right'.
-conv (pair Left Right) (pair Left' Right') :-
-    conv Left Left',
-    conv Right Right'.
 
 % ELIMINATION
 type split term -> string -> string -> (term -> term -> term) -> term.
@@ -135,34 +78,15 @@ of (split Pair Name1 Name2 Func) (T_Pair) (split Pair' Name1 Name2 Func') :-
     isa Pair (sum A B) Pair',
     pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T (pair x y)) (Func' x y),
     T_Pair = T Pair.
-conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
-    conv Pair Pair',
-    isa Pair (sum A B) _,
-    pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
     of Pair (sum A B) Pair'.
-conv (fst Pair) (fst Pair') :-
-    conv Pair Pair'.
 
 type snd term -> term.
 of (snd Pair) B_Fst (snd Pair') :-
     of Pair (sum A B) Pair',
     B_Fst = B (fst Pair).
-conv (snd Pair) (snd Pair') :-
-    conv Pair Pair'.
-
-% EQUALITY
-steps (split P _ _ F) R :-
-    steps P (pair X Y),
-    R = (F X Y).
-steps (fst P) X :- steps P (pair X Y).
-steps (snd P) Y :- steps P (pair X Y).
-
-% ETA EQUALITY
-conv P (pair (fst P) (snd P)).
-conv (pair (fst P) (snd P)) P.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
@@ -175,12 +99,6 @@ of_type (id A X Y) :- of_type A, of X A X', of Y A Y'.
 % INTRODUCTION
 type refl term -> term -> term.
 of (refl A X) (id A X Y) (refl A X') :- of X A X', of Y A _, conv X Y.
-
-% ELIMINATION
-conv X Y :- of Magic (id A X Y) _.
-
-% EQUALITY
-conv Magic (refl A X) :- of Magic (id A X Y) _.
 
 % ------------------ %
 % ---- NATURALS ---- %
@@ -195,23 +113,9 @@ type succ term -> term.
 of zero nat.
 of (succ N) nat :- of N nat.
 
-conv zero zero.
-conv (succ N) (succ M) :- conv N M.
-
 % ELIMINATION
 type natrec (term -> term) -> term -> term -> string -> string -> (term -> term -> term) -> term.
 of (natrec T N ZeroElement Name1 Name2 RecFun) (T N) (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
     of N nat N',
     of ZeroElement (T zero) ZeroElement',
     pi x y\ (of x nat x, of y (T x) y) => of (RecFun x y) (T (succ x)) (RecFun' x y).
-
-conv (natrec T N1 ZeroElement1 _ _ RecFun1) (natrec T N2 ZeroElement2 _ _ RecFun2) :-
-    conv N1 N2,
-    conv ZeroElement1 ZeroElement2,
-    pi x y\ (isa x nat x, isa y (T x) y) => conv (RecFun1 x y) (RecFun2 x y).
-
-% EQUALITY
-step (natrec _ N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
-step (natrec _ M ZeroElement _ _ RecFun) R :-
-    steps M (succ N),
-    R = (RecFun N (natrec N ZeroElement _ _ RecFun)).

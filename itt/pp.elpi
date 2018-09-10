@@ -1,5 +1,3 @@
-%accumulate lang.
-
 % Pretty printing module, basic code borrowed from: https://github.com/LPCIC/elpi/blob/master/ELPI.md
 
 mode (pp i o).

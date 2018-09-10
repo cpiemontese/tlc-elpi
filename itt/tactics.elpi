@@ -1,9 +1,6 @@
-accumulate lang.
-
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
-
 
 % return a lambda abstraction, prove (F x)
 tactic (intro Name) (lam Name T1 Body) Vars K :-

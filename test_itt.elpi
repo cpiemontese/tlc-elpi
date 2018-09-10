@@ -12,7 +12,7 @@ identity (prod a (x\ a)).
 % ---- K combinator ---- %
 % ---------------------- %
 
-% [intro, intro, app x]
+% [intro x, intro y, app x]
 comb_K (prod a (x\ prod b (y\ a))).
 
 % ---------------------- %
@@ -34,3 +34,21 @@ andElimR (prod (sum a (x\ b)) (y\ b)).
 
 % [intro f, intro z, andE x y z, app, app, app f, app x, app y]
 implAnd (@arrow (prod a (x\ prod b (y\ c))) (prod (sum a (x\ b)) (z\ c))).
+
+test_all L :-
+    print "start",
+    interactive identity [intro x, app x] S1,
+    print "1/7",
+    interactive comb_K [intro x, intro y, app x] S2,
+    print "2/7",
+    interactive comb_S [intro g, intro f, intro x, app g, app f, app x, app x] S3,
+    print "3/7",
+    interactive andIntro [intro f, intro g, andI f g] S4,
+    print "4/7",
+    interactive andElimL [intro p, andEL p] S5,
+    print "5/7",
+    interactive andElimR [intro p, andER p] S6,
+    print "6/7", halt,
+    interactive implAnd [intro f, intro z, andE x y z, app, app, app f, app x, app y] S7,
+    print "7/7",
+    append [S1, S2, S3, S4, S5, S6, S7] [] L.

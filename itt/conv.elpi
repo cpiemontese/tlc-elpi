@@ -39,7 +39,8 @@ conv M N :- step N N', !, conv M N'.
 
 %type prod term -> (term -> term) -> term.
 
-conv (prod A B)       (prod A' B')         :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+conv (prod A B) (prod A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+
 conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd' x).
 conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
 
@@ -58,25 +59,22 @@ conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 conv (pair Left Right) (pair Left' Right') :-
     conv Left Left',
-    conv Right Right'.
+    pi x\ of x A x => conv (Right x) (Right' x).
 
 conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
     conv Pair Pair',
     isa Pair (sum A B) _,
     pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
 
-conv (fst Pair) (fst Pair') :-
-    conv Pair Pair'.
-
-conv (snd Pair) (snd Pair') :-
-    conv Pair Pair'.
+conv (fst Pair) (fst Pair') :- conv Pair Pair'.
+conv (snd Pair) (snd Pair') :- conv Pair Pair'.
 
 % BETA
-steps (split P _ _ F) R :-
+step (split P _ _ F) R :-
     steps P (pair X Y),
     R = (F X Y).
-steps (fst P) X :- steps P (pair X Y).
-steps (snd P) Y :- steps P (pair X Y).
+step (fst P) X :- steps P (pair X Y).
+step (snd P) Y :- steps P (pair X Y).
 
 % ETA EQUALITY
 conv P (pair (fst P) (snd P)).

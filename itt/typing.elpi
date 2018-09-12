@@ -29,9 +29,11 @@ isa (app Lam dots) T O :- !,
     isa (app (app Lam Arg) dots) T O.
 
 
+% invertire conv e of toglie un delay quando si usa itp
+% ma aggiunge un delay quando si chiede un of normale es. of (pair zero zero) T X.
 isa Te Ty OTe :-
-    of Te Ty' OTe,
-    conv Ty Ty'.
+    conv Ty Ty',
+    of Te Ty' OTe.
 
 of_type T :- print (of_type T), fail.
 
@@ -63,34 +65,69 @@ of (app Lam Arg) B_Arg (app Lam' Arg') :-
 
 % FORMATION
 type sum term -> (term -> term) -> term.
-macro @cross A B :- sum A (x\ B).
+macro @times A B :- sum A (x\ B).
 
 % TYPE
 of_type (sum A B) :- of_type A, pi x \ of x A x => of_type (B x).
 
 % INTRODUCTION
+% Entrambe queste versioni pero' non causano delay durante
+% l'uso di tattiche
+% Questa versione da p.e. delay anche solo con of (pair zero zero) T X.
+
 type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
     isa Left A Left',
-    isa Right (B Left) Right'.
+    isa Right (B Left) Right'. 
+
+% Questa versione differisce da quella di ML perche' in ITT
+% il b della coppia (a, b) non e' un b(x) e quindi ti trovi
+% a dire che b \in B(a) ma b non usa a, pero' se ho un
+% tipo dipendente non dovrei poter usare il termine da cui
+% dipende anche nel corpo del termine stesso? Se si allora
+% ho la versione sotto e a questo punto b(a) \in B(a) se
+% pi x\ b(x) \in B(x). Pero' boh a sto punto diventa 
+% quasi come lambda ma dove ti do l'input associato, che
+% senso ha...?
+% Questa versione non porta a delay ma p.e. una coppia di nat
+% diventa pair zero (x\ zero) che e' un po' meh.
+
+%type pair string -> term -> (term -> term) -> term.
+%of (pair Name Left Right) (sum A B) (pair Name Left' Right') :- 
+%    isa Left A Left',
+%    pi x\ isa x A x => isa (Right x) (B x) (Right' x).
+
 
 % ELIMINATION
-% Update: split ora unifica ma ho dovuto aggiungere conv e T x y anziche T <x, y> come da ML
 type split term -> string -> string -> (term -> term -> term) -> term.
-of (split Pair Name1 Name2 Func) (T_Pair) (split Pair' Name1 Name2 Func') :- 
+of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    conv Pair (pair X Y),
-    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T x y) (Func' x y),
-    T_Pair = T X Y.
+    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T (pair x y)) (Func' x y), 
+    % ^ questo mi genera un goal brutto
+    T_Pair = T Pair.
+% cosi' split unifica ma ho dovuto aggiungere conv e T x y anziche T <x, y> come da ML
+% problema: quando dimostro Pair a volte e' una variabile es. x1 di tipo somma
+%of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
+%    isa Pair (sum A B) Pair',
+%    conv Pair (pair X Y),
+%    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T x y) (Func' x y),
+%    T_Pair = T X Y.
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
-    of Pair (sum A B) Pair'.
+    isa Pair (sum A B) Pair'.
 
+% due versioni, entrambe causano delay e non so quale sia la meno scorretta
+% DELAY con of (snd (pair zero zero)) T X.
 type snd term -> term.
-of (snd Pair) B_Fst (snd Pair') :-
-    of Pair (sum A B) Pair',
-    B_Fst = B (fst Pair).
+%of (snd Pair) B_Fst (snd Pair') :-
+%    isa Pair (sum A B) Pair',
+%    step (fst Pair) Fst,
+%    B_Fst = B Fst.
+
+of (snd Pair) B_fst (fst Pair') :-
+    isa Pair (sum A B) Pair',
+    B_fst = B (fst Pair). % ???
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
@@ -116,11 +153,13 @@ of_type nat.
 type zero term.
 type succ term -> term.
 of zero nat zero.
+of zero (x\ Nat) zero :- of zero Nat zero. % HACK
 of (succ N) nat (succ N') :- of N nat N'.
 
 % ELIMINATION
 type natrec (term -> term) -> term -> term -> string -> string -> (term -> term -> term) -> term.
-of (natrec T N ZeroElement Name1 Name2 RecFun) (T N) (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
+of (natrec N ZeroElement Name1 Name2 RecFun) T_N (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
     of N nat N',
     of ZeroElement (T zero) ZeroElement',
-    pi x y\ (of x nat x, of y (T x) y) => of (RecFun x y) (T (succ x)) (RecFun' x y).
+    pi x y\ (of x nat x, of y (T x) y) => of (RecFun x y) (T (succ x)) (RecFun' x y),
+    T_N = T N.

@@ -19,6 +19,11 @@ pp (pair Left Right) S :-
     pp Left SLeft,
     pp Right SRight,
     S is "<" ^ SLeft ^ ", " ^ SRight ^ ">".
+%pp (pair Name Left Right) S :-
+%    term_to_string Name Name',
+%    pp Left SLeft,
+%    pi x\ pp x Name' => pp (Right x) SRight,
+%    S is "<" ^ SLeft ^ ", (" ^ Name' ^ ")" ^ SRight ^ ">".
 pp (split Pair Name1 Name2 Func) S :-
     pp Pair SPair,
     term_to_string Name1 Name1',

@@ -6,34 +6,34 @@ accumulate itt/pp.
 
 %main :- interactive andElimR [intro f, andER f] S.
 
-identity (prod a (x\ a)).
+identity (@arrow a a). 
 
 % ---------------------- %
 % ---- K combinator ---- %
 % ---------------------- %
 
 % [intro x, intro y, app x]
-comb_K (prod a (x\ prod b (y\ a))).
+comb_K (@arrow a (@arrow b a)).
 
 % ---------------------- %
 % ---- S combinator ---- %
 % ---------------------- %
 
 % [intro g, intro f, intro x, app g, app f, app x, app x]
-comb_S (prod (prod a (x\ prod b (y\ c))) (_\ prod (prod a (x\ b)) (f\ prod a (x\ c)))).
+comb_S (@arrow (@arrow a (@arrow b c)) (@arrow (@arrow a b) (@arrow a c))).
 
 % axioms of conjunction
-% [intro f, intro g, andI f g]
-andIntro (prod a (x\ prod b (y\ sum a (z\ b)))).
+% [intro f, intro g, andI f g] ==> andI f g porta a delay, andI, app f, app g no.
+andIntro (@arrow a (@arrow b (@times a b))).
 
 % [intro p, andEL p]
-andElimL (prod (sum a (x\ b)) (y\ a)).
+andElimL (@arrow (@times a b) a).
 
 % [intro p, andER p]
-andElimR (prod (sum a (x\ b)) (y\ b)).
+andElimR (@arrow (@times a b) b).
 
 % [intro f, intro z, andE x y z, app, app, app f, app x, app y]
-implAnd (@arrow (prod a (x\ prod b (y\ c))) (prod (sum a (x\ b)) (z\ c))).
+implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
 
 test_all L :-
     print "start",
@@ -48,7 +48,7 @@ test_all L :-
     interactive andElimL [intro p, andEL p] S5,
     print "5/7",
     interactive andElimR [intro p, andER p] S6,
-    print "6/7", halt,
+    print "6/7",
     interactive implAnd [intro f, intro z, andE x y z, app, app, app f, app x, app y] S7,
     print "7/7",
     append [S1, S2, S3, S4, S5, S6, S7] [] L.

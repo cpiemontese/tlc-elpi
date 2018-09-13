@@ -1,2 +1,2 @@
 % Accumulator file to gather everything
-accumulate typing, conv, tactics.
+accumulate typing, subst, conv, tactics.

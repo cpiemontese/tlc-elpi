@@ -57,7 +57,7 @@ type app term -> term -> term.
 of (app Lam Arg) B_Arg (app Lam' Arg') :-
     isa Lam (prod A B) Lam',
     isa Arg A Arg',
-    B_Arg = B Arg.
+    subst B Arg B_Arg.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -68,17 +68,18 @@ type sum term -> (term -> term) -> term.
 macro @times A B :- sum A (x\ B).
 
 % TYPE
-of_type (sum A B) :- of_type A, pi x \ of x A x => of_type (B x).
+of_type (sum A B) :- of_type A, pi x \ isa x A x => of_type (B x).
 
 % INTRODUCTION
-% Entrambe queste versioni pero' non causano delay durante
-% l'uso di tattiche
-% Questa versione da p.e. delay anche solo con of (pair zero zero) T X.
+% Entrambe queste versioni non causano delay durante
+% l'uso di tattiche (la prima a meno di invertire conv
+% e of in isa)
 
 type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
     isa Left A Left',
-    isa Right (B Left) Right'. 
+    isa Right B_Left Right',
+    subst B Left B_Left.
 
 % Questa versione differisce da quella di ML perche' in ITT
 % il b della coppia (a, b) non e' un b(x) e quindi ti trovi
@@ -97,37 +98,24 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
 %    isa Left A Left',
 %    pi x\ isa x A x => isa (Right x) (B x) (Right' x).
 
-
 % ELIMINATION
 type split term -> string -> string -> (term -> term -> term) -> term.
 of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T (pair x y)) (Func' x y), 
-    % ^ questo mi genera un goal brutto
-    T_Pair = T Pair.
-% cosi' split unifica ma ho dovuto aggiungere conv e T x y anziche T <x, y> come da ML
-% problema: quando dimostro Pair a volte e' una variabile es. x1 di tipo somma
-%of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
-%    isa Pair (sum A B) Pair',
-%    conv Pair (pair X Y),
-%    pi x y\ (isa x A x, isa y (B x) y) => isa (Func x y) (T x y) (Func' x y),
-%    T_Pair = T X Y.
+    pi x y\ (isa x A x, isa y (B x) y) => (
+        isa (Func x y) TSubst (Func' x y),
+        subst T (pair x y) TSubst
+    ),
+    subst T Pair T_Pair.
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
     isa Pair (sum A B) Pair'.
 
-% due versioni, entrambe causano delay e non so quale sia la meno scorretta
-% DELAY con of (snd (pair zero zero)) T X.
 type snd term -> term.
-%of (snd Pair) B_Fst (snd Pair') :-
-%    isa Pair (sum A B) Pair',
-%    step (fst Pair) Fst,
-%    B_Fst = B Fst.
-
 of (snd Pair) B_fst (fst Pair') :-
     isa Pair (sum A B) Pair',
-    B_fst = B (fst Pair). % ???
+    subst B (fst Pair) B_fst.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
@@ -139,7 +127,7 @@ of_type (id A X Y) :- of_type A, of X A X', of Y A Y'.
 
 % INTRODUCTION
 type refl term -> term -> term.
-of (refl A X) (id A X Y) (refl A X') :- of X A X', of Y A _, conv X Y.
+of (refl A X) (id A X X) (refl A X') :- isa X A X'.
 
 % ------------------ %
 % ---- NATURALS ---- %
@@ -153,13 +141,15 @@ of_type nat.
 type zero term.
 type succ term -> term.
 of zero nat zero.
-of zero (x\ Nat) zero :- of zero Nat zero. % HACK
-of (succ N) nat (succ N') :- of N nat N'.
+of (succ N) nat (succ N') :- isa N nat N'.
 
 % ELIMINATION
-type natrec (term -> term) -> term -> term -> string -> string -> (term -> term -> term) -> term.
+type natrec term -> term -> string -> string -> (term -> term -> term) -> term.
 of (natrec N ZeroElement Name1 Name2 RecFun) T_N (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
-    of N nat N',
-    of ZeroElement (T zero) ZeroElement',
-    pi x y\ (of x nat x, of y (T x) y) => of (RecFun x y) (T (succ x)) (RecFun' x y),
-    T_N = T N.
+    isa N nat N',
+    pi x y\ (isa x nat x, isa y (T x) y) => (
+        isa (RecFun x y) T_Succ (RecFun' x y),
+        subst T (succ x) T_Succ
+    ),
+    isa ZeroElement (T zero) ZeroElement',
+    subst T N T_N.

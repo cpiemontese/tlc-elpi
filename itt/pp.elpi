@@ -19,11 +19,6 @@ pp (pair Left Right) S :-
     pp Left SLeft,
     pp Right SRight,
     S is "<" ^ SLeft ^ ", " ^ SRight ^ ">".
-%pp (pair Name Left Right) S :-
-%    term_to_string Name Name',
-%    pp Left SLeft,
-%    pi x\ pp x Name' => pp (Right x) SRight,
-%    S is "<" ^ SLeft ^ ", (" ^ Name' ^ ")" ^ SRight ^ ">".
 pp (split Pair Name1 Name2 Func) S :-
     pp Pair SPair,
     term_to_string Name1 Name1',
@@ -44,11 +39,13 @@ pp zero "Z".
 pp (succ N) S :-
     pp N SN,
     S is "S " ^ SN.
-pp (natrec N ZeroElement VarName1 VarName2 RecFun) S :-
+pp (natrec N ZeroElement Name1 Name2 RecFun) S :-
     pp N SN,
     pp ZeroElement SZero,
-    pi x y\ (pp x VarName1, pp y VarName2) => pp (RecFun x y) SRecFun,
-    S is "R(" ^ SN ^ ", " ^ SZero ^ ", " ^ "(" ^ VarName1 ^ ", " ^ VarName2 ^ ") " ^ SRecFun ^ ")".
+    term_to_string Name1 Name1',
+    term_to_string Name2 Name2',
+    pi x y\ (pp x Name1', pp y Name2') => pp (RecFun x y) SRecFun,
+    S is "R(" ^ SN ^ ", " ^ SZero ^ ", " ^ "(" ^ Name1' ^ ", " ^ Name2' ^ ") " ^ SRecFun ^ ")".
 pp nat "Nat".
 pp uvar "_".
 pp Term S :- term_to_string Term S. % no special rules, just print the term

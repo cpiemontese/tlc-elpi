@@ -1,0 +1,31 @@
+type copy tm -> tm -> o.
+
+copy A B :- print (copy A B), fail. % remove when not debugging
+% PI
+copy (prod A B) (prod T S) :- copy A T, pi x\ copy (B x) (S x).
+copy (app M N) (app P Q) :- copy M P, copy N Q.
+copy (lam Name T M) (lam Name T N) :- pi x\ copy x x => copy (M x) (N x).
+
+% SIGMA
+copy (pair M N) (pair P Q) :- copy M P, copy N Q.
+copy (sum A B) (sum T S) :- copy A T, pi x\ copy (B x) (S x).
+%copy (pair Name M N) (pair Name P Q) :- copy M P, copy N Q.
+copy (pair M N) (pair P Q) :- copy M P, copy N Q.
+copy (split Pair N1 N2 Func) (split Pair' N1 N2 Func') :-
+    copy Pair Pair',
+    pi x y\ (copy x x, copy y y) => copy (Func x y) (Func' x y).
+copy (fst P) (fst Q) :- copy P Q.
+copy (snd P) (snd Q) :- copy P Q.
+
+% NATS
+copy nat      nat.
+copy zero     zero.
+copy (succ M) (succ N) :- copy M N.
+copy (natrec N ZeroElement N1 N2 RecFun) (natrec M ZeroElement' N1 N2 RecFun') :-
+    copy N M,
+    copy ZeroElement ZeroElement',
+    pi x y\ copy (RecFun x y) (RecFun' x y).
+
+type subst (tm -> tm) -> tm -> tm -> o.
+subst M T S :- print (subst M T S), fail.
+subst M T S :- pi x\ copy x T => copy (M x) S.

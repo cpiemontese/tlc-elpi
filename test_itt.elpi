@@ -8,7 +8,7 @@ interactive TestName OutputTerm :-
 interactive TestName TestInput OutputTerm :-
     TestName Type,
     of X Type X',
-    loop [([],X)] [] TestInput,
+    run_itp X TestInput,
     print_pt X' Type OutputTerm.
 
 print_pt Term Type S :-

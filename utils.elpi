@@ -3,6 +3,11 @@
 %length [] 0.
 %length [_|TL] L :- length TL L', L is L' + 1.
 
+nth_element 1 [X|_] X.
+nth_element N [_|TL] X :- 
+    M is N - 1,
+    nth_element M TL X.
+
 % An element is nth if its the first of the nth sublist
 nth_element 1 [(X, _)|_] X.
 nth_element N [_|TL] X :- 

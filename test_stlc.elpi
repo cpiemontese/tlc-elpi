@@ -1,49 +1,35 @@
 accumulate itp.
 accumulate stlc/theory.
 
-interactive :-
-    of X (arr (arr a b) (arr (arr b c) (arr a c))),
-    loop [([],X)] [] [].
-
-interactive InScript :-
-    of X (arr (arr a b) (arr (arr b c) (arr a c))),
-    loop [([],X)] [] InScript.
-
 % (A -> (B -> C)) -> ((A & B) -> C)
 % and elim test
 % [intro, intro, app, andER 1, app, andEL 1, var 2]
-interactive_pairElim :-
-    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
-    loop [([],X)] [] [].
+interactive_pairElim :- interactive_pairElim [].
 
-intercative_pairElim InScript :-
+interactive_pairElim InScript :-
     of X (arr (arr a (arr b c)) (arr (prod a b) c)),
-    loop [([],X)] [] InScript.
+    run_itp X InScript.
 
 % (A & B -> C) -> (A -> B -> C)
 % and intro test
 % [intro, intro, intro, app 3, andI 2 1]
-interactive_pairIntro :-
-    of X (arr (arr (prod a b) c) (arr a (arr b c))),
-    loop [([],X)] [] [].
+interactive_pairIntro :- interactive_pairIntro [].
 
 interactive_pairIntro InScript :-
     of X (arr (arr (prod a b) c) (arr a (arr b c))),
-    loop [([],X)] [] InScript.
+    run_itp X InScript.
 
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
 % case test
 % [intro, intro, intro, orE 3, app 3 1, app 2 1]
-interactive_case :-
-    of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
-    loop [([],X)] [] [].
+interactive_case :- interactive_case [].
 
 interactive_case InScript :-
     of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
-    loop [([],X)] [] InScript.
+    run_itp X InScript.
 
 % suml test
 interactive_suml :-
     of X (arr a (sum a b)),
-    loop [([],X)] [] [].
+    run_itp X InScript.

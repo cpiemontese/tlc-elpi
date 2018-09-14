@@ -1,13 +1,17 @@
 accumulate utils.
 
+run_itp X InScript :- loop [([],X)] [] InScript.
+
 % ------------------ %
 % ---- ITP LOOP ---- %
 % ------------------ %
 
+% base call
 loop [] OutScript InScript :-
     reverse OutScript OutReversed,
     print "Total script:" OutReversed.
 
+% call with no script
 loop [(Vars,X)|TL] OutScript [] :-
     print_constraints,
     print, print Vars "|-" X,
@@ -17,14 +21,9 @@ loop [(Vars,X)|TL] OutScript [] :-
         append Goals TL TL',
         loop TL' [T|OutScript] []).
 
+% call with script
 loop [(Vars,X)|TL] OutScript [T|InScript] :-
     tactic T TE Vars (Goals \ sigma TL' \
         X = TE,
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
-
-
-get_var_names [] [].
-get_var_names [(X, N)|TL] TL' :- 
-    get_var_names TL VNTL,
-    append [N] VNTL TL'.

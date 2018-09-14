@@ -1,0 +1,48 @@
+accumulate theory, pp.
+
+% TODO: usare term_lib, pero' per ora non mi ricordo
+% tutti i nomi. C'e' modo di elencare tutte le query
+% possibili automaticamente?
+
+% TODO: come si fa a fare match con sottoparti di
+% stringhe prese in input? 
+
+macro @nat_id :- (lam n nat (x\ x)).
+macro @nat_fun Bd :- (lam n nat Bd).
+macro @pred A :- (natrec A zero x y (x\ y\ x)).
+macro @sum A B :- (natrec B A n m (x\ y\ (succ y))).
+macro @mult A B :- (natrec B zero x y (x\ y\ (@sum y A))).
+
+% convert integers to S S S ... 
+to_S 0 zero.
+to_S N S :- M is N - 1, to_S M S', S = (succ S').
+
+nat_identity @nat_id.
+appl (app (@nat_fun (x\ succ x)) (succ (succ zero))).
+nat_pair (pair @nat_id (succ zero)).
+first (fst Pair) :- nat_pair Pair.
+second (snd Pair) :- nat_pair Pair.
+first_split (split Pair x y (x\ y\ x)) :- nat_pair Pair.
+second_split (split Pair x y (x\ y\ y)) :- nat_pair Pair.
+prede (natrec (succ zero) zero x y (x\ y\ x)).
+sum (@sum A B) :- to_S 2 A, to_S 3 B.
+mult (@mult A B) :- to_S 2 A, to_S 3 B.
+
+
+get_query Query :-
+    print "input test name", read TestName,
+    TestName Query.
+
+main :-
+    print "input test type {typing|reduction}", read TestType,
+    get_query Query,
+    TestType Query Result,
+    pp Query QPP,
+    pp Result TPP,
+    S is "query: " ^ QPP ^ " --> result: " ^ TPP,
+    print S,
+    main.
+
+typing Query Result :- of Query Result _.
+
+reduction Query Result :- step Query Result. 

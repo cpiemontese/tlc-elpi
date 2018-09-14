@@ -38,9 +38,23 @@ many_args Vars Lambda (app Lambda' Arg) [(Vars, Arg)|L] :-
 % ---- DISJOINT UNION ---- %
 % ------------------------ %
 
-tactic (andEL) (fst P) Vars K :-
+% INTRO
+tactic andI (pair X Y) Vars K :-
+    K [(Vars, X), (Vars, Y)].
+
+tactic (andI N) (pair H Y) Vars K :-
+    get_named N Vars H,
+    K [(Vars, Y)].
+
+tactic (andI N M) (pair H G) Vars K :-
+    get_named N Vars H,
+    get_named M Vars G,
+    K [].
+
+% ELIM
+tactic andEL (fst P) Vars K :-
     K [(Vars, P)].
-tactic (andER) (snd P) Vars K :-
+tactic andER (snd P) Vars K :-
     K [(Vars, P)].
 
 % and elimination but with hypothesis use
@@ -63,28 +77,6 @@ tactic (andE Name1 Name2 N M) (split H Name1 Name2 G) Vars K :-
     get_named M Vars G,
     K [].
 
-% tattiche se (a, b)
-tactic andI (pair X Y) Vars K :-
-    K [(Vars, X), (Vars, Y)].
-
-tactic (andI N) (pair H Y) Vars K :-
-    get_named N Vars H,
-    K [(Vars, Y)].
-
-tactic (andI N M) (pair H G) Vars K :-
-    get_named N Vars H,
-    get_named M Vars G,
-    K [].
-
-% tattiche se (a, b(x))
-%tactic (andI Name) (pair Name X Y) Vars K :-
-%    pi x\ K [(Vars, X), ([(x, Name)|Vars], (Y x))].
-
-%tactic (andI Name N) (pair Name H Y) Vars K :-
-%    get_named N Vars H,
-%    pi x\ K [([(x, Name)|Vars], (Y x))].
-
-
 % -------------------- %
 % ---- HYPOTHESIS ---- %
 % -------------------- %
@@ -92,7 +84,6 @@ tactic (andI N M) (pair H G) Vars K :-
 tactic (var N) H Vars K :-
     get_named N Vars H,
     K [].
-
 
 % Error
 %tactic Name H Vars K :- 

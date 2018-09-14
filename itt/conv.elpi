@@ -4,7 +4,7 @@
 
 % one step conversion
 mode (step i o).
-%step X Y :- print (step X Y), fail.
+step X Y :- print (step X Y), fail.
 
 % multiple step conversion
 mode (steps i o).
@@ -45,7 +45,10 @@ conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd'
 conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
 
 % BETA
-step (app Lam Arg) Res :- steps Lam (lam _Name _A Bd), Res = Bd Arg.
+step (app Lam Arg) Res :-
+    steps Lam (lam _Name _A Bd),
+    steps (Bd Arg) R.
+% NOTE: cosi' ^ forzo la "normalizzazione", non sono sicuro sia corretto
 
 % ETA EQUALITY
 conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
@@ -59,7 +62,7 @@ conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 conv (pair Left Right) (pair Left' Right') :-
     conv Left Left',
-    pi x\ of x A x => conv (Right x) (Right' x).
+    conv Right Right'.
 
 conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
     conv Pair Pair',
@@ -84,8 +87,8 @@ conv (pair (fst P) (snd P)) P.
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
-%conv X Y :- of Magic (id A X Y) _. % If I leave this typing doesn't work.
-conv Magic (refl A X) :- of Magic (id A X Y) _.
+%conv X Y :- of Magic (id A X Y) _.
+%conv Magic (refl A X) :- isa Magic (id A X Y) _.
 
 % ------------------ %
 % ---- NATURALS ---- %
@@ -94,13 +97,14 @@ conv Magic (refl A X) :- of Magic (id A X Y) _.
 conv zero zero.
 conv (succ N) (succ M) :- conv N M.
 
-conv (natrec _T N1 ZeroElement1 _ _ RecFun1) (natrec _T N2 ZeroElement2 _ _ RecFun2) :-
+conv (natrec N1 ZeroElement1 _ _ RecFun1) (natrec _T N2 ZeroElement2 _ _ RecFun2) :-
     conv N1 N2,
     conv ZeroElement1 ZeroElement2,
     pi x y\ (isa x nat x, isa y (T x) y) => conv (RecFun1 x y) (RecFun2 x y).
 
 % BETA
-step (natrec _ N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
-step (natrec _ M ZeroElement _ _ RecFun) R :-
+step (natrec N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
+step (natrec M ZeroElement _ _ RecFun) R :-
     steps M (succ N),
-    R = (RecFun N (natrec N ZeroElement _ _ RecFun)).
+    steps (natrec N ZeroElement _ _ RecFun) R',
+    steps (RecFun N R') R.

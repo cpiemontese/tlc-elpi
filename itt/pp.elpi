@@ -38,7 +38,7 @@ pp (sum Tl Tr) S :-
 pp zero "Z".
 pp (succ N) S :-
     pp N SN,
-    S is "S " ^ SN.
+    S is "S" ^ SN.
 pp (natrec N ZeroElement Name1 Name2 RecFun) S :-
     pp N SN,
     pp ZeroElement SZero,

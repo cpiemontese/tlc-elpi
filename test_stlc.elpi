@@ -1,6 +1,5 @@
-accumulate stlc/lang.
-accumulate stlc/tactics.
 accumulate itp.
+accumulate stlc/theory.
 
 interactive :-
     of X (arr (arr a b) (arr (arr b c) (arr a c))),

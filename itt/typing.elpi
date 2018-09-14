@@ -102,11 +102,11 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
 type split term -> string -> string -> (term -> term -> term) -> term.
 of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (isa x A x, isa y (B x) y) => (
-        isa (Func x y) TSubst (Func' x y),
-        subst T (pair x y) TSubst
-    ),
     subst T Pair T_Pair.
+    pi x y\ (isa x A x, isa y (B x) y) => ( % problema: per il theorem proving sta parte 
+        isa (Func x y) TSubst (Func' x y),  % e' inutile perche' T_Pair so cos'e' e quindi
+        subst T (pair x y) TSubst           % trovo t usando subst e fine... boh
+    ).
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-

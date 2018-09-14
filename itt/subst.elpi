@@ -16,6 +16,7 @@ copy (split Pair N1 N2 Func) (split Pair' N1 N2 Func') :-
     pi x y\ (copy x x, copy y y) => copy (Func x y) (Func' x y).
 copy (fst P) (fst Q) :- copy P Q.
 copy (snd P) (snd Q) :- copy P Q.
+copy A A. % if all else fails, A copies to itself
 
 % NATS
 copy nat      nat.

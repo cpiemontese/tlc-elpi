@@ -1,6 +1,6 @@
 # tlc-elpi
 Implementation of some type theories in ELPI, an [embeddable λProlog interpreter](https://hal.inria.fr/hal-01176856/).
-These theories can be used to prove some (basic) theorems using the interactive theorem prover found in `itp.elpi`. Given a type it gradually builds a typed lambda-term through the use of tactics given as input by the user.
+These theories can be used to prove some (basic) theorems using the interactive theorem prover found in `itp.elpi`. Given a type it gradually builds a typed λ-term through the use of tactics given as input by the user.
 
 `stlc` contains term definitions, typing, conversion and tactics for the simply typed λ-calculus.
 
@@ -14,7 +14,7 @@ Who could have guessed it! Go [here](https://github.com/LPCIC/elpi#how-to-instal
 2. using `accumulate` add `stlc/theory` or `itt/theory` to accumulate the whole "theory",
 3. accumulate the `itp` and start the itp loop by
     1. writing something like `of X TypeDecl` where `TypeDecl` is what you want to prove and
-    2. running the actual loop using: `loop [([],X)] [] InScript` where `InScript` is a list of tactics that can be given as input.
+    2. running the actual loop using: `run_itp X InScript` where `InScript` is a list of tactics that can be given as input.
 
 As an example of how one such file could look see `test_itt.elpi`.
 

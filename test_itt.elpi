@@ -2,7 +2,20 @@ accumulate itp.
 accumulate itt/theory.
 accumulate itt/pp.
 
-identity (@arrow A A). 
+interactive TestName OutputTerm :-
+    interactive TestName [] OutputTerm.
+
+interactive TestName TestInput OutputTerm :-
+    TestName Type,
+    of X Type X',
+    loop [([],X)] [] TestInput,
+    print_pt X' Type OutputTerm.
+
+print_pt Term Type S :-
+    pp Term TermPP, pp Type TypePP, !,
+    S is TermPP ^ " :: " ^ TypePP.
+
+identity (@arrow a a). 
 
 % ---------------------- %
 % ---- K combinator ---- %

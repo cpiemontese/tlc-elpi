@@ -1,0 +1,24 @@
+accumulate theory, pp.
+
+main :-
+    print "Input test name", read TestName,
+    TestName Query,
+    of Query T _,
+    pp Query QPP,
+    pp T TPP,
+    S is QPP ^ " :: " ^ TPP,
+    print S,
+    main.
+
+macro @nat_id :- (lam n nat (x\ x)).
+macro @nat_fun Bd :- (lam n nat Bd).
+
+nat_identity @nat_id.
+appl (app (@nat_fun (x\ succ x)) (succ (succ zero))).
+nat_pair (pair @nat_id (succ zero)).
+first (fst Pair) :- nat_pair Pair.
+second (snd Pair) :- nat_pair Pair.
+first_split (split Pair x y (x\ y\ x)) :- nat_pair Pair.
+second_split (split Pair x y (x\ y\ y)) :- nat_pair Pair.
+prede (natrec (succ zero) zero x y (x\ y\ x)).
+sum (natrec (succ zero) zero x y (x\ y\ (succ y))).

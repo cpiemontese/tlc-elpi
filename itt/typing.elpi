@@ -33,7 +33,7 @@ isa Te Ty OTe :-
     conv Ty Ty',
     of Te Ty' OTe.
 
-%of_type T :- print (of_type T), fail.
+of_type T :- print (of_type T), fail.
 
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
@@ -106,8 +106,7 @@ of_type (id A X Y) :- of_type A, isa X A _, isa Y A _.
 % INTRODUCTION
 type refl term -> term -> term.
 of (refl A X) (id A X X) (refl A X') :- isa X A X'.
-%of (refl A X) (id A X Y) (refl A X') :- isa X A X', isa Y A _, conv X Y. % ???
-%conv X Y :- isa X A X', isa (refl A X) (id A X Y) (refl A X'). % ???
+of (refl A X) (id A X Y) (refl A X') :- isa X A X', isa Y A _, conv X Y. % ???
 
 % ------------------ %
 % ---- NATURALS ---- %

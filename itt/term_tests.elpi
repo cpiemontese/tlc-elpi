@@ -5,7 +5,7 @@ accumulate theory, pp.
 % possibili automaticamente?
 
 % TODO: come si fa a fare match con sottoparti di
-% stringhe prese in input? 
+% stringhe prese in input?
 
 macro @nat_id :- (lam n nat (x\ x)).
 macro @nat_fun Bd :- (lam n nat Bd).
@@ -13,7 +13,7 @@ macro @pred A :- (natrec A zero x y (x\ y\ x)).
 macro @sum A B :- (natrec B A n m (x\ y\ (succ y))).
 macro @mult A B :- (natrec B zero x y (x\ y\ (@sum y A))).
 
-% convert integers to S S S ... 
+% convert integers to S S S ...
 to_S 0 zero.
 to_S N S :- M is N - 1, to_S M S', S = (succ S').
 
@@ -28,10 +28,23 @@ prede (natrec (succ zero) zero x y (x\ y\ x)).
 sum (@sum A B) :- to_S 2 A, to_S 3 B.
 mult (@mult A B) :- to_S 2 A, to_S 3 B.
 
+% conv queries
+pairs (pair (app @nat_id zero) (succ zero)) (pair zero (app (@nat_fun (x\ succ x)) zero)).
+first (fst (app (lam p (sum nat (x\ nat)) (p\ p)) (pair zero zero)))
+      (fst (pair zero (@pred N))) :- to_S 1 N.
+second (snd (app (lam p (sum nat (x\ nat)) (p\ p)) (pair zero zero)))
+       (snd (pair zero (@pred N))) :- to_S 1 N.
+splitter (split (app (lam p (sum nat (x\ nat)) (p\ p)) (pair zero zero)) x y (x\ y\ x))
+         (split (pair zero (@pred N)) x y (x\ y\ x)) :- to_S 1 N.
+sum (@sum A B) (@sum B A) :- to_S 2 A, to_S 3 B.
+mult (@mult A B) (@mult B A) :- to_S 2 A, to_S 3 B.
 
 get_query Query :-
     print "input test name", read TestName,
     TestName Query.
+get_query Query1 Query2 :-
+    print "input test name", read TestName,
+    TestName Query1 Query2.
 
 main :-
     print "input test type {typing|reduction}", read TestType,
@@ -43,6 +56,14 @@ main :-
     print S,
     main.
 
+mainc :-
+    get_query Query1 Query2,
+    conv Query1 Query2,
+    print "conv success",
+    mainc.
+
 typing Query Result :- of Query Result _.
 
-reduction Query Result :- step Query Result. 
+reduction Query Result :- step Query Result.
+
+conversion Query1 Query2 :- conv Query1 Query2.

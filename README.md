@@ -1,5 +1,5 @@
 # tlc-elpi
-Implementation of some type theories in ELPI, an [embeddable λProlog interpreter](https://hal.inria.fr/hal-01176856/).
+Implementation of some type theories in ELPI, an [embeddable λProlog interpreter](https://hal.inria.fr/hal-01176856/), as part of a curricular internship with professor [Claudio Sacerdoti Coen](https://github.com/sacerdot).
 These theories can be used to prove some (basic) theorems using the interactive theorem prover found in `itp.elpi`. Given a type it gradually builds a typed λ-term through the use of tactics given as input by the user.
 
 `stlc` contains term definitions, typing, conversion and tactics for the simply typed λ-calculus.

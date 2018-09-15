@@ -2,12 +2,14 @@
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
-% return a lambda abstraction, prove (F x)
-tactic (intro Name) (lam Name T1 Body) Vars K :-
+tactic (intro [Name]) Lam Vars K :- tactic (intro Name) Lam Vars K.
+
+tactic (intro [Name|TL]) (lam Name T Body) Vars K :-
+    pi x\ tactic (intro TL) (Body x) [(x, Name)|Vars] K. 
+
+tactic (intro Name) (lam Name T Body) Vars K :-
     pi x \ K [([(x, Name)|Vars], (Body x))].
 
-
-% ---- APP TACTICS ----
 tactic app (app Lambda Arg) Vars K :-
     K [(Vars, Lambda), (Vars, Arg)].
 
@@ -76,6 +78,13 @@ tactic (andE Name1 Name2 N M) (split H Name1 Name2 G) Vars K :-
     get_named N Vars H,
     get_named M Vars G,
     K [].
+
+% ------------------ %
+% ---- PROP. ID ---- %
+% ------------------ %
+
+tactic idIntro (refl A X) Vars K :-
+    K [(Vars, X)].
 
 % -------------------- %
 % ---- HYPOTHESIS ---- %

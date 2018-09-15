@@ -1,5 +1,8 @@
 % Pretty printing module, basic code borrowed from: https://github.com/LPCIC/elpi/blob/master/ELPI.md
 
+% problema: per ogni tipo dipendente dovrei avere i nomi
+% delle variabili altrimenti non stampa niente di decente
+
 mode (pp i o).
 
 pp (lam Name T1 Body) S :-

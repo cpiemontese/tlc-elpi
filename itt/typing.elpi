@@ -1,4 +1,4 @@
-kind term type. % everything is a term
+kind term type.
 
 % ------------------------ %
 % ---- TYPE INFERENCE ---- %
@@ -29,8 +29,6 @@ isa (app Lam dots) T O :- !,
     isa (app (app Lam Arg) dots) T O.
 
 
-% invertire conv e of toglie un delay quando si usa itp
-% ma aggiunge un delay quando si chiede un of normale es. of (pair zero zero) T X.
 isa Te Ty OTe :-
     conv Ty Ty',
     of Te Ty' OTe.
@@ -71,32 +69,12 @@ macro @times A B :- sum A (x\ B).
 of_type (sum A B) :- of_type A, pi x \ isa x A x => of_type (B x).
 
 % INTRODUCTION
-% Entrambe queste versioni non causano delay durante
-% l'uso di tattiche (la prima a meno di invertire conv
-% e of in isa)
 
 type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
     isa Left A Left',
     isa Right B_Left Right',
     subst B Left B_Left.
-
-% Questa versione differisce da quella di ML perche' in ITT
-% il b della coppia (a, b) non e' un b(x) e quindi ti trovi
-% a dire che b \in B(a) ma b non usa a, pero' se ho un
-% tipo dipendente non dovrei poter usare il termine da cui
-% dipende anche nel corpo del termine stesso? Se si allora
-% ho la versione sotto e a questo punto b(a) \in B(a) se
-% pi x\ b(x) \in B(x). Pero' boh a sto punto diventa 
-% quasi come lambda ma dove ti do l'input associato, che
-% senso ha...?
-% Questa versione non porta a delay ma p.e. una coppia di nat
-% diventa pair zero (x\ zero) che e' un po' meh.
-
-%type pair string -> term -> (term -> term) -> term.
-%of (pair Name Left Right) (sum A B) (pair Name Left' Right') :- 
-%    isa Left A Left',
-%    pi x\ isa x A x => isa (Right x) (B x) (Right' x).
 
 % ELIMINATION
 type split term -> string -> string -> (term -> term -> term) -> term.
@@ -105,7 +83,7 @@ of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :-
     subst T Pair T_Pair,
     pi x y\ (isa x A x, isa y (B x) y) => ( % problema: per il theorem proving sta parte 
         isa (Func x y) TSubst (Func' x y),  % e' inutile perche' T_Pair so cos'e' e quindi
-        subst T (pair x y) TSubst           % trovo t usando subst e fine... boh
+        subst T (pair x y) TSubst           % trovo t usando subst e fine
     ).
 
 type fst term -> term.
@@ -123,11 +101,13 @@ of (snd Pair) B_fst (fst Pair') :-
 
 % FORMATION
 type id term -> term -> term -> term.
-of_type (id A X Y) :- of_type A, of X A X', of Y A Y'.
+of_type (id A X Y) :- of_type A, isa X A _, isa Y A _.
 
 % INTRODUCTION
 type refl term -> term -> term.
 of (refl A X) (id A X X) (refl A X') :- isa X A X'.
+%of (refl A X) (id A X Y) (refl A X') :- isa X A X', isa Y A _, conv X Y. % ???
+%conv X Y :- isa X A X', isa (refl A X) (id A X Y) (refl A X'). % ???
 
 % ------------------ %
 % ---- NATURALS ---- %

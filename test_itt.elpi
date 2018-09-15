@@ -48,6 +48,9 @@ implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
 % [intro z, andI, intro x, andEL, app z, app x, intro x, andER, app z, app x]
 choice (@arrow (prod a (x\ sum b (y\ c))) (sum (prod a (x\ b)) (f\ prod a (x\ c)))).
 
+% [intro x, idIntro, app x]
+intro_id_axiom (prod a (x\ id a x x)).
+
 test_all L :-
     print "start",
     interactive identity [intro x, app x] S1,

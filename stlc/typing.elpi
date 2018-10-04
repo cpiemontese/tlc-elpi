@@ -6,13 +6,13 @@
 %   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
 %       | p t1 ... tn | X t1 .. tn
 
-accumulate lang.
-
 % ---- Typing rules for terms defined in terms ----
 
 type of term -> typ -> o.
 mode (of i o).
 of (uvar as X) T :- declare_constraint (of X T) [X].
+
+% arrow
 of (app Lam N) S :- of Lam (arr T S), of N T.
 of (lam T Body) (arr T S) :- pi x \ of x T => of (Body x) S.
 

@@ -30,9 +30,16 @@ of (inl T2 InL) (sum T1 T2) (inl T2 InL') :- isa InL T1 InL'.
 of (inr T1 InR) (sum T1 T2) (inr T1 InR') :- isa InR T2 InR'.
 of (case M F G) T (case M' F' G') :-
     isa M (sum T1 T2) M',
-    (pi u \ isa u T1 => isa (F u) T (F' u)), 
-    (pi v \ isa v T2 => isa (G v) T (G' v)). 
+    (pi u \ isa u T1 u => isa (F u) T (F' u)), 
+    (pi v \ isa v T2 v => isa (G v) T (G' v)). 
 
 % top e bottom
 of singleton unit.
 of (abort T X) T (abort T X') :- isa X void X'.
+
+% elaborator terms
+isa (app Lam dots Args) T O :- isa Lam T O, Args = [].
+isa (app Lam dots Args) T O :- !,
+    isa Lam (arr _ _) _,
+    isa (app (app Lam Arg) dots Args') T O,
+    Args = [Arg|Args'].

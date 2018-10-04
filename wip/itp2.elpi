@@ -1,0 +1,47 @@
+accumulate utils.
+accumulate stlc/theory.
+
+run_itp X InScript :- loop [([],X)] [] InScript.
+
+% ------------------ %
+% ---- ITP LOOP ---- %
+% ------------------ %
+
+% base call
+loop [] OutScript _ :-
+    reverse OutScript OutReversed,
+    print "Total script:" OutReversed.
+
+% call with no script
+loop [(Vars, X)|TL] OutScript [] :-
+    print_constraints,
+    print, print Vars "|-" X,
+    read T,
+    tactic T (Vars, X) (Goals \ sigma TL' \
+        append Goals TL TL',
+        loop TL' [T|OutScript] []).
+
+% call with script
+loop [(Vars, X)|TL] OutScript [T|InScript] :-
+    tactic T (Vars, X) (Goals \ sigma TL' \
+        append Goals TL TL',
+        loop TL' [T|OutScript] InScript).
+
+tactic (intro2 Name) (Vars, X) K :-
+    X = lam T F,
+    pi x \ K [([(x, Name)|Vars], (F x))].
+
+fix_meta_list _ [] Acc RAcc :- reverse Acc RAcc.
+fix_meta_list Vars [X|XS] Acc Result :- fix_meta_list Vars XS [(Vars, X)|Acc] Result.
+
+tactic (mapp2 Name) (Vars, X) K :-
+    get_named Name Vars Lam,
+    X = app Lam dots Args,
+    fix_meta_list Vars Args [] ArgsFixed,
+    print "----" ArgsFixed,
+    K ArgsFixed.
+
+interactive_moo :- interactive_moo [].
+interactive_moo InScript :-
+    of X (arr (arr a b) (arr (arr b c) (arr a c))) X',
+    run_itp X InScript.

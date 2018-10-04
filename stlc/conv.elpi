@@ -3,7 +3,7 @@
 % -------------------- %
 
 mode (step i o).
-step X Y :- print (step X Y), fail.
+%step X Y :- print (step X Y), fail.
 
 % App
 step (app M N) R :- steps M (lam T F), R = F N.
@@ -28,24 +28,17 @@ step (case Sum U V) (V S) :- steps Sum (inr _T1 S).
 %eta_step (of M unit) singleton.
 %eta_step (of M void) (abort void M).
 
-
 mode (steps i o).
-steps X Y :- print (steps X Y), fail.
+%steps X Y :- print (steps X Y), fail.
 steps M N :- step M M', !, steps M' N.
 steps M M.
-
-mode (steps_debug i o).
-steps_debug X Y :- print (steps_debug X Y), fail.
-steps_debug M N :- step M M', !, print "Input something to go on", read Something, steps_debug M' N.
-steps_debug M M.
-
 
 % ---------------- %
 % ---- NUCLEO ---- %
 % ---------------- %
 
 mode (conv i i).
-conv X Y :- print (conv X Y), fail.
+%conv X Y :- print (conv X Y), fail.
 
 % ------------------------- %
 % ---- TYPE CONVERSION ---- %

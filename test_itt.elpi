@@ -23,18 +23,18 @@ identity (@arrow a a).
 % ---- K combinator ---- %
 % ---------------------- %
 
-% [intro [x, y], app x]
+% [intro x, intro y, app x]
 comb_K (@arrow a (@arrow b a)).
 
 % ---------------------- %
 % ---- S combinator ---- %
 % ---------------------- %
 
-% [intro [g, f, x], app g, app f, app x, app x]
+% [intro g, intro f, intro x, app g, app f, app x, app x]
 comb_S (@arrow (@arrow a (@arrow b c)) (@arrow (@arrow a b) (@arrow a c))).
 
 % axioms of conjunction
-% [intro [f, g], andI f g] ==> andI f g porta a delay, andI, app f, app g no.
+% [intro f, intro g, andI f g]
 andIntro (@arrow a (@arrow b (@times a b))).
 
 % [intro p, andEL p]
@@ -43,7 +43,7 @@ andElimL (@arrow (@times a b) a).
 % [intro p, andER p]
 andElimR (@arrow (@times a b) b).
 
-% [intro [f, z], andE x y z, app, app, app f, app x, app y]
+% [intro f, intro z, andE x y z, app, app, app f, app x, app y]
 implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
 
 

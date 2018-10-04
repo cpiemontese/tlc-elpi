@@ -2,11 +2,6 @@
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
-tactic (intro [Name]) Lam Vars K :- tactic (intro Name) Lam Vars K.
-
-tactic (intro [Name|TL]) (lam Name T Body) Vars K :-
-    pi x\ tactic (intro TL) (Body x) [(x, Name)|Vars] K. 
-
 tactic (intro Name) (lam Name T Body) Vars K :-
     pi x \ K [([(x, Name)|Vars], (Body x))].
 
@@ -19,7 +14,6 @@ tactic app (app Lambda Arg) Vars K :-
 
 tactic (mapp N) (app Lambda dots) Vars K :-
     get_named N Vars Lambda,
-    print K, print Vars,
     K []. % wrong: recuperare le meta
 
 tactic (app N) T Vars K :-

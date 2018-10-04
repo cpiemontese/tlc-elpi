@@ -22,7 +22,7 @@ interactive_pairIntro InScript :-
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
 % case test
-% [intro x, intro y, intro z, orE z, app z x, app y x]
+% [intro x, intro y, intro z, orE x u v, app y u, app z v]
 interactive_case :- interactive_case [].
 
 interactive_case InScript :-

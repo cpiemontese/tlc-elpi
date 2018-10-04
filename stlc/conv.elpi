@@ -44,17 +44,24 @@ steps_debug M M.
 % ---- NUCLEO ---- %
 % ---------------- %
 
-% rules for term equivalence
-
-%mode (conv i i).
-%conv M N :- steps M M', steps N N', M' = N'.
-
 mode (conv i i).
 conv X Y :- print (conv X Y), fail.
 
-conv (succ M) (succ M') :- conv M M'.
-conv (prec M) (prec M') :- conv M M'.
-conv (plus M N) (plus X Y) :- steps (plus M N) S1, steps (plus X Y) S2, conv S1 S2.
+% ------------------------- %
+% ---- TYPE CONVERSION ---- %
+% ------------------------- %
+
+% praticamente inutile pero' isa chiama comunque conv sui tipi e boh...
+% probabilmente da rimuovere
+conv (arr A B) (arr C D) :- conv A C, conv B D.
+conv (prod A B) (prod C D) :- conv A C, conv B D.
+conv (sum A B) (sum C D) :- conv A C, conv B D.
+conv (void A) (void B) :- conv A B.
+conv unit unit.
+
+% ------------------------- %
+% ---- TERM CONVERSION ---- %
+% ------------------------- %
 
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
 conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
@@ -75,3 +82,4 @@ conv (case M1 F1 G1) (case M2 F2 G2) :-
 conv M N :- M = N. % i i => non vuole istanziare
 conv M N :- step M M', !, conv M' N.
 conv M N :- step N N', !, conv M N'.
+conv M M.

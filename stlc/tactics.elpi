@@ -1,6 +1,6 @@
 % return a lambda abstraction, prove (F x)
-tactic intro (lam Z F) Vars K :-
-    pi x \ K [([x|Vars], (F x))].
+tactic (intro Name) (lam Z F) Vars K :-
+    pi x \ K [([(x, Name)|Vars], (F x))].
 
 % --------------------- %
 % ---- APP TACTICS ---- %
@@ -12,13 +12,13 @@ tactic app (app H G) Vars K :-
 
 % app when I have a function as an hypothesis
 tactic (app N) (app H G) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [(Vars, G)].
 
 % app when I know everything
 tactic (app N M) (app H G) Vars K :-
-    nth_element N Vars H,
-    nth_element M Vars G,
+    get_named N Vars H,
+    get_named M Vars G,
     K [].
 
 
@@ -33,10 +33,10 @@ tactic andER (snd X) Vars K :-
 
 % and elimination but with hypothesis use
 tactic (andEL N) (fst H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 tactic (andER N) (snd H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 
 tactic andI (pair A B) Vars K :-
@@ -44,8 +44,8 @@ tactic andI (pair A B) Vars K :-
 
 % and intro with hyp use
 tactic (andI N M) (pair H I) Vars K :-
-    nth_element N Vars H,
-    nth_element M Vars I,
+    get_named N Vars H,
+    get_named M Vars I,
     K [].
 
 
@@ -53,28 +53,28 @@ tactic (andI N M) (pair H I) Vars K :-
 % ---- OR TACTICS ---- %
 % -------------------- %
 
-tactic orIL (inl X) Vars K :-
+tactic orIL (inl T2 X) Vars K :-
     K [(Vars, X)].
-tactic orIR (inr X) Vars K :-
+tactic orIR (inr T1 X) Vars K :-
     K [(Vars, X)].
 
 % or where element is hyp
 tactic (orIL N) (inl T2 H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 tactic (orIR N) (inr T1 H) Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 
-tactic orE (case M F G) Vars K :-
+tactic (orE Name1 Name2) (case M F G) Vars K :-
     pi u v \
-        K [(Vars, M), ([u|Vars], (F u)), ([v|Vars], (G v))].
+        K [(Vars, M), ([(u, Name1)|Vars], (F u)), ([(v, Name2)|Vars], (G v))].
 
 % or where sum is hyp
-tactic (orE N) (case H F G) Vars K :-
-    nth_element N Vars H,
+tactic (orE N Name1 Name2) (case H F G) Vars K :-
+    get_named N Vars H,
     pi u v \
-        K [([u|Vars], (F u)), ([v|Vars], (G v))].    
+        K [([(u, Name1)|Vars], (F u)), ([(v, Name2)|Vars], (G v))].    
 
 
 % ------------------------- %
@@ -92,7 +92,7 @@ tactic topI singleton _ K :-
 % -------------------- %
 
 tactic (var N) H Vars K :-
-    nth_element N Vars H,
+    get_named N Vars H,
     K [].
 
 

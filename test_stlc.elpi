@@ -3,7 +3,7 @@ accumulate stlc/theory.
 
 % (A -> (B -> C)) -> ((A & B) -> C)
 % and elim test
-% [intro, intro, app, andER 1, app, andEL 1, var 2]
+% [intro x, intro y, app, andER y, app x, andEL y]
 interactive_pairElim :- interactive_pairElim [].
 
 interactive_pairElim InScript :-
@@ -12,7 +12,7 @@ interactive_pairElim InScript :-
 
 % (A & B -> C) -> (A -> B -> C)
 % and intro test
-% [intro, intro, intro, app 3, andI 2 1]
+% [intro x, intro y, intro z, app z, andI y x]
 interactive_pairIntro :- interactive_pairIntro [].
 
 interactive_pairIntro InScript :-
@@ -22,7 +22,7 @@ interactive_pairIntro InScript :-
 
 % (A v B) -> (A -> C) -> (B -> C) -> C
 % case test
-% [intro, intro, intro, orE 3, app 3 1, app 2 1]
+% [intro x, intro y, intro z, orE z, app z x, app y x]
 interactive_case :- interactive_case [].
 
 interactive_case InScript :-

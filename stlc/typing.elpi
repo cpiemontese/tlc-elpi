@@ -6,29 +6,33 @@
 %   Q ::= P => Q | Q :- P | Q,Q | Q;Q | true | false | pi x \ Q | exists X \ Q
 %       | p t1 ... tn | X t1 .. tn
 
-% ---- Typing rules for terms defined in terms ----
+%type of term -> typ -> o.
+%mode (of i o o).
+%of (uvar as X) T :- declare_constraint (of X T) [X].
 
-type of term -> typ -> o.
-mode (of i o).
-of (uvar as X) T :- declare_constraint (of X T) [X].
+% NOTE: of and isa basic behaviour is described in commons/typing.elpi
+
+% ------------------------ %
+% ---- TYPE INFERENCE ---- %
+% ------------------------ %
 
 % arrow
-of (app Lam N) S :- of Lam (arr T S), of N T.
-of (lam T Body) (arr T S) :- pi x \ of x T => of (Body x) S.
+of (app Lam N) S (app Lam' N') :- isa Lam (arr T S) Lam', isa N T N'.
+of (lam T F) (arr T S) (lam T F') :- pi x \ isa x T x => isa (F x) S (F' x).
 
 % product
-of (pair Fst Snd) (prod T1 T2) :- of Fst T1, of Snd T2.
-of (fst Pair) T :- of Pair (prod T S). 
-of (snd Pair) S :- of Pair (prod T S). 
+of (pair Fst Snd) (prod T1 T2) (pair Fst' Snd') :- isa Fst T1 Fst', isa Snd T2 Snd'.
+of (fst Pair) T (fst Pair') :- isa Pair (prod T S) Pair'. 
+of (snd Pair) S (snd Pair') :- isa Pair (prod T S) Pair'. 
 
 % sum
-of (inl T2 InL) (sum T1 T2) :- of InL T1.
-of (inr T1 InR) (sum T1 T2) :- of InR T2.
-of (case M F G) T :-
-    of M (sum T1 T2),
-    (pi u \ of u T1 => of (F u) T), 
-    (pi v \ of v T2 => of (G v) T). 
+of (inl T2 InL) (sum T1 T2) (inl T2 InL') :- isa InL T1 InL'.
+of (inr T1 InR) (sum T1 T2) (inr T1 InR') :- isa InR T2 InR'.
+of (case M F G) T (case M' F' G') :-
+    isa M (sum T1 T2) M',
+    (pi u \ isa u T1 => isa (F u) T (F' u)), 
+    (pi v \ isa v T2 => isa (G v) T (G' v)). 
 
-% T e bot
+% top e bottom
 of singleton unit.
-of (abort T X) T :- of X void.
+of (abort T X) T (abort T X') :- isa X void X'.

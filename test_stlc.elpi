@@ -7,7 +7,7 @@ accumulate stlc/theory.
 interactive_pairElim :- interactive_pairElim [].
 
 interactive_pairElim InScript :-
-    of X (arr (arr a (arr b c)) (arr (prod a b) c)),
+    of X (arr (arr a (arr b c)) (arr (prod a b) c)) X',
     run_itp X InScript.
 
 % (A & B -> C) -> (A -> B -> C)
@@ -16,7 +16,7 @@ interactive_pairElim InScript :-
 interactive_pairIntro :- interactive_pairIntro [].
 
 interactive_pairIntro InScript :-
-    of X (arr (arr (prod a b) c) (arr a (arr b c))),
+    of X (arr (arr (prod a b) c) (arr a (arr b c))) X',
     run_itp X InScript.
 
 
@@ -26,10 +26,10 @@ interactive_pairIntro InScript :-
 interactive_case :- interactive_case [].
 
 interactive_case InScript :-
-    of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))),
+    of X (arr (sum a b) (arr (arr a c) (arr (arr b c) c))) X',
     run_itp X InScript.
 
 % suml test
 interactive_suml :-
-    of X (arr a (sum a b)),
+    of X (arr a (sum a b)) X',
     run_itp X InScript.

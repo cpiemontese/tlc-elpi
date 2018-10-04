@@ -1,0 +1,26 @@
+% ------------------------ %
+% ---- TYPE INFERENCE ---- %
+% ------------------------ %
+
+type of term -> term -> term -> o.
+mode (of i o o).
+of X T Y :- print (of X T Y), fail.
+of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+
+% ----------------------- %
+% ---- TYPE CHECKING ---- %
+% ----------------------- %
+
+type isa term -> term -> term -> o.
+mode (isa i o o).
+isa X T Y :- print (isa X T Y), fail.
+isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+
+isa Te Ty OTe :-
+    conv Ty Ty',
+    of Te Ty' OTe.
+
+%constraint of {
+%  rule (E : Ctx ?- of (uvar K L as X) Ty RX)
+%    <=> (E : Ctx ?- print K L Ty RX).
+%}

@@ -27,21 +27,35 @@ loop [(Vars, X)|TL] OutScript [T|InScript] :-
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
 
-tactic (intro2 Name) (Vars, X) K :-
+tactic (intro Name) (Vars, X) K :-
     X = lam T F,
     pi x \ K [([(x, Name)|Vars], (F x))].
 
 fix_meta_list _ [] Acc RAcc :- reverse Acc RAcc.
 fix_meta_list Vars [X|XS] Acc Result :- fix_meta_list Vars XS [(Vars, X)|Acc] Result.
 
-tactic (mapp2 Name) (Vars, X) K :-
-    get_named Name Vars Lam,
-    X = app Lam dots Args,
-    fix_meta_list Vars Args [] ArgsFixed,
-    print "----" ArgsFixed,
-    K ArgsFixed.
+gibe_metas X :- declare_constraint (gibe_metas X) [X].
 
-interactive_moo :- interactive_moo [].
-interactive_moo InScript :-
-    of X (arr (arr a b) (arr (arr b c) (arr a c))) X',
+tactic (mapp Name) (Vars, X) K :-
+    get_named Name Vars Lam,
+    X = (app Lam dots PTerm RTerm),
+    get_metas PTerm Metas,
+    fix_meta_list Vars Metas [] MetasFixed, % give each X^.. a Vars
+    K MetasFixed.
+
+tactic (var Name) (Vars, X) K :-
+    get_named Name Vars X,
+    K [].
+
+interactive_moo X :- interactive_moo X [].
+interactive_moo X InScript :-
+    of X (arr a (arr b (arr (arr a (arr b c)) c))) X',
     run_itp X InScript.
+
+% get metavariables by recursion on a term
+mode (get_metas i o).
+%get_metas A B :- print (get_metas A B), fail.
+get_metas (uvar as X) [X].
+get_metas (app M N) Metas :- !, get_metas M Metas1, get_metas N Metas2, append Metas1 Metas2 Metas.
+get_metas (lam T F) Metas :- !, get_metas F Metas.
+get_metas X [] :- name X.

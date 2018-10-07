@@ -4,7 +4,7 @@
 
 type of term -> term -> term -> o.
 mode (of i o o).
-of X T Y :- print (of X T Y), fail.
+%of X T Y :- print (of X T Y), fail.
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 % ----------------------- %
@@ -20,7 +20,9 @@ isa Te Ty OTe :-
     conv Ty Ty',
     of Te Ty' OTe.
 
-%constraint of {
-%  rule (E : Ctx ?- of (uvar K L as X) Ty RX)
-%    <=> (E : Ctx ?- print K L Ty RX).
-%}
+constraint isa get_type_constraint {
+    rule (isa (uvar K _) T _)
+    \ (get_type_constraint (uvar U _) Type)
+    %| (print "---- Match " T Type)
+    <=> (Type = T).
+}

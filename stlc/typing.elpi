@@ -38,8 +38,7 @@ of singleton unit.
 of (abort T X) T (abort T X') :- isa X void X'.
 
 % elaborator terms
-isa (app Lam dots Args) T O :- isa Lam T O, Args = [].
-isa (app Lam dots Args) T O :- !,
+isa (app Lam dots PTerm) T O :- isa Lam T O, PTerm = Lam.
+isa (app Lam dots PTerm) T O :- !, 
     isa Lam (arr _ _) _,
-    isa (app (app Lam Arg) dots Args') T O,
-    Args = [Arg|Args'].
+    isa (app (app Lam Arg) dots PTerm) T O.

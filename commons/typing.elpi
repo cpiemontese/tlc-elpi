@@ -4,7 +4,7 @@
 
 type of term -> term -> term -> o.
 mode (of i o o).
-%of X T Y :- print (of X T Y), fail.
+of X T Y :- print (of X T Y), fail.
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 % ----------------------- %
@@ -20,9 +20,26 @@ isa Te Ty OTe :-
     conv Ty Ty',
     of Te Ty' OTe.
 
-constraint isa get_type_constraint {
+constraint get_type isa get_ctx {
     rule (isa (uvar K _) T _)
-    \ (get_type_constraint (uvar U _) Type)
-    %| (print "---- Match " T Type)
-    <=> (Type = T).
+    \ (get_type (uvar K _) S)
+    %| (print "---- get_type match")
+    <=> (S = T).
+
+    % NOTE: pretty big assumption i.e. that
+    % constraints in Ctx have the same order
+    % of the variables in L
+    rule (Ctx ?- isa (uvar K _) T O)
+    \ (get_ctx (uvar _ L as X) Body)
+    | (print "---- get_ctx match", transfer_ctx Ctx L NewCtx)
+    <=> (NewCtx ?- Body).
 }
+
+mode (transfer_ctx i i o).
+%transfer_ctx A B C :- print (transfer_ctx A B C), fail.
+transfer_ctx [] [] [].
+transfer_ctx [] XS XS. % not so sure about these two
+transfer_ctx CS [] CS.
+transfer_ctx [(isa X T O)|CS] [Y|YS] OutCtx :-
+    transfer_ctx CS YS OutCtx',
+    OutCtx = [(isa Y T O)|OutCtx'].

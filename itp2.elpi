@@ -1,61 +1,77 @@
 accumulate utils.
 accumulate stlc/theory.
 
-run_itp X InScript :- loop [([],X)] [] InScript.
+% tmp start
+prove Term :-
+    isa PTerm (arr a a) Term,
+    refine PTerm [].
 
-% ------------------ %
-% ---- ITP LOOP ---- %
-% ------------------ %
+% ----------------------- %
+% ---- ITP PROCEDURE ---- %
+% ----------------------- %
 
-% base call
-loop [] OutScript _ :-
-    reverse OutScript OutReversed,
-    print "Total script:" OutReversed.
+mode (process_input i i i).
+% NOTE: this could be used to add new ways
+% to handle input, for instance getting
+% manual input form the user and so on
+process_input (tac Name) X Vars :-
+    tac Name (Vars, X) PTerm,
+    X = PTerm,
+    refine PTerm Vars.
 
-% call with no script
-loop [(Vars, X)|TL] OutScript [] :-
-    print_constraints,
-    print, print Vars "|-" X,
+% Core of itp procedure
+% IDEA: you want to build a term X of type T
+% to do this you have to fill all the holes in
+% the term, to do this you use recursion on the
+% partial term. Once all meta-vars are filled,
+% the whole term will be returned.
+mode (refine i i).
+refine A B :- print (refine A B), fail.
+refine (uvar as X) Vars :- !,
+    print_info X Vars,
     read T,
-    tactic T (Vars, X) (Goals \ sigma TL' \
-        append Goals TL TL',
-        loop TL' [T|OutScript] []).
+    process_input T X Vars.
 
-% call with script
-loop [(Vars, X)|TL] OutScript [T|InScript] :-
-    tactic T (Vars, X) (Goals \ sigma TL' \
-        append Goals TL TL',
-        loop TL' [T|OutScript] InScript).
+refine (app M N) Vars :- !, refine M Vars, refine N Vars.
+refine (lam N T F) Vars :- !, pi x\ refine (F x) [(x, N)|Vars].
+refine X Vars :- !, name X.
 
-tactic (intro Name) (Vars, X) K :-
-    X = lam T F,
-    pi x \ K [([(x, Name)|Vars], (F x))].
+% ----------------- %
+% ---- TACTICS ---- %
+% ----------------- %
 
-fix_meta_list _ [] Acc RAcc :- reverse Acc RAcc.
-fix_meta_list Vars [X|XS] Acc Result :- fix_meta_list Vars XS [(Vars, X)|Acc] Result.
+mode (tac i i o).
 
-gibe_metas X :- declare_constraint (gibe_metas X) [X].
+% Primitive
+tac (intro N) (_, _) (lam N T F).
+tac app (_, _) (app M N).
+tac (var N) (Vars, _) H :-
+    get_named N Vars H.
 
-tactic (mapp Name) (Vars, X) K :-
-    get_named Name Vars Lam,
-    X = (app Lam dots PTerm RTerm),
-    get_metas PTerm Metas,
-    fix_meta_list Vars Metas [] MetasFixed, % give each X^.. a Vars
-    K MetasFixed.
+% Non primitive
+tac (mapp N) (Vars, X) PTerm :-
+    get_named N Vars H,
+    get_ctx X (isa H T _, dots H T PTerm).
 
-tactic (var Name) (Vars, X) K :-
-    get_named Name Vars X,
-    K [].
+mode (dots i i o).
+dots X T X :- isa X T O. 
+dots Lam T PTerm :-
+    isa Lam (arr _ _) _,
+    dots (app Lam Arg) T PTerm.
 
-interactive_moo X :- interactive_moo X [].
-interactive_moo X InScript :-
-    of X (arr a (arr b (arr (arr a (arr b c)) c))) X',
-    run_itp X InScript.
+% ------------- %
+% ---- AUX ---- %
+% ------------- %
 
-% get metavariables by recursion on a term
-mode (get_metas i o).
-%get_metas A B :- print (get_metas A B), fail.
-get_metas (uvar as X) [X].
-get_metas (app M N) Metas :- !, get_metas M Metas1, get_metas N Metas2, append Metas1 Metas2 Metas.
-get_metas (lam T F) Metas :- !, get_metas F Metas.
-get_metas X [] :- name X.
+print_info X Vars :-
+    print_constraints,
+    print, print Vars "|-" X.
+
+% Given a meta, get what type you should prove it to be
+%mode (get_type i o).
+%get_type (uvar as X) T :- declare_constraint (get_type X T) [X].
+
+% Given a meta, perform some code under its isa context
+% i.e. bring into the tactic [isa x0 t x0, ...].
+mode (get_ctx i o).
+get_ctx (uvar as X) Body :- declare_constraint (get_ctx X Body) [X].

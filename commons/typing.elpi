@@ -21,25 +21,28 @@ isa Te Ty OTe :-
     of Te Ty' OTe.
 
 constraint get_type isa get_ctx {
-    rule (isa (uvar K _) T _)
-    \ (get_type (uvar K _) S)
+    rule (isa (uvar K _ as X) T _)
+    \ (get_type (uvar K _ as Y) S)
     %| (print "---- get_type match")
     <=> (S = T).
 
     % NOTE: pretty big assumption i.e. that
     % constraints in Ctx have the same order
     % of the variables in L
-    rule (Ctx ?- isa (uvar K _) T O)
-    \ (get_ctx (uvar _ L as X) Body)
-    | (print "---- get_ctx match", transfer_ctx Ctx L NewCtx)
+    rule (Ctx ?- isa (uvar K _ as X) T O)
+    \ (get_ctx (uvar K L as Y) Body)
+    | (reverse Ctx RCtx, transfer_ctx RCtx L NewCtx)
     <=> (NewCtx ?- Body).
+
+    % regola farlocca giusto per non vedere mille constraint uguali
+    rule (isa (uvar K _ as X) T1 M)
+    \ (isa (uvar K _ as Y) T2 N)
+    <=> (M = N, T1 = T2).
 }
 
 mode (transfer_ctx i i o).
 %transfer_ctx A B C :- print (transfer_ctx A B C), fail.
-transfer_ctx [] [] [].
-transfer_ctx [] XS XS. % not so sure about these two
-transfer_ctx CS [] CS.
+transfer_ctx [] _ [].
 transfer_ctx [(isa X T O)|CS] [Y|YS] OutCtx :-
     transfer_ctx CS YS OutCtx',
     OutCtx = [(isa Y T O)|OutCtx'].

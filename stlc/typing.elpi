@@ -38,5 +38,6 @@ of singleton unit singleton.
 of (abort T X) T (abort T X') :- isa X void X'.
 
 % elaborator terms
-% named lambda to unnamed lambda
-isa (lam N T F) A O :- isa (lam T F) A O.
+% named to unnamed
+isa (lam N T F) Arr O :- isa (lam T F) Arr O.
+isa (case N1 N2 P F G) C O :- isa (case P F G) C O.

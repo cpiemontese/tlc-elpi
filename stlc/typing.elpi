@@ -37,6 +37,21 @@ of (case M F G) T (case M' F' G') :-
 of singleton unit singleton.
 of (abort T X) T (abort T X') :- isa X void X'.
 
+% nats
+of zero nat zero.
+of (succ N) nat (succ N') :- isa N nat N'.
+of (natrec N ZE Fun) C (natrec N' ZE' Fun') :-
+    isa N nat N',
+    isa ZE C ZE',
+    pi x y\ [isa x nat x, isa y C y] => isa (Fun x y) C (Fun' x y).
+
+of tt bool tt.
+of ff bool ff.
+of (ite Cond Then Else) T (ite Cond' Then' Else') :-
+    isa Cond bool Cond',
+    isa Then T Then',
+    isa Else T Else'. 
+
 % elaborator terms
 % named to unnamed
 isa (lam N T F) Arr O :- isa (lam T F) Arr O.

@@ -10,6 +10,8 @@ type prod typ -> typ -> typ.    % T1 * T2
 type sum typ -> typ -> typ.     % T1 + T2
 type unit typ.
 type void typ.
+type nat typ.
+type bool typ.
 
 
 % ---------------------
@@ -35,3 +37,11 @@ type case term -> (term -> term) -> (term -> term) -> term.
 % bottom and top
 type abort typ -> term -> term.
 type singleton term.
+
+type zero nat.
+type succ nat -> nat.
+type natrec nat -> term -> (nat -> term -> term) -> term.
+
+type tt bool.
+type ff bool.
+type ite bool -> term -> term -> term.

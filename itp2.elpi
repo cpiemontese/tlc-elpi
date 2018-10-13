@@ -4,6 +4,7 @@ accumulate stlc/theory.
 % tmp start
 prove Term :-
     isa PTerm (arr (arr a (arr b c)) (arr (prod a b) c)) Term,
+    %isa PTerm (arr bool nat) Term,
     refine PTerm [].
 
 % ----------------------- %
@@ -88,34 +89,13 @@ tac botE _ (abort T X).
 tac (mapp N) (Vars, X) PTerm :-
     get_named N Vars H,
     get_type X T,
-    get_ctx X (
-        isa H ATy _,
-        get_ariety_aux ATy Ariety,
-        dots H Ariety PTerm
-    ).
+    get_ctx X (dots H T PTerm).
 
 mode (dots i i o).
 %dots A B C :- print (dots A B C), fail.
-dots X 0 X.
-dots X N PTerm :-
-    M is N - 1,
-    dots (app X Arg) M PTerm.
-
-%dots X T PTerm :- isa X T O, PTerm = X. 
-%dots Lam T PTerm :- !,
-%    isa Lam (arr A B) _,
-%    dots (app Lam Arg) T PTerm.
-
-mode (get_ariety i o).
-get_ariety (arr T _S) N :- get_ariety_aux T N.
-get_ariety T 0. % :- print "Warning: T must be arr," T "given".
-
-mode (get_ariety_aux i o).
-get_ariety_aux (arr T S) N :-
-    get_ariety_aux T X,
-    get_ariety_aux S Y,
-    N is X + Y + 1.
-get_ariety_aux T 0.
+dots X T X :- isa X T _.
+dots Lam T PTerm :-
+    dots (app Lam Arg) T PTerm.
 
 % ------------- %
 % ---- AUX ---- %
@@ -134,3 +114,16 @@ get_type (uvar _ _ as X) T :- names Names, print "Names, X, T" Names X T, declar
 % i.e. bring into the tactic [isa x0 t x0, ...].
 mode (get_ctx i o).
 get_ctx (uvar as X) Body :- declare_constraint (get_ctx X Body) [X].
+
+% Given a term, get its ariety
+mode (get_ariety i o).
+get_ariety (arr T _S) N :- get_ariety_aux T N.
+get_ariety T 0. % :- print "Warning: T must be arr," T "given".
+
+mode (get_ariety_aux i o).
+get_ariety_aux (arr T S) N :-
+    get_ariety_aux T X,
+    get_ariety_aux S Y,
+    N is X + Y + 1.
+get_ariety_aux T 0.
+

@@ -52,7 +52,23 @@ of (ite Cond Then Else) T (ite Cond' Then' Else') :-
     isa Then T Then',
     isa Else T Else'. 
 
-% elaborator terms
+% -------------------------- %
+% ---- ELABORATOR TERMS ---- %
+% -------------------------- %
+
 % named to unnamed
-isa (lam N T F) Arr O :- isa (lam T F) Arr O.
-isa (case N1 N2 P F G) C O :- isa (case P F G) C O.
+isa (lam N T F) Arr (lam N T F') :- isa (lam T F) Arr (lam T F').
+isa (case N1 N2 P F G) C (case N1 N2 P' F' G') :- isa (case P F G) C (case P' F' G').
+
+
+% Coercion library + judjement
+%coerce bool nat (x\ ite x (succ zero) zero).
+
+% If you can't type a term you
+% can try to coerce it as a
+% last resort
+%isa Term Type O :-
+%    isa Term Type' _,
+%    coerce Type' Type F, % e se ci sono piu' di una coercion?
+%    Coerced = F Term,
+%    isa Coerced Type O.

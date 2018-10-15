@@ -17,5 +17,3 @@ Who could have guessed it! Go [here](https://github.com/LPCIC/elpi#how-to-instal
     2. running the actual loop using: `run_itp X InScript` where `InScript` is a list of tactics that can be given as input.
 
 As an example of how one such file could look see `test_itt.elpi`.
-
-NOTE: `stlc` and everything concerning it is slightly outdated and may or may not be incomplete and or contain bugs.

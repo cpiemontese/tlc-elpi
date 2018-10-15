@@ -93,9 +93,10 @@ tac (mapp N) (Vars, X) PTerm :-
 
 mode (dots i i o).
 %dots A B C :- print (dots A B C), fail.
+% XXX: stlc specific, should move
 dots X T X :- isa X T _.
 dots Lam T PTerm :-
-    isa Lam (arr _ _), % stlc specific, should move
+    isa Lam (arr _ _) _,
     dots (app Lam Arg) T PTerm.
 
 % ------------- %

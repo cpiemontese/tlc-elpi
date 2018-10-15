@@ -7,6 +7,14 @@ prove Term :-
     %isa PTerm (arr bool nat) Term,
     refine PTerm [].
 
+simultaneous [F', App', TI'] :-
+    App = app F zero,
+    TI = (lam n Ty (n\ app F n)),
+    isa F (arr nat nat) F',
+    isa App T App',
+    isa TI T' TI',
+    refine [F, App, TI] [].
+
 % ----------------------- %
 % ---- ITP PROCEDURE ---- %
 % ----------------------- %
@@ -28,6 +36,11 @@ process_input (tac Name) X Vars :-
 % the whole term will be returned.
 mode (refine i i).
 %refine A B :- print (refine A B), fail.
+
+refine [] _.
+refine [Term|TS] Vars :-
+    refine Term Vars, print TS, refine TS Vars.
+
 refine (uvar as X) Vars :- !,
     print_info X Vars,
     read T,
@@ -49,6 +62,15 @@ refine (inr T1 X) Vars :- refine X Vars.
 
 refine (abort T X) Vars :- refine X Vars.
 
+% bools
+refine tt _.
+refine ff _.
+
+% nats
+refine zero _.
+refine (succ N) Vars :- refine N Vars.
+
+% eigenvars
 refine X Vars :- name X.
 
 % ----------------- %

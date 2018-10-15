@@ -26,8 +26,9 @@ constraint get_type isa get_ctx {
     <=> (S = T).
 
     % NOTE: pretty big assumption i.e. that
-    % constraints in Ctx have the same order
-    % of the variables in L
+    % constraints in Ctx have the same number
+    % of variables in L and moreover that
+    % each variables is in a 1:1 relation
     rule (Ctx ?- isa (uvar K _ as X) T O)
     \ (get_ctx (uvar K L as Y) Body)
     | (reverse Ctx RCtx, transfer_ctx RCtx L NCtx, reverse NCtx RNCtx)
@@ -38,3 +39,14 @@ mode (transfer_ctx i i o).
 %transfer_ctx A B C :- print (transfer_ctx A B C), fail.
 transfer_ctx [] _ [].
 transfer_ctx [(isa X T O)|CS] [Y|YS] [(isa Y T O)|OutCtx] :- transfer_ctx CS YS OutCtx.
+
+
+% Given a meta, get what type you should prove it to be
+mode (get_type i o).
+% con uvar _ _ as X non crea la nuova variabile x4 che frega tutto ma non capisco...
+get_type (uvar _ _ as X) T :- declare_constraint (get_type X T) [X].
+
+% Given a meta, perform some code under its isa context
+% i.e. bring into the tactic [isa x0 t x0, ...].
+mode (get_ctx i o).
+get_ctx (uvar as X) Body :- declare_constraint (get_ctx X Body) [X].

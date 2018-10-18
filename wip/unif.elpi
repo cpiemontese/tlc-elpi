@@ -9,12 +9,19 @@ conv A B :- print (conv A B), fail.
 conv (lam _ F) (lam _ F') :- pi x\ conv (F x) (F' x).
 conv (app A1 B1) (app A2 B2) :- conv A1 A2, conv B1 B2.
 
-%conv (uvar K L) T :- subst K L T.
-%conv T (uvar K L) :- subst K L T.
-% same meta must have unifiable variables
-%conv (uvar K L1) (uvar K L2) :- conv L1 L2.
-% delay different meta-meta case
-%conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
+% NOTE: decidere cosa fare con stesse meta
+% es. X x y = X y x
+% - si se X = (x\ y\ ..) dove .. non usa ne x ne y
+% - no se X = (x\ y\ x)
+% due strade almeno:
+% 1. delay, aspetto che X venga istanziato e poi vedo
+% 2. controllo che gli argomenti siano convertibili
+%    ma rischio di perdere soluzioni valide
+% stesso problema se ho meta diverse
+% es. X x = Y y --> X = (z\ z) e Y = (w\ x) e' soluzione
+conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
+conv (uvar K L) T :- !, subst K L T.
+conv T (uvar K L) :- !, subst K L T.
 
 % Convert lists of terms 
 conv [] [].

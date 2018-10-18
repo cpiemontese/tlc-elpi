@@ -1,0 +1,38 @@
+% Invariant: use calculus syntax ONLY for NON META
+% for META use lambda-prolog internal notation
+% es. ?x a = g a a                 --> unif problem
+%     conv (X a) (app (app g a) a) --> representation
+
+mode (conv i i).
+conv A B :- print (conv A B), fail.
+
+conv (lam _ F) (lam _ F') :- pi x\ conv (F x) (F' x).
+conv (app A1 B1) (app A2 B2) :- conv A1 A2, conv B1 B2.
+
+%conv (uvar K L) T :- subst K L T.
+%conv T (uvar K L) :- subst K L T.
+% same meta must have unifiable variables
+%conv (uvar K L1) (uvar K L2) :- conv L1 L2.
+% delay different meta-meta case
+%conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
+
+% Convert lists of terms 
+conv [] [].
+conv [L|LS] [K|KS] :- conv L K, conv LS KS.
+
+conv A B :- step A A', !, conv A' B.
+conv A B :- step B B', !, conv A B'.
+conv A A.
+
+% ---- Copy
+
+copy A B :- print (copy A B), fail.
+copy (lam _ F) (lam _ F') :- !, pi x\ copy x x => copy (F x) (F' x).
+copy (app A1 B1) (app A2 B2) :- !, copy A1 A2, copy B1 B2.
+copy X X.
+
+% ---- Multivariable substitution
+
+subst M T S :- print (subst M T S), fail.
+subst M [] S :- copy M S.
+subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.

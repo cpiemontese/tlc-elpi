@@ -17,6 +17,7 @@ of (uvar as X) T :- declare_constraint (of X T) [X].
 of (lam T M) (arr T S) :- pi x \ of x T => of (M x) S.
 of (app M N) S :- of M (arr T S), of N T.
 of (lamT A) (forall U) :- pi x \ of (A x) (U x).
+% should use subst U T S instead of (U T)
 of (appT M T) (U T) :- of M (forall U).
 
 % (lamT (a \ lam a (x \ x)))

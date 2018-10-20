@@ -1,44 +1,57 @@
-accumulate conversion, terms.
+accumulate theory.
 
-% ---- TESTS ----
+% ---- TESTS ---- %
 
 
 steps_app X :-
     steps (app (app (lam (arr nat nat) x \ x) (lam nat y \ y)) a) X.
-
 steps_fst X :-
     steps (fst (pair a b)) X.
 steps_snd X :-
     steps (snd (pair a b)) X.
-
 steps_caseL X :-
     steps (case (inl T2 x) (u \ u) (v \ v)) X.
 steps_caseR X :-
     steps (case (inr T1 y) (u \ u) (v \ v)) X.
 
+test_all_steps L :-
+    steps_app X1,
+    steps_fst X2,
+    steps_snd X3,
+    steps_caseL X4,
+    steps_caseR X5,
+    L = [X1, X2, X3, X4, X5],
+    print "5/5 test passed".
 
-test_app X Y :-
+
+conv_app X Y :-
     conv (app (lam nat x \ x) X) (app Y a).  
-test_lam X :-
+conv_lam X :-
     conv (lam nat x \ (pair x x)) (lam nat x \ (X x)).
-test_pair X :-
+conv_pair X :-
     conv (pair (app (lam nat x \ x) 0) X) (pair 0 b).
-test_fst X :-
+conv_fst X :-
     conv (fst (pair X b)) a. 
-test_snd X :-
+conv_snd X :-
     conv (snd (pair a X)) b. 
-test_inl X :-
+conv_inl X :-
     conv (inl T2 (just x)) (inl T2 X).
-test_inr X :-
-    conv (inr T1 X) (inr none).
-test_case X :-
+conv_inr X :-
+    conv (inr T1 X) (inr T1 none).
+conv_case X :-
     conv (case (inl T2 X) (y \ y) (z \ (pair z z))) x.
-test_fstcase X :-
+conv_fstcase X :-
     step (snd (case (inr T1 x) (u \ pair a b) (v \ pair c d))) X.
 
-
-test :-
-    print "What do you want to test?",
-    read Test,
-    Test,
-    test.
+test_all_conv L :-
+    conv_app X1a X1b, X1 = [X1a, X1b],
+    conv_lam X2,
+    conv_pair X3,
+    conv_fst X4,
+    conv_snd X5,
+    conv_inl X6,
+    conv_inr X7,
+    conv_case X8,
+    conv_fstcase X9,
+    L = [X1, X2, X3, X4, X5, X6, X7, X8, X9],
+    print "9/9 test passed".

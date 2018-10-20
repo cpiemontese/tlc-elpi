@@ -6,7 +6,7 @@ mode (step i o).
 %step X Y :- print (step X Y), fail.
 
 % App
-step (app M N) R :- steps M (lam T F), R = F N.
+step (app M N) R :- steps M (lam T F), subst F [N] R. %R = F N.
 
 % Pairs
 step (fst Pair) M :- steps Pair (pair M N).
@@ -21,7 +21,8 @@ step (natrec Z ZE _Fun) ZE :- steps Z zero.
 step (natrec S ZE Fun) R :-
     steps S (succ N),
     steps (natrec N ZE Fun) RecRes,
-    R = Fun N RecRes.
+    subst Fun [N, RecRes] R.
+    %R = Fun N RecRes.
 
 % If then else
 step (ite Cond Then Else) Then :- steps Cond tt.
@@ -40,22 +41,20 @@ step (ite Cond Then Else) Else :- steps Cond ff.
 
 mode (steps i o).
 %steps X Y :- print (steps X Y), fail.
+steps [] [].
+% normalization of a list of arguments
+steps [M|MS] [M'|MS'] :- steps M M', steps MS MS'.
 steps M N :- step M M', !, steps M' N.
 steps M M.
-
-% ---------------- %
-% ---- NUCLEO ---- %
-% ---------------- %
-
-mode (conv i i).
-%conv X Y :- print (conv X Y), fail.
 
 % ------------------------- %
 % ---- TYPE CONVERSION ---- %
 % ------------------------- %
 
-% praticamente inutile pero' isa chiama comunque conv sui tipi e boh...
-% probabilmente da rimuovere
+mode (conv i i).
+%conv X Y :- print (conv X Y), fail.
+
+% NOTE: praticamente inutile in stlc pero' isa chiama comunque conv sui tipi
 conv (arr A B) (arr C D) :- conv A C, conv B D.
 conv (prod A B) (prod C D) :- conv A C, conv B D.
 conv (sum A B) (sum C D) :- conv A C, conv B D.
@@ -67,6 +66,25 @@ conv bool bool.
 % ------------------------- %
 % ---- TERM CONVERSION ---- %
 % ------------------------- %
+
+% INVARIANT: we assume terms are typed beforehand
+% and that conversion is only asked between terms
+% with convertible types.
+
+
+% FLEX - FLEX
+conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
+% FLEX - "RIGID"
+conv (uvar K L) T :- !,
+    steps T T',     % term has to be normal
+    steps L L',     % meta args have to be normal
+    subst K L T'.
+% "RIGID" - FLEX
+conv T (uvar K L) :- !,
+    steps T T',
+    steps L L',
+    subst K L T'.
+
 
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
 conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
@@ -98,7 +116,9 @@ conv (ite C1 T1 E1) (ite C2 T2 E2) :-
     conv T1 T2,
     conv E1 E2.
 
-conv M N :- M = N. % i i => non vuole istanziare
-conv M N :- step M M', !, conv M' N.
-conv M N :- step N N', !, conv M N'.
+
+% mode i i won't instantiate
+conv M N :- M = N.
+conv M N :- step M M', !, conv M' N.    % at least one step
+conv M N :- step N N', !, conv M N'.    % at least one step
 conv M M.

@@ -1,0 +1,51 @@
+% -------------------------- %
+% ---- SUBSTITION RULES ---- %
+% -------------------------- %
+
+% XXX: copy and conv rules are VERY similar
+% but copy doesn't have i i mode i.e. it lets
+% you instantiate... is there a better way
+% to do this?
+
+% XXX: are the `copy x x` => really needed?
+
+% ---- Copy ---- %
+
+%copy A B :- print (copy A B), fail. % Debug
+% TODO: define copy rules for all stlc terms
+% TODO: test pattern fragmentness
+copy (lam _ F) (lam _ F') :- !, pi x\ copy x x => copy (F x) (F' x).
+copy (app A1 B1) (app A2 B2) :- !, copy A1 A2, copy B1 B2.
+
+copy (pair M1 N1) (pair M2 N2) :- copy M1 M2, copy N1 N2.
+
+copy (fst P1) (fst P2) :- copy P1 P2.
+copy (snd P1) (snd P2) :- copy P1 P2.
+
+copy (inl _ S1) (inl _ S2) :- copy S1 S2.
+copy (inr _ S1) (inr _ S2) :- copy S1 S2.
+
+copy (case M1 F1 G1) (case M2 F2 G2) :-
+    copy M1 M2,
+    pi x\ copy x x => copy (F1 x) (F2 x),
+    pi x\ copy x x => copy (G1 x) (G2 x).
+
+copy zero zero.
+copy (succ N1) (succ N2) :- copy N1 N2.
+copy (natrec N1 ZE1 F1) (natrec N2 ZE2 F2) :-
+    copy N1 N2,
+    copy ZE1 ZE2,
+    pi x y\ (copy x x, copy y y) => copy (F1 x y) (F2 x y).
+
+copy tt tt.
+copy ff ff.
+copy (ite C1 T1 E1) (ite C2 T2 E2) :-
+    copy C1 C2,
+    copy T1 T2,
+    copy E1 E2.
+
+copy X X.
+
+% subst M T S :- print (subst M T S), fail. % Debug
+subst M [] S :- copy M S.
+subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.

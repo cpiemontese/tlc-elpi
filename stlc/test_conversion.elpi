@@ -44,14 +44,41 @@ conv_fstcase X :-
     step (snd (case (inr T1 x) (u \ pair a b) (v \ pair c d))) X.
 
 test_all_conv L :-
+    print "conv_app test",
     conv_app X1a X1b, X1 = [X1a, X1b],
+    print,
+
+    print "conv_lam test",
     conv_lam X2,
+    print,
+
+    print "conv_pair test",
     conv_pair X3,
+    print,
+
+    print "conv_fst test",
     conv_fst X4,
+    print,
+
+    print "conv_snd test",
     conv_snd X5,
+    print,
+
+    print "conv_inl test",
     conv_inl X6,
+    print,
+
+    print "conv_inr test",
     conv_inr X7,
+    print,
+
+    print "conv_case test",
     conv_case X8,
+    print,
+
+    print "conv_fstcase test",
     conv_fstcase X9,
+    print,
+
     L = [X1, X2, X3, X4, X5, X6, X7, X8, X9],
     print "9/9 test passed".

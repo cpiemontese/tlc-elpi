@@ -47,5 +47,6 @@ copy (ite C1 T1 E1) (ite C2 T2 E2) :-
 copy X X.
 
 % subst M T S :- print (subst M T S), fail. % Debug
+subst M T S :- print "called subst" (subst M T S), fail.
 subst M [] S :- copy M S.
 subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.

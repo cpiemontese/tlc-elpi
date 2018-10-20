@@ -1,0 +1,48 @@
+accumulate theory.
+
+% Some unification problems from the literature
+% that aren't in PATTERN and their encodings
+% If an atom isn't specified, it's treated as an
+% external constant
+
+% All these should pass
+
+% Miller, 1991
+% F x = g b a                   -- x non e' quantificata universalmente
+% (v\ m (X v)) = (y\ X (m y))   -- inf soluzioni
+miller_a F :- conv (F x) (app (app g b) a).
+miller_b X :- conv (lam _ (v\ app m (X v))) (lam _ (y\ (X (app m y)))).
+
+% De Moura, 2008
+% ((X (f x)) = f x) & (X (f x) = f (X x))   -- X (f x) non e' nel pattern
+% (y\ y (X w)) = (x\ x (u w))               -- 2 soluzioni
+de_moura_a X :- (conv (X (app f x)) (app f x)), (conv (X (app f x)) (app f (X x))).
+de_moura_b X :- conv (lam _ (y\ app y (X w))) (lam _ (x\ app x (app u w))).
+
+% Abel & Pientka, 2011
+% (x y z\ X x y)        = (x y z\ x (succ y))   -- L_lambda
+% (x y z\ X x x y)      = ^                     -- non-linearity
+% (x y z\ X (Y x) y)    = ^                     -- meta-meta appl
+% (x y z\ X x (succ y)) = ^                     -- succ y is not a variable
+abel_pientka_a X :-
+    conv
+        (lam _ (x\ lam _ (y\ lam _ (z\ X x y))))
+        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+abel_pientka_b X :-
+    conv
+        (lam _ (x\ lam _ (y\ lam _ (z\ X x x y))))
+        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+abel_pientka_c X Y :-
+    conv
+        (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x) y))))
+        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+abel_pientka_d X :-
+    conv
+        (lam _ (x\ lam _ (y\ lam _ (z\ X x (succ y)))))
+        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+
+% Miller & Nadathur, 2012
+% F a = g a a                   -- 4 soluzioni
+% pi w\ (u (F w)) = (F (u w))   -- inf soluzioni
+miller_nadathur_a F :- conv (F a) (app (app g a) a).
+miller_nadathur_b F :- pi w\ conv (app u (F w)) (F (app u w)).

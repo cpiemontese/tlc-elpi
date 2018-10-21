@@ -61,7 +61,7 @@ isa (lam N T F) Arr (lam N T F') :- isa (lam T F) Arr (lam T F').
 isa (case N1 N2 P F G) C (case N1 N2 P' F' G') :- isa (case P F G) C (case P' F' G').
 
 
-% Coercion library + judjement
+% Coercion library + judgement
 %coerce bool nat (x\ ite x (succ zero) zero).
 
 % If you can't type a term you
@@ -69,6 +69,6 @@ isa (case N1 N2 P F G) C (case N1 N2 P' F' G') :- isa (case P F G) C (case P' F'
 % last resort
 %isa Term Type O :-
 %    isa Term Type' _,
-%    coerce Type' Type F, % e se ci sono piu' di una coercion?
-%    Coerced = F Term,
+%    coerce Type' Type F, % e se ci sono piu' coercion?
+%    subst F [Term] Coerced,
 %    isa Coerced Type O.

@@ -34,7 +34,7 @@ abel_pientka_b X :-
         (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
 abel_pientka_c X Y :-
     conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x) y))))
+        (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x) y))))        % (Y x (succ y)) is not in pattern
         (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
 abel_pientka_d X :-
     conv

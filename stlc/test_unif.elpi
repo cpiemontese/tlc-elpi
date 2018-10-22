@@ -47,7 +47,9 @@ abel_pientka_d X :-
 miller_nadathur_a F :- conv (F a) (app (app g a) a).
 miller_nadathur_b F :- pi w\ conv (app u (F w)) (F (app u w)).
 
-mio_a X Y :- conv (lam _ (x\ X x (Y x      )))  (lam _ (v\ app x v)).
-mio_b X Y :- conv (lam _ (x\ X x (Y (succ x)))) (lam _ (v\ app x v)).
+ok_a X Y :- conv (lam _ (x\ X x (Y x      )))  (lam _ (v\ app x v)).
+non_ok_b X Y :- conv (lam _ (x\ X x (Y (succ x)))) (lam _ (v\ app x v)).
 % Y (succ x) e' fuori dal pattern e questo viene segnalato,
 % ma idem X x (Y (succ x)), solo che X fa parte della ka$ta
+
+pairs? X :- pi x y\ conv (X (pair x y)) x.

@@ -15,10 +15,9 @@
 % ---- Copy ---- %
 
 %copy A B :- print (copy A B), fail. % Debug
-copy (meta K L) T :- print "meta!", subst K L T.
 
-copy (lam _ F) (lam _ F') :- !, pi x\ copy x x => copy (F x) (F' x).
-copy (app A1 B1) (app A2 B2) :- !, copy A1 A2, copy B1 B2.
+copy (lam _ F) (lam _ F') :- pi x\ copy x x => copy (F x) (F' x).
+copy (app A1 B1) (app A2 B2) :- copy A1 A2, copy B1 B2.
 
 copy (pair M1 N1) (pair M2 N2) :- copy M1 M2, copy N1 N2.
 
@@ -49,24 +48,6 @@ copy (ite C1 T1 E1) (ite C2 T2 E2) :-
 
 copy X X.
 
-% subst M T S :- print (subst M T S), fail. % Debug
-subst M T S :- print "called subst" (subst M T S), fail.
+subst M T S :- print (subst M T S), fail. % Debug
 subst M [] S :- copy M S.
 subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.
-
-
-mode (mark_metas i o).
-mark_metas I O :- print (mark_metas I O), fail.
-mark_metas (uvar K L) (meta K L') :- !, print K L, mark_metas L L'.
-mark_metas [] [].
-mark_metas [L|LS] [L'|LS'] :- mark_metas L L', mark_metas LS LS'.
-
-mark_metas (lam _ F) (lam _ F') :- pi x\ mark_metas (F x) (F' x).
-mark_metas (app M N) (app M' N') :- mark_metas M M', mark_metas N N'.
-mark_metas (succ N) (succ N') :- mark_metas N N'.
-mark_metas X X.
-
-mode (test i).
-test M.
-
-test_mark M :- mark_metas (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x x) y)))) M.

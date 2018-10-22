@@ -50,4 +50,8 @@ copy X X.
 
 subst M T S :- print (subst M T S), fail. % Debug
 subst M [] S :- copy M S.
-subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.
+%subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.
+
+subst M [X|XS] R :-
+    of X T _, M = lam T F,
+    pi x\ copy x X => subst (F x) XS R.

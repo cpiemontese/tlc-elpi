@@ -17,7 +17,9 @@ loop [(Vars,X)|TL] OutScript [] :-
     print, print Vars "|-" X,
     read T,
     tactic T TE Vars (Goals \ sigma TL' \
+        lookup X Y,
         X = TE,
+        print "recuperato" Y "elaborato di" TE,
         append Goals TL TL',
         loop TL' [T|OutScript] []).
 
@@ -27,3 +29,12 @@ loop [(Vars,X)|TL] OutScript [T|InScript] :-
         X = TE,
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
+
+lookup X Y :- declare_constraint (read-evar X Y) [X].
+
+constraint isa read-evar of {
+  rule (E1 : Ctx ?- isa (uvar K L1 as X) Ty (uvar O L1'))
+     \ (E2 : read-evar (uvar K L2) Y)
+    | (L1 = L1')
+    <=> (E2 : Y = uvar O L2).
+}

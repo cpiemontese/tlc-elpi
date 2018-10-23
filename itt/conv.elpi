@@ -23,7 +23,7 @@ steps M M.
 
 % term equivalence
 mode (conv i i).
-conv X Y :- print (conv X Y), fail.
+%conv X Y :- print (conv X Y), fail.
 conv X X :- !.                      % reflexivity
 %conv X Y :- conv Y X.               % symmetry loops, is it needed?
 %(conv X Y, conv Y Z) :- conv X Z.   % transitivity ???

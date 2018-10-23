@@ -19,6 +19,8 @@ print_pt Term Type S :-
 
 identity (@arrow a a). 
 
+test_mapp (@arrow (@arrow a (@arrow b c)) (@arrow a (@arrow b c))).
+
 % ---------------------- %
 % ---- K combinator ---- %
 % ---------------------- %

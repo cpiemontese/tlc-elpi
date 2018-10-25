@@ -4,18 +4,16 @@ kind term type.
 % ---- TYPE INFERENCE ---- %
 % ------------------------ %
 
-type of term -> term -> term -> o.
-mode (of i o o).
-of X T Y :- print (of X T Y), fail. 
+pred of i:term, o:term, o:term.
+%of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
 % ---- TYPE CHECKING ---- %
 % ----------------------- %
 
-type isa term -> term -> term -> o.
-mode (isa i o o).
-isa X T Y :- print (isa X T Y), fail. 
+pred isa i:term, o:term, o:term.
+%isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %
@@ -105,7 +103,6 @@ of_type (id A X Y) :- of_type A, isa X A _, isa Y A _.
 % INTRODUCTION
 type refl term -> term -> term.
 of (refl A X) (id A X X) (refl A X') :- isa X A X'.
-of (refl A X) (id A X Y) (refl A X') :- isa X A X', isa Y A _, conv X Y. % ???
 
 % ------------------ %
 % ---- NATURALS ---- %

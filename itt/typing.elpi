@@ -7,7 +7,7 @@ kind term type.
 type of term -> term -> term -> o.
 mode (of i o o).
 of X T Y :- print (of X T Y), fail. 
-of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
 % ---- TYPE CHECKING ---- %
@@ -16,7 +16,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 type isa term -> term -> term -> o.
 mode (isa i o o).
 isa X T Y :- print (isa X T Y), fail. 
-isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %
 % ---- DOTS ---- %
@@ -24,8 +24,6 @@ isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 
 isa (app Lam dots) T O :- isa Lam T O.
 isa (app Lam dots) T O :- !,
-    %of Lam TY _,
-    %steps TY (prod _ _),
     isa Lam (prod _ _) _,
     isa (app (app Lam Arg) dots) T O.
 

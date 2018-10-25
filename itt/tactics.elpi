@@ -2,8 +2,12 @@
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
-tactic (intro Name) (lam Name T Body) Vars K :-
+%tactic (intro Name) (lam Name T Body) Vars K :-
+%    pi x \ K [([(x, Name)|Vars], (Body x))].
+tactic (intro Name) X Vars K :-
+    X = lam Name T Body, 
     pi x \ K [([(x, Name)|Vars], (Body x))].
+
 
 tactic app (app Lambda Arg) Vars K :-
     K [(Vars, Lambda), (Vars, Arg)].
@@ -12,9 +16,26 @@ tactic app (app Lambda Arg) Vars K :-
 %    nth_element N Vars Lambda,
 %    K [(Vars, Arg)].
 
-tactic (mapp N) (app Lambda dots) Vars K :-
+%tactic (mapp N) (app Lambda dots) Vars K :-
+%    get_named N Vars Lambda,
+%    K []. % wrong: recuperare le meta
+
+mode (rec_term i i i).
+%rec_term A B C :- print (rec_term A B C), fail.
+rec_term (uvar as Y) Vars K :- lookdown Y X, K [(Vars, X)].
+rec_term (lam N T F) Vars K :- pi x\ rec_term (F x) [(x, N)|Vars] K.
+rec_term (app M N) Vars K :- rec_term M Vars K, rec_term N Vars K.
+rec_term X Vars K :-
+    name X,
+    % dovrei controllare che X sia in Vars?
+    K [].
+
+tactic (mapp N) X Vars K :-
     get_named N Vars Lambda,
-    K []. % wrong: recuperare le meta
+    lookup X Y,
+    X = app Lambda dots,
+    print "recuperato" Y "elaborato di" X,
+    rec_term Y Vars K. 
 
 tactic (app N) T Vars K :-
     get_named N Vars Lambda,

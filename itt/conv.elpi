@@ -45,10 +45,10 @@ conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd'
 conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
 
 % BETA
-step (app Lam Arg) Res :-
+step (app Lam Arg) R :-
     steps Lam (lam _Name _A Bd),
-    steps (Bd Arg) R.
-% NOTE: cosi' ^ forzo la "normalizzazione", non sono sicuro sia corretto
+    subst Bd [Arg] S,
+    steps S R.
 
 % ETA EQUALITY
 conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
@@ -75,7 +75,8 @@ conv (snd Pair) (snd Pair') :- conv Pair Pair'.
 % BETA
 step (split P _ _ F) R :-
     steps P (pair X Y),
-    R = (F X Y).
+    subst F [X, Y] R.
+    %R = (F X Y).
 step (fst P) X :- steps P (pair X Y).
 step (snd P) Y :- steps P (pair X Y).
 
@@ -87,8 +88,8 @@ conv (pair (fst P) (snd P)) P.
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
-%conv X Y :- of Magic (id A X Y) _.
-%conv Magic (refl A X) :- isa Magic (id A X Y) _.
+conv X Y :- isa Magic (id A X Y) _.
+conv Magic (refl A X) :- isa Magic (id A X Y) _.
 
 % ------------------ %
 % ---- NATURALS ---- %
@@ -107,4 +108,5 @@ step (natrec N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
 step (natrec M ZeroElement _ _ RecFun) R :-
     steps M (succ N),
     steps (natrec N ZeroElement _ _ RecFun) R',
-    steps (RecFun N R') R.
+    subst RecFun [N, R'] S,
+    steps S R.

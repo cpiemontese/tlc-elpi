@@ -12,7 +12,7 @@
 
 % ---- Copy ---- %
 
-copy A B :- print (copy A B), fail. % Debug
+%copy A B :- print (copy A B), fail. % Debug
 
 copy (lam _ F) (lam _ F') :- pi x\ copy (F x) (F' x).
 copy (app A1 B1) (app A2 B2) :- copy A1 A2, copy B1 B2.
@@ -46,22 +46,19 @@ copy (ite C1 T1 E1) (ite C2 T2 E2) :-
 
 copy X X.
 
-mode (ucopy i i i i).
-ucopy A B C D :- print (ucopy A B C D), fail.
-ucopy X [] V Clause :- copy V X => Clause.
-%ucopy (uvar as X) [(uvar K L)|TS] V Clause :- !, 
-%    print "ucopy uvar",
-%    pi x\ ucopy K L x => ucopy (X x) TS V Clause. % TODO: add to Clause
-ucopy (uvar as X) [T|TS] V Clause :- 
-    print "ucopy normal",
-    pi x\ copy x T => ucopy (X x) TS V Clause.
+mode (rcopy i i i i).
+%rcopy A B C D :- print (rcopy A B C D), fail.
+rcopy V X [] Clause :- copy V X => Clause.
+rcopy V (uvar as X) [(uvar K L)|TS] Clause :- !, 
+    pi x\ rcopy x K L (rcopy V (X x) TS Clause).
+rcopy V (uvar as X) [T|TS] Clause :- 
+    pi x\ copy x T => rcopy V (X x) TS Clause.
 
 mode (subst i i i).
-subst M T S :- print (subst M T S), fail. % Debug
-subst M [] S :- copy M S.
+%subst M T S :- print (subst M T S), fail. % Debug
+subst M [] S :- print "----" M S, copy M S.
 subst (uvar as M) [(uvar K L)|TS] S :- !,
-    %pi x\ ucopy K L x => subst (M x) TS S.
-    pi x\ ucopy K L x (subst (M x) TS S).
+    pi x\ rcopy x K L (subst (M x) TS S).
 subst (uvar as M) [T|TS] S :-
     pi x\ copy x T => subst (M x) TS S.
 

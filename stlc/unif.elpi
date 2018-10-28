@@ -56,7 +56,7 @@ rcopy V (uvar as X) [T|TS] Clause :-
 
 mode (subst i i i).
 %subst M T S :- print (subst M T S), fail. % Debug
-subst M [] S :- print "----" M S, copy M S.
+subst M [] S :- copy M S.
 subst (uvar as M) [(uvar K L)|TS] S :- !,
     pi x\ rcopy x K L (subst (M x) TS S).
 subst (uvar as M) [T|TS] S :-

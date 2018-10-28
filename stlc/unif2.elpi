@@ -1,0 +1,44 @@
+accumulate theory.
+accumulate "../utils".
+
+
+copy A B :- print (copy A B), fail.
+copy (lam _T F1) (lam _T F2) :- pi x\ copy (F1 x) (F2 x).
+copy (app M1 N1) (app M2 N2) :- comp M1 [] M2 [], comp N1 [] N2 [].
+copy X X.
+
+
+mode (rcopy i i i i).
+rcopy A B C D :- print (rcopy A B C D), fail.
+rcopy V X [] Clause :- copy V X => Clause.
+rcopy V (uvar as X) [(uvar K L)|TS] Clause :- !, 
+    pi x\ rcopy x K L (rcopy V (X x) TS Clause).
+rcopy V (uvar as X) [T|TS] Clause :- 
+    pi x\ copy x T => rcopy V (X x) TS Clause.
+
+
+mode (comp i i i i).
+comp A B C D :- print (comp A B C D), fail.
+
+comp (app M N) L1 T2 L2 :-
+    comp M [N|L1] T2 L2.
+comp T1 L1 (app M N) L2 :-
+    comp T1 L1 M [N|L2].
+
+comp (uvar as X) [(uvar K L as Y)|LS] T2 L2 :-
+    of Y Ty _O,
+    X = lam Ty F,
+    pi x\ rcopy x K L (comp (F x) LS T2 L2).
+
+comp (uvar as X) [L|LS] T2 L2 :-
+    of L Ty _O,
+    X = lam Ty F, % TODO: usare la conv
+    pi x\ copy x L => comp (F x) LS T2 L2.
+
+comp (uvar as X) [] T2 L2 :-
+    append Rest [Last] L2,
+    X = app M N,
+    comp M [] T2 Rest,
+    comp N [] Last [].
+
+comp X [] Y [] :- copy X Y.

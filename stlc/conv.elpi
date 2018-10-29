@@ -77,19 +77,17 @@ conv bool bool.
 conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
 % FLEX - "RIGID"
 conv (uvar K L) T :- !,
-    comp K L T [].
-%conv (uvar K L) T :- !,
-%    steps T T',     % term has to be normal
-%    steps L L',     % meta args have to be normal
-%    subst K L T'.
+    steps T T',     % term has to be normal
+    steps L L',     % meta args have to be normal
+    subst K L T'.
 
 % "RIGID" - FLEX
 conv T (uvar K L) :- !,
-    comp T [] K L.
-%conv T (uvar K L) :- !,
-%    steps T T',
-%    steps L L',
-%    subst K L T'.
+    subst T [] K L.
+conv T (uvar K L) :- !,
+    steps T T',
+    steps L L',
+    subst K L T'.
 
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
 conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).

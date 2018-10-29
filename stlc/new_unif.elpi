@@ -1,0 +1,63 @@
+accumulate theory.
+accumulate "../utils".
+
+% ---- MARK ---- %
+
+mode (mark i o).
+mark A B :- print (mark A B), fail.
+
+mark [] [].
+mark [X|XS] [Y|YS] :- mark X Y, mark XS YS.
+
+mark (uvar X L) (meta X L') :- !, mark L L'.
+mark (lam _T F) (lam _T F') :- pi x\ mark (F x) (F' x).
+mark (app M N) (app M' N') :- mark M M', mark N N'.
+mark X X.
+
+t_mark M :- mark (app (X (succ x)) (lam (arr nat nat) (x\ app x (Y (succ x) (Z (succ x)))))) M.
+
+% ---- COPY ---- %
+
+mode (rcopy i i i).
+rcopy A B C :- print (rcopy A B C), fail.
+
+rcopy V (meta X []) Clause :- !, copy V X => Clause.
+rcopy V (meta X [L|LS]) Clause :- !,
+    of L LTy _,
+    X = lam LTy F,
+    pi x\ rcopy x L (rcopy V (meta (F x) LS) Clause).
+
+rcopy V (lam _T (meta F L)) Clause :-
+    pi x\ (append L [x] L',
+           rcopy V (meta F L') Clause).
+rcopy V (lam _T F) Clause :- pi x\ rcopy V (F x) Clause.
+
+rcopy V (app M N) Clause :- pi x y\ rcopy x M (rcopy y N Clause).
+
+rcopy V X Clause :- copy V X => Clause.
+
+% ---- UNIFY ---- %
+
+% INVARIANT: terms to be unified must be marked first
+mode (unify i i).
+unify A B :- print (unify A B), fail.
+
+unify (meta X L as M) (meta Y L' as N) :- declare_constraint (unify M N) [X, Y].
+
+% if metas args are empty we can start instantiating
+unify (meta X []) (app M N) :-
+    X = app M' N',
+    unify (meta M' []) M,
+    unify (meta N' []) N.
+unify (meta X []) (lam T F) :-
+    X = lam T F',
+    pi x\ unify (meta (F' x) []) (F x). 
+
+% if we are here T isn't an app, lam or meta
+% so it must be a constant or eigenvar (???)
+unify (meta X []) T :- X = T.
+
+unify (meta X [L|LS]) T :-
+    of L LTy _,
+    X = lam LTy F,
+    pi x\ rcopy x L (unify (meta (F x) LS) T).

@@ -1,0 +1,65 @@
+accumulate stlc/theory.
+accumulate utils.
+
+type vdecl string -> term -> o.
+type goal term -> term -> term -> list vdecl -> list goal -> o.
+
+apply X [] Term :- X = Term.
+apply X (vdecl _ _ :: VDecls) Term :-
+    pi x\ apply (X x) VDecls Term.
+
+apply_named X VName Var (vdecl Name _ :: VDecls) Term :-
+    pi x\ apply_named (X x) VName Var VDecls Term.
+apply_named X VName Var (vdecl VName _ :: VDecls) Term :-
+    pi x\ (Var = x, apply_named (X x) _ _ VDecls Term).
+
+tactic (intro N) (goal X TyX RefX VDecls SubGoal) :-
+    apply X VDecl (lam T F),
+    recover RefX [F'],
+    SubGoal = (goal F TyF F' (vdecl N T :: VDecls) []).
+
+tactic (mapp N) (goal X TyX RefX VDecls SubGoal) :-
+    apply_named X N Var VDecl (app Var dots),
+    recover RefX .
+
+prove Type ProofTerm OScript :-
+    prove Type [] ProofTerm OScript.
+
+prove Type InScript ProofTerm OScript :-
+    of X Type ProofTerm,
+    itp_loop [goal X Type ProofTerm [] []] InScript OScript.
+
+type itp_loop goal -> list tactic -> list tactic -> o.
+mode (itp_loop i i o).
+itp_loop [] _ _.
+
+% caso meta i.e. devi istanziare per andare avanti
+itp_loop ((goal (uvar as Hole) Type RTerm VDecl [] as Goal) :: Goals) [] OScript.
+    print_status Goal,
+    prompt_user Tac,
+    itp_loop (Goal :: Goals) [Tac] OScript.
+    %tactic Tac Goal Goal',
+    %itp_loop (Goal' :: Goals) [] OScript',
+    %append [Tac] OScript' OScript.
+
+itp_loop ((goal (uvar as Hole) Type RTerm VDecl []) :: Goals) [Tac|Tacs] OScript.
+    tactic Tac (goal Hole Type RTerm VDecl SubGoals),
+    itp_loop (Goal' :: Goals) [Tac|Tacs] OScript',
+    append [Tac] OScript' OScript.
+
+% quando hai un goal puoi provare prima a dimostrare i suoi sotto goal
+% poi (che tu abbia fallito o meno?) passi a esaminare i fratelli
+% eventualmente fallisci e fai backtrack al goal precedente
+itp_loop (goal PTerm Type RTerm VDecl SubGoals :: Goals) Tacs OScript :-
+    (itp_loop SubGoals Tacs OScript',
+    itp_loop Goals OScript'',
+    OScript = [[OScript']|OScript'']) ; fail.
+
+print_status (goal PTerm Type _ VDecl _) :-
+    % TODO:
+    % - pretty print del tipo e delle variabili
+    % - estendere stampa a goal non terminali?
+    print "λ - " VDecl "|-" PTerm ":" Type.
+
+prompt_user Tac :-
+    print "λ - input tactic:", read Tac.

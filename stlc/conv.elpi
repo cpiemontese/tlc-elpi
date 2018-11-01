@@ -53,7 +53,7 @@ steps M M.
 % ------------------------- %
 
 mode (conv i i).
-%conv X Y :- print (conv X Y), fail.
+conv X Y :- print (conv X Y), fail.
 
 conv (arr A B) (arr C D) :- conv A C, conv B D.
 conv (prod A B) (prod C D) :- conv A C, conv B D.
@@ -74,23 +74,28 @@ conv bool bool.
 
 
 % FLEX - FLEX
-conv (uvar as X) (uvar as Y) :- declare_constraint (conv X Y) [X, Y].
+conv (uvar as X) (uvar as Y) :- !, declare_constraint (conv X Y) [X, Y].
+
+%conv (app (uvar as X) N) T :- unify (app X N) [] T [].
+%conv T (app (uvar as X) N) :- unify (app X N) [] T [].
+%conv (uvar as X) T :- !, unify X [] T [].
+%conv T (uvar as X) :- !, unify X [] T [].
+
+/*
 % FLEX - "RIGID"
 conv (uvar K L) T :- !,
     steps T T',     % term has to be normal
     steps L L',     % meta args have to be normal
     subst K L T'.
-
 % "RIGID" - FLEX
-conv T (uvar K L) :- !,
-    subst T [] K L.
 conv T (uvar K L) :- !,
     steps T T',
     steps L L',
     subst K L T'.
+*/
 
 conv (app M1 N1) (app M2 N2) :- conv M1 M2, conv N1 N2.
-conv (lam _ F1) (lam _ F2) :- pi x \ conv (F1 x) (F2 x).
+conv (lam T F1) (lam T F2) :- pi x\ of x T x => conv (F1 x) (F2 x).
 
 conv (pair M1 N1) (pair M2 N2) :- conv M1 M2, conv N1 N2.
 

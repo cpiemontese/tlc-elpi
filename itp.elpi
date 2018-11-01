@@ -35,8 +35,7 @@ loop [(Vars,X)|TL] OutScript [] :-
 
 % call with script
 loop [(Vars,X)|TL] OutScript [T|InScript] :-
-    tactic T TE Vars (Goals \ sigma TL' \
-        X = TE,
+    tactic T X Vars (Goals \ sigma TL' \
         append Goals TL TL',
         loop TL' [T|OutScript] InScript).
 

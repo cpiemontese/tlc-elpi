@@ -26,13 +26,15 @@ prove Type InScript ProofTerm OutScript :-
 % - output script list
 type itp_loop goal -> list tactic -> list tactic -> o.
 mode (itp_loop i i o).
-itp_loop A B C :- print (itp_loop A B C), fail.
+%itp_loop A B C :- print (itp_loop A B C), fail.
 
-itp_loop [] _ _.  % end of list reached
+itp_loop [] _ _.
 
 % hole - no input
 itp_loop [(goal (uvar as Hole) Type RTerm VDecls as Goal) | Goals] [] OutScript :-
     print_status Goal,
+    print "constraints at query",
+    print_constraints, print,
     prompt_user Tac,
     itp_loop (Goal :: Goals) [Tac] OutScript.
 
@@ -45,6 +47,9 @@ itp_loop [(goal (uvar as Hole) Type RTerm VDecls as Goal) | Goals] [Tac | Tacs] 
 
 tactic (intro N) (goal X Type RTerm VDecls) NewGoals :-
     assign_under X (lam N T F) VDecls,
+    print,
+    print "constraints after tactic assignment",
+    print_constraints, print,
     build_newgoals RTerm VDecls VDecls NewGoals.
     /*
     recover_metas RTerm [F'],
@@ -54,9 +59,6 @@ tactic (intro N) (goal X Type RTerm VDecls) NewGoals :-
 
 tactic (mapp N) (goal X Type RTerm VDecls) NewGoals :-
     assign_named_under X (app Lam dots) VDecls N Lam,
-    % qui potrebbero andare bene sia [] che VDecls, l'idea e' questo parametro
-    % rappresenta le dichiarazioni del nuovo goal e potrebbe essere usato per
-    % controllare a cosa il nuovo goal si applica
     build_newgoals RTerm VDecls VDecls NewGoals.
 
 % --------------- %
@@ -64,12 +66,12 @@ tactic (mapp N) (goal X Type RTerm VDecls) NewGoals :-
 % --------------- %
 
 mode (lookdown i i i).
-lookdown (uvar K L as X) Y T :- print X Y T, declare_constraint (read-refined X Y T) [X].
+lookdown (uvar K L as X) Y T :- declare_constraint (read-refined X Y T) [X].
 
 constraint isa read-evar read-refined of {
     rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
         \ (E2 : read-refined (uvar O L2) X T)
-        | (print "match" L1 L1' L2, L1 = L1', !; print "align fail on" L1 "=" L1')
+        | (/*print "match" L1 L1' L2,*/ L1 = L1', !; print "align fail on" L1 "=" L1')
         <=> (E2 : X = uvar K L2, T = Ty).
 }
 
@@ -85,7 +87,7 @@ constraint read-refined of isa {
 */
 
 mode (assign_under i i i).
-assign_under X Term [] :- print "assign" Term "to" X, X = Term.
+assign_under X Term [] :- X = Term.
 assign_under X Term (vdecl _ _ :: VDecls) :-
     pi x\ assign_under (X x) Term VDecls.
 
@@ -97,7 +99,7 @@ assign_named_under X Term (vdecl Name' _ :: VDecls) Name Var :-
     pi x\ (print "----" Name Var Term, assign_named_under X Term VDecls Name Var).
 
 mode (build_newgoals i i i i).
-build_newgoals A B C D :- print (build_newgoals A B C D), fail.
+%build_newgoals A B C D :- print (build_newgoals A B C D), fail.
 
 build_newgoals Term (vdecl N T :: VDecls) NewVDecls NewGoals :-
     pi x\ build_newgoals (Term x) VDecls NewVDecls NewGoals.

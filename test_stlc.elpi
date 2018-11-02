@@ -1,5 +1,8 @@
-accumulate itp.
+accumulate itp2.
 accumulate stlc/theory.
+
+test_itp Term Script :-
+    prove (arr (arr a b) (arr a b)) Term Script.
 
 % (A -> (B -> C)) -> ((A & B) -> C)
 % and elim test

@@ -1,0 +1,22 @@
+% A binary tree implementation in ELPI
+
+type node N -> node -> node -> node.
+
+mode (append i i).
+append (node N NSx NDx) (uvar as EmptyNode) :-
+    EmptyNode = node N NSx NDx.
+
+append (node N NSx NDx) (node M MSx MDx) :-
+    N = M, append NSx MSx, append NDx MDx.
+
+append (node N _NSx _NDx as NewNode) (node M MSx _) :-
+    N < M, append NewNode MSx.
+
+append (node N _NSx _NDx as NewNode) (node M _ MDx) :-
+    N > M, append NewNode MDx.
+
+main :-
+    append (node 5 _NSx _NDx) Tree,
+    append (node 4 (node 3 _A _B) _C) Tree,
+    append (node 6 _D (node 7 _E _F)) Tree,
+    print Tree.

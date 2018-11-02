@@ -5,7 +5,7 @@
 type of term -> term -> term -> o.
 mode (of i o o).
 %of X T Y :- print (of X T Y), fail.
-of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
 % ---- TYPE CHECKING ---- %
@@ -14,12 +14,13 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
 type isa term -> term -> term -> o.
 mode (isa i o o).
 %isa X T Y :- print (isa X T Y), fail.
-isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X].
+isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 isa Te Ty OTe :-
     conv Ty Ty',
     of Te Ty' OTe.
 
+/*
 constraint get_type isa get_ctx {
     rule (isa (uvar K _ as X) T _)
     \ (get_type (uvar K _ as Y) S)
@@ -34,6 +35,7 @@ constraint get_type isa get_ctx {
     | (reverse Ctx RCtx, transfer_ctx RCtx L NCtx, reverse NCtx RNCtx)
     <=> (RNCtx ?- Body).
 }
+*/
 
 mode (transfer_ctx i i o).
 %transfer_ctx A B C :- print (transfer_ctx A B C), fail.

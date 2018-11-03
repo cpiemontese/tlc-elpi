@@ -59,6 +59,10 @@ of (ite Cond Then Else) T (ite Cond' Then' Else') :-
 % named to unnamed
 isa (lam N T F) Arr (lam N T F') :- isa (lam T F) Arr (lam T F').
 isa (case N1 N2 P F G) C (case N1 N2 P' F' G') :- isa (case P F G) C (case P' F' G').
+isa (app Lam dots) T O :- isa Lam T O.
+isa (app Lam dots) T O :- !,
+    isa Lam (arr _ _) _,
+    isa (app (app Lam Arg) dots) T O.
 
 
 % Coercion library + judgement

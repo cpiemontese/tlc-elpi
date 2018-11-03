@@ -3,8 +3,10 @@ accumulate stlc/lang, stlc/typing, stlc/conv.
 accumulate utils.
 
 % TODO:
-% - pretty print type in print_status
+% - pretty print tipo in print_goal
 % - forse separare argomenti in usabili e da applicare
+% - stampa di goal multipi
+% - scelta goal multipli
 
 % ------------------- %
 % ---- INTERFACE ---- %
@@ -26,49 +28,44 @@ prove Type InScript ProofTerm OutScript :-
 % - list of current open goals
 % - input tactics list
 % - output script list
-type itp_loop goal -> list tactic -> list tactic -> o.
 mode (itp_loop i i o).
-%itp_loop A B C :- print (itp_loop A B C), fail.
+itp_loop A B C :- print (itp_loop A B C), fail.
 
 itp_loop [] _ _.
 
-% hole - no input
-itp_loop [(goal (uvar as Hole) Type RTerm VDecls as Goal) | Goals] [] OutScript :-
-    print_status Goal,
+% hole - no input - no choice
+itp_loop [Goal] [] OutScript :- !,
+    print_goal Goal,
+    prompt_user "input tactic" Tac,
+    (Tac = backup, !, fail;
+    itp_loop [Goal] [Tac] OutScript;
+    itp_loop [Goal] [] OutScript).
 
-    print "constraints at query",
-    print_constraints, print,
-
-    prompt_user Tac,
-    itp_loop (Goal :: Goals) [Tac] OutScript.
+% hole - no input - choice
+itp_loop Goals [] OutScript :-
+    print_goals Goals,
+    prompt_user "select goal" GNum,
+    get_nth GNum Left Goals Right Goal,
+    append Left Right Rest,
+    prompt_user "input tactic" Tac,
+    (Tac = backup, !, fail;
+    itp_loop (Goal :: Rest) [Tac] OutScript,
+    itp_loop Goals [] OutScript).
 
 % hole - input
-itp_loop [(goal (uvar as Hole) Type RTerm VDecls as Goal) | Goals] [Tac | Tacs] OutScript :-
+itp_loop [(goal Hole Type RTerm VDecls as Goal) | Goals] [Tac | Tacs] OutScript :-
     tac_under_ctx Tac Goal VDecls [] NewGoals,
-    %tactic Tac Goal NewGoals,
     append NewGoals Goals UpdatedGoals,
     itp_loop UpdatedGoals Tacs OutScript',
     append [Tac] OutScript' OutScript.
 
 tactic (intro N) (goal X Type RTerm VDecls) FVars NewGoals :-
-    %assign_under X (lam N T F) VDecls,
-    print "----" X (lam N T F),
     X = lam N T F,
-    print,
-    print "constraints after tactic assignment",
-    print_constraints, print,
     build_newgoals RTerm VDecls NewGoals.
-    /*
-    recover_metas RTerm [F'],
-    get_evar_type F' Type_F,
-    SubGoals = [goal F Type_F F' (vdecl N T :: VDecls)].
-    */
 
 tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
     get_named N FVars Lam,
-    print "here" Lam,
     X = app Lam dots,
-    %assign_named_under X (app Lam dots) VDecls N Lam,
     build_newgoals RTerm VDecls NewGoals.
 
 % --------------- %
@@ -81,23 +78,20 @@ lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
 constraint isa read-evar read-refined of {
     rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
         \ (E2 : read-refined (uvar O L2) X T)
-        | (print "match" L1 L1' L2, L1 = L1', !; print "align fail on" L1 "=" L1', halt)
+        | (/* print "match" L1 L1' L2, */ L1 = L1', !; print "align fail on" L1 "=" L1', halt)
         <=> (E2 : X = uvar K [], T = Ty).
 }
 
-mode (tac_under_ctx i i i i).
-tac_under_ctx A B C D E :- print (tac_under_ctx A B C D E), fail.
+mode (tac_under_ctx i i i i i).
+%tac_under_ctx A B C D E :- print (tac_under_ctx A B C D E), fail.
 tac_under_ctx Tac (goal X T Y V) (vdecl N _ :: VDecls) FVars NG :-
     pi x\ tac_under_ctx Tac (goal (X x) T (Y x) V) VDecls ((x, N) :: FVars) NG.
 
 tac_under_ctx Tac (goal X T Y V as G) [] FVars NewGoals :-
     tactic Tac G FVars NewGoals.
 
-mode (build_newgoals i i i i).
-build_newgoals A B C :- print (build_newgoals A B C), fail.
-
-%build_newgoals Term (vdecl N T :: VDecls) NewVDecls NewGoals :-
-%    pi x\ build_newgoals (Term x) VDecls NewVDecls NewGoals.
+mode (build_newgoals i i o).
+%build_newgoals A B C :- print (build_newgoals A B C), fail.
 
 build_newgoals (uvar K L as Y) VDecls NewGoals :-
     lookdown Y X T,
@@ -109,10 +103,37 @@ build_newgoals (app M N) VDecls NewGoals :-
     build_newgoals M VDecls NewGoals',
     build_newgoals N VDecls NewGoals'',
     append NewGoals' NewGoals'' NewGoals.
+build_newgoals FVar _ [] :- name FVar.
 
-print_status (goal PTerm Type _ VDecls) :-
+mode (get_nth i o i o o).
+get_nth A B C D E :- print (get_nth A B C D E), fail.
+get_nth 1 [] [X|XS] XS X.
+get_nth N L [X|XS] R Res :-
+    M is N - 1,
+    get_nth M L' XS R Res,
+    append L' [X] L.     
+
+% ------------- %
+% ---- I/O ---- %
+% ------------- %
+
+print_goals (Goal :: Goals) :-
+    length (Goal :: Goals) N,
     print,
-    print VDecls "|-" PTerm ":" Type.
+    print "you got" N "open goals",
+    print_goal_aux 1 N (Goal :: Goals).
 
-prompt_user Tac :-
-    print "input tactic:", read Tac.
+print_goal Goal :-
+    print,
+    print "you got" 1 "open goal",
+    print_goal_aux 1 1 [Goal].
+
+print_goal_aux _ 0 [].
+print_goal_aux Current Length (goal PTerm Type _ VDecls :: Goals) :-
+    print Current "→-" VDecls "|-" PTerm ":" Type,
+    Length' is Length - 1,
+    Current' is Current + 1,
+    print_goal_aux Current' Length' Goals.
+
+prompt_user Msg Input :-
+    print Msg, read Input, print.

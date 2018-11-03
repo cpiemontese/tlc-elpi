@@ -1,6 +1,12 @@
 accumulate utils.
 
-run_itp X InScript :- loop [([],X)] [] InScript.
+prove Type ProofTerm OutScript :-
+    prove Type [] ProofTerm OutScript.
+
+prove Type InScript ProofTerm OutScript :-
+    of X Type ProofTerm,
+    loop [([],X)] OutScript InScript,
+    print "finished" ProofTerm.
 
 % ------------------ %
 % ---- ITP LOOP ---- %

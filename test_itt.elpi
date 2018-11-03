@@ -9,8 +9,7 @@ interactive TestName OutputTerm :-
 
 interactive TestName TestInput OutputTerm :-
     TestName Type,
-    of X Type X',
-    run_itp X TestInput,
+    prove Type TestInput OutputTerm _.    
     print_pt X' Type OutputTerm.
 
 print_pt Term Type S :-

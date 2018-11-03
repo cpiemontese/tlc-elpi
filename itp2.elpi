@@ -4,9 +4,6 @@ accumulate utils.
 
 % TODO:
 % - pretty print tipo in print_goal
-% - forse separare argomenti in usabili e da applicare
-% - stampa di goal multipi
-% - scelta goal multipli
 
 % ------------------- %
 % ---- INTERFACE ---- %
@@ -17,8 +14,7 @@ prove Type ProofTerm OutScript :-
 
 prove Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
-    itp_loop [goal X Type ProofTerm []] InScript OutScript,
-    print "finished" ProofTerm.
+    itp_loop [goal X Type ProofTerm []] InScript OutScript.
 
 % -------------- %
 % ---- LOOP ---- %
@@ -29,9 +25,9 @@ prove Type InScript ProofTerm OutScript :-
 % - input tactics list
 % - output script list
 mode (itp_loop i i o).
-itp_loop A B C :- print (itp_loop A B C), fail.
+%itp_loop A B C :- print (itp_loop A B C), fail.
 
-itp_loop [] _ _.
+itp_loop [] _ [].
 
 % hole - no input - no choice
 itp_loop [Goal] [] OutScript :- !,
@@ -49,11 +45,11 @@ itp_loop Goals [] OutScript :-
     append Left Right Rest,
     prompt_user "input tactic" Tac,
     (Tac = backup, !, fail;
-    itp_loop (Goal :: Rest) [Tac] OutScript,
+    itp_loop (Goal :: Rest) [Tac] OutScript;
     itp_loop Goals [] OutScript).
 
 % hole - input
-itp_loop [(goal Hole Type RTerm VDecls as Goal) | Goals] [Tac | Tacs] OutScript :-
+itp_loop [(goal H T R VDecls as Goal) | Goals] [Tac | Tacs] OutScript :-
     tac_under_ctx Tac Goal VDecls [] NewGoals,
     append NewGoals Goals UpdatedGoals,
     itp_loop UpdatedGoals Tacs OutScript',
@@ -71,16 +67,6 @@ tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
 % --------------- %
 % ---- UTILS ---- %
 % --------------- %
-
-mode (lookdown i i i).
-lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
-
-constraint isa read-evar read-refined of {
-    rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
-        \ (E2 : read-refined (uvar O L2) X T)
-        | (/* print "match" L1 L1' L2, */ L1 = L1', !; print "align fail on" L1 "=" L1', halt)
-        <=> (E2 : X = uvar K [], T = Ty).
-}
 
 mode (tac_under_ctx i i i i i).
 %tac_under_ctx A B C D E :- print (tac_under_ctx A B C D E), fail.
@@ -106,12 +92,22 @@ build_newgoals (app M N) VDecls NewGoals :-
 build_newgoals FVar _ [] :- name FVar.
 
 mode (get_nth i o i o o).
-get_nth A B C D E :- print (get_nth A B C D E), fail.
+%get_nth A B C D E :- print (get_nth A B C D E), fail.
 get_nth 1 [] [X|XS] XS X.
 get_nth N L [X|XS] R Res :-
     M is N - 1,
     get_nth M L' XS R Res,
     append L' [X] L.     
+
+mode (lookdown i i i).
+lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
+
+constraint isa read-evar read-refined of {
+    rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
+        \ (E2 : read-refined (uvar O L2) X T)
+        | (/* print "match" L1 L1' L2, */ L1 = L1', !; print "align fail on" L1 "=" L1', halt)
+        <=> (E2 : X = uvar K [], T = Ty).
+}
 
 % ------------- %
 % ---- I/O ---- %

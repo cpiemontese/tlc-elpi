@@ -17,20 +17,6 @@ loop [] OutScript InScript :-
     reverse OutScript OutReversed,
     print "Total script:" OutReversed.
 
-% call with no script
-/*
-loop [(Vars,X)|TL] OutScript [] :-
-    print_constraints,
-    print, print Vars "|-" X,
-    read T,
-    tactic T TE Vars (Goals \ sigma TL' \
-        lookup X Y,
-        X = TE,
-        print "recuperato" Y "elaborato di" TE,
-        append Goals TL TL',
-        loop TL' [T|OutScript] []).
-*/
-
 loop [(Vars,X)|TL] OutScript [] :-
     print_constraints,
     print, print Vars "|-" X,

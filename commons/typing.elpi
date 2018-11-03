@@ -35,7 +35,6 @@ constraint get_type isa get_ctx {
     | (reverse Ctx RCtx, transfer_ctx RCtx L NCtx, reverse NCtx RNCtx)
     <=> (RNCtx ?- Body).
 }
-*/
 
 mode (transfer_ctx i i o).
 %transfer_ctx A B C :- print (transfer_ctx A B C), fail.
@@ -52,3 +51,4 @@ get_type (uvar _ _ as X) T :- declare_constraint (get_type X T) [X].
 % i.e. bring into the tactic [isa x0 t x0, ...].
 mode (get_ctx i o).
 get_ctx (uvar as X) Body :- declare_constraint (get_ctx X Body) [X].
+*/

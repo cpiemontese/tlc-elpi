@@ -21,6 +21,13 @@ tactic (app N M) (app H G) Vars K :-
     get_named M Vars G,
     K [].
 
+tactic (mapp N) X Vars K :-
+    get_named N Vars Lambda,
+    lookup X Y,
+    X = app Lambda dots,
+    %print "recuperato" Y "elaborato di" X,
+    rec_term Y Vars K.
+
 
 % --------------------- %
 % ---- AND TACTICS ---- %

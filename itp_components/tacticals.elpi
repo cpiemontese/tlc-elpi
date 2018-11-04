@@ -1,0 +1,30 @@
+% ------------------- %
+% ---- TACTICALS ---- %
+% ------------------- %
+
+tactic idtac Goal _ Goal.
+tactic (then T1 T2) Goal FVars NewGoals :-
+    tactic T1 Goal FVars MidGoals, tac_under_ctx T2 MidGoals NewGoals.   
+
+tactic (orelse T1 _T2) Goal FVars NewGoals :- tactic T1 Goal FVars NewGoals.
+tactic (orelse _T1 T2) Goal FVars NewGoals :- tactic T2 Goal FVars NewGoals.
+%tactic (orelse T1 T2) Goal FVars NewGoals :-
+%    tactic T1 Goal FVars NewGoals; tactic T2 Goal FVars NewGoals.
+
+tactic (orelse! T1 _T2) Goal FVars NewGoals :- tactic T1 Goal FVars NewGoals, !.
+tactic (orelse! _T1 T2) Goal FVars NewGoals :- tactic T2 Goal FVars NewGoals.
+%tactic (orelse! T1 T2) Goal FVars NewGoals :-
+%    tactic T1 Goal FVars NewGoals, !; tactic T2 Goal FVars NewGoals.
+
+tactic (try T) Goal FVars NewGoals :- tactic (orelse T idtac) Goal FVars NewGoals.
+tactic (solve T) Goal FVars NewGoals :- tactic T Goal FVars NewGoals, NewGoals = [].
+tactic (repeat T) Goal FVars NewGoals :- tactic (then T (try (repeat T))) Goal FVars NewGoals.
+
+tactic (do 0 T) Goal _ Goal.
+tactic (do N T) Goal FVars NewGoals :-
+    M is N - 1, tactic (then T (do M T)) Goal FVars NewGoals.
+
+tactic (first []) Goal _ Goal.
+tactic (first (Tac :: Tacs)) Goal FVars NewGoals :- tactic (orelse Tac (first Tacs)) Goal FVars NewGoals.
+
+

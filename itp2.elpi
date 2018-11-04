@@ -50,11 +50,17 @@ itp_loop Goals [] OutScript :-
     itp_loop Goals [] OutScript).
 
 % hole - input
-itp_loop [(goal H T R VDecls as Goal) | Goals] [Tac | Tacs] OutScript :-
-    tac_under_ctx Tac Goal VDecls [] NewGoals,
+itp_loop (Goal :: Goals) (Tac :: Tacs) OutScript :-
+    tac_under_ctx Tac [Goal] NewGoals,
     append NewGoals Goals UpdatedGoals,
     itp_loop UpdatedGoals Tacs OutScript',
     append [Tac] OutScript' OutScript.
+
+% ----------------- %
+% ---- TACTICS ---- %
+% ----------------- %
+
+% tactic name goals fresh_vars new_goals
 
 tactic (intro N) (goal X Type RTerm VDecls) FVars NewGoals :-
     X = lam N T F,
@@ -65,16 +71,55 @@ tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
     X = app Lam dots,
     build_newgoals RTerm VDecls NewGoals.
 
+% ------------------- %
+% ---- TACTICALS ---- %
+% ------------------- %
+
+tactic idtac Goal _ Goal.
+tactic (then T1 T2) Goal FVars NewGoals :-
+    tactic T1 Goal FVars MidGoals, tac_under_ctx T2 MidGoals NewGoals.   
+
+tactic (orelse T1 _T2) Goal FVars NewGoals :- tactic T1 Goal FVars NewGoals.
+tactic (orelse _T1 T2) Goal FVars NewGoals :- tactic T2 Goal FVars NewGoals.
+%tactic (orelse T1 T2) Goal FVars NewGoals :-
+%    tactic T1 Goal FVars NewGoals; tactic T2 Goal FVars NewGoals.
+
+tactic (orelse! T1 _T2) Goal FVars NewGoals :- tactic T1 Goal FVars NewGoals, !.
+tactic (orelse! _T1 T2) Goal FVars NewGoals :- tactic T2 Goal FVars NewGoals.
+%tactic (orelse! T1 T2) Goal FVars NewGoals :-
+%    tactic T1 Goal FVars NewGoals, !; tactic T2 Goal FVars NewGoals.
+
+tactic (try T) Goal FVars NewGoals :- tactic (orelse T idtac) Goal FVars NewGoals.
+tactic (solve T) Goal FVars NewGoals :- tactic T Goal FVars NewGoals, NewGoals = [].
+tactic (repeat T) Goal FVars NewGoals :- tactic (then T (try (repeat T))) Goal FVars NewGoals.
+
+tactic (do 0 T) Goal _ Goal.
+tactic (do N T) Goal FVars NewGoals :-
+    M is N - 1, tactic (then T (do M T)) Goal FVars NewGoals.
+
+tactic (first []) Goal _ Goal.
+tactic (first (Tac :: Tacs)) Goal FVars NewGoals :- tactic (orelse Tac (first Tacs)) Goal FVars NewGoals.
+
 % --------------- %
 % ---- UTILS ---- %
 % --------------- %
 
-mode (tac_under_ctx i i i i i).
-%tac_under_ctx A B C D E :- print (tac_under_ctx A B C D E), fail.
-tac_under_ctx Tac (goal X T Y V) (vdecl N _ :: VDecls) FVars NG :-
-    pi x\ tac_under_ctx Tac (goal (X x) T (Y x) V) VDecls ((x, N) :: FVars) NG.
+% apply tac to many goals
+mode (tac_under_ctx i i o).
+%tac_under_ctx A B C :- print (tac_under_ctx A B C), fail.
+tac_under_ctx _ [] [].
+tac_under_ctx Tac ((goal X T Y D as Goal) :: Goals) NG :-
+    tac_under_ctx_base Tac Goal D [] NG',
+    tac_under_ctx Tac Goals NGS,
+    append NG' NGS NG.
 
-tac_under_ctx Tac (goal X T Y V as G) [] FVars NewGoals :-
+% apply tac to one goal
+mode (tac_under_ctx_base i i i i o).
+%tac_under_ctx_base A B C D E :- print (tac_under_ctx_base A B C D E), fail.
+tac_under_ctx_base Tac (goal X T Y D) (vdecl N _ :: VDecls) FVars NG :-
+    pi x\ tac_under_ctx_base Tac (goal (X x) T (Y x) D) VDecls ((x, N) :: FVars) NG.
+
+tac_under_ctx_base Tac (goal X T Y D as G) [] FVars NewGoals :-
     tactic Tac G FVars NewGoals.
 
 mode (build_newgoals i i o).

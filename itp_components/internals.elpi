@@ -33,7 +33,21 @@ build_newgoals (app M N) VDecls NewGoals :-
     build_newgoals M VDecls NewGoals',
     build_newgoals N VDecls NewGoals'',
     append NewGoals' NewGoals'' NewGoals.
+build_newgoals (pair M N) VDecls NewGoals :-
+    build_newgoals M VDecls NewGoals',
+    build_newgoals N VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
 build_newgoals FVar _ [] :- name FVar.
+
+mode (get_goals i i o o).
+%get_goals A B C D :- print (get_goals A B C D), fail.
+get_goals [] Rest [] Rest.
+get_goals (N :: GoalsToPick) Goals OutGoals Rest :-
+    get_nth N Left Goals Right Goal,
+    append Left Right Rest',
+    dec_greater N GoalsToPick GoalsToPickFixed,
+    get_goals GoalsToPickFixed Rest' OutGoals' Rest,
+    append [Goal] OutGoals' OutGoals.
 
 mode (get_nth i o i o o).
 %get_nth A B C D E :- print (get_nth A B C D E), fail.
@@ -41,7 +55,12 @@ get_nth 1 [] [X|XS] XS X.
 get_nth N L [X|XS] R Res :-
     M is N - 1,
     get_nth M L' XS R Res,
-    append L' [X] L.     
+    append [X] L' L.     
+
+dec_greater _ [] [].
+dec_greater N (M :: MS) (M' :: MS') :-
+    (M > N, M' is M - 1; M' = M),
+    dec_greater N MS MS'.
 
 mode (lookdown i i i).
 lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
@@ -52,4 +71,3 @@ constraint isa read-evar read-refined of {
         | (/* print "match" L1 L1' L2, */ L1 = L1', !; print "align fail on" L1 "=" L1', halt)
         <=> (E2 : X = uvar K [], T = Ty).
 }
-

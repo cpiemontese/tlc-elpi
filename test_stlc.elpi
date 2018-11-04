@@ -5,6 +5,10 @@ test_itp PTerm InScript OutScript :-
     prove (arr (arr a (arr b c)) (arr a (arr b c))) InScript PTerm OutScript.
 test_itp PTerm OutScript :-
     prove (arr (arr a (arr b c)) (arr a (arr b c))) PTerm OutScript.
+test_pair PTerm InScript OutScript :-
+    prove (arr a (arr b (prod (prod a b) (prod b a)))) InScript PTerm OutScript.
+test_pair PTerm OutScript :-
+    prove (arr a (arr b (prod (prod a b) (prod b a)))) PTerm OutScript.
 
 % (A -> (B -> C)) -> ((A & B) -> C)
 % and elim test

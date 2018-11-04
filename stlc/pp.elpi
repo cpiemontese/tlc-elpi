@@ -6,7 +6,7 @@ pp (lam Name T1 Body) S :-
     term_to_string Name Name',
     (pi x\ pp x Name' => pp (Body x) S1),
     pp T1 SType,
-    S is "λ" ^ Name' ^ ":" ^ SType ^ "." ^ S1.
+    S is "λ" ^ Name' ^ ": " ^ SType ^ "." ^ S1.
 pp (app Lambda Arg) S :-
     pp Lambda S1,
     pp Arg S2,
@@ -15,5 +15,9 @@ pp (arr T1 T2) S :-
     pp T1 S1,
     pp T2 S2,
     S is "(" ^ S1 ^ " →  " ^ S2 ^ ")".
+pp (prod T1 T2) S :-
+    pp T1 S1,
+    pp T2 S2,
+    S is "(" ^ S1 ^ " ∧ " ^ S2 ^ ")".
 pp uvar "_".
 pp Term S :- term_to_string Term S. % no special rules, just print the term

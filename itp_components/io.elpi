@@ -37,7 +37,3 @@ vdecls_to_string (vdecl N T :: VDecls) S :-
 
 prompt_user Msg Input :-
     print Msg, read Input, print.
-
-mode (parse_input i o).
-parse_input (Tac GoalNums) (Tac, GoalNums).
-parse_input Tac Tac.

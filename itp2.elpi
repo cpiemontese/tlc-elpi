@@ -5,7 +5,6 @@ accumulate "commons/typing".
 accumulate stlc/lang, stlc/typing, stlc/conv, stlc/pp.
 
 % TODO:
-% - tattiche multiple (i.e. su piu' goal)
 % - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
 % - itp_loop dovrebbe essere spostato in internals
 % - questo file dovrebbe contenere solo i predicati di interfaccia
@@ -45,19 +44,15 @@ itp_loop [Goal] [] OutScript :- !,
 % hole - no input - choice
 itp_loop Goals [] OutScript :-
     print_goals Goals,
-    % TODO:
-    % - cambiare input in nome_tattica goal_a_cui_applicarla
-    % - selezionare i goal con get_nth ricorsive
-    % - applicare la tattica ai goal
-    prompt_user "input tactic" Input,
-    parse_input Input (Tac, GoalArgs),
-    print Tac GoalArgs, halt.
-    %get_nth GNum Left Goals Right Goal,
-    %append Left Right Rest,
-    %prompt_user "input tactic" Tac,
-    %(Tac = backup, !, fail;
-    %itp_loop (Goal :: Rest) [Tac] OutScript;
-    %itp_loop Goals [] OutScript).
+    prompt_user "input tactic" Tac,
+    prompt_user "goals to apply to" GoalNums,
+    get_goals GoalNums Goals SelectedGoals Rest,
+    (Tac = backup, !, fail;                     % backtracking point
+    tac_under_ctx Tac SelectedGoals NewGoals,   % try to execute tac
+    append NewGoals Rest UpdatedGoals,
+    itp_loop UpdatedGoals [] OutScript',
+    append [Tac] OutScript' OutScript;
+    itp_loop Goals [] OutScript).               % otherwise retry
 
 % hole - input
 itp_loop (Goal :: Goals) (Tac :: Tacs) OutScript :-
@@ -72,11 +67,15 @@ itp_loop (Goal :: Goals) (Tac :: Tacs) OutScript :-
 
 % tactic name goals fresh_vars new_goals
 
-tactic (intro N) (goal X Type RTerm VDecls) FVars NewGoals :-
-    X = lam N T F,
+tactic (intro N) (goal X (arr A B) RTerm VDecls) FVars NewGoals :-
+    X = lam N A F,
     build_newgoals RTerm VDecls NewGoals.
 
 tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
     get_named N FVars Lam,
     X = app Lam dots,
+    build_newgoals RTerm VDecls NewGoals.
+
+tactic andI (goal X (prod A B) RTerm VDecls) FVars NewGoals :-
+    X = pair P Q,
     build_newgoals RTerm VDecls NewGoals.

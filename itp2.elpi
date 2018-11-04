@@ -1,9 +1,10 @@
 accumulate "commons/typing".
-accumulate stlc/lang, stlc/typing, stlc/conv.
+accumulate stlc/lang, stlc/typing, stlc/conv, stlc/pp.
 accumulate utils.
 
 % TODO:
-% - pretty print tipo in print_goal
+% - tattiche multiple (i.e. su piu' goal)
+% - tatticali
 
 % ------------------- %
 % ---- INTERFACE ---- %
@@ -115,21 +116,36 @@ constraint isa read-evar read-refined of {
 
 print_goals (Goal :: Goals) :-
     length (Goal :: Goals) N,
+    term_to_string N SN,
+    P is "you got "^ SN ^ " open goals",
     print,
-    print "you got" N "open goals",
+    print P,
     print_goal_aux 1 N (Goal :: Goals).
 
 print_goal Goal :-
     print,
-    print "you got" 1 "open goal",
+    print "you got 1 open goal",
     print_goal_aux 1 1 [Goal].
 
 print_goal_aux _ 0 [].
 print_goal_aux Current Length (goal PTerm Type _ VDecls :: Goals) :-
-    print Current "→-" VDecls "|-" PTerm ":" Type,
+    pp Type TypePP,
+    vdecls_to_string VDecls VDString,
+    term_to_string Current SCurrent,
+    term_to_string PTerm SPTerm,
+    S is SCurrent ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
+    print S,
     Length' is Length - 1,
     Current' is Current + 1,
     print_goal_aux Current' Length' Goals.
 
 prompt_user Msg Input :-
     print Msg, read Input, print.
+
+vdecls_to_string [] "".
+vdecls_to_string (vdecl N T :: VDecls) S :-
+    vdecls_to_string VDecls S',
+    pp T TPP,
+    term_to_string N SN,
+    (S' is "", S is "(" ^ SN ^ ": " ^ TPP ^ ")", !;
+    S is "(" ^ SN ^ ": " ^ TPP ^ "), " ^ S').

@@ -6,8 +6,8 @@ accumulate stlc/lang, stlc/typing, stlc/conv, stlc/pp.
 
 % TODO:
 % - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
-% - itp_loop dovrebbe essere spostato in internals
-% - questo file dovrebbe contenere solo i predicati di interfaccia
+% - itp_loop potrebbe essere spostato in internals
+% - questo file potrebbe contenere solo i predicati di interfaccia
 
 % ------------------- %
 % ---- INTERFACE ---- %
@@ -30,7 +30,6 @@ prove Type InScript ProofTerm OutScript :-
 % - output script list
 mode (itp_loop i i o).
 %itp_loop A B C :- print (itp_loop A B C), fail.
-
 itp_loop [] _ [].
 
 % hole - no input - no choice

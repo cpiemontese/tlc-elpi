@@ -5,7 +5,7 @@
 print_goals (Goal :: Goals) :-
     length (Goal :: Goals) N,
     term_to_string N SN,
-    P is "you got "^ SN ^ " open goals",
+    P is "you got " ^ SN ^ " open goals",
     print,
     print P,
     print_goal_aux 1 N (Goal :: Goals).
@@ -25,7 +25,7 @@ print_goal_aux Current Length (goal PTerm Type _ VDecls :: Goals) :-
     print S,
     Length' is Length - 1,
     Current' is Current + 1,
-    print_goal_aux Current' Length' Goals.
+    print_goal_aux Current' Length' Goals, !.
 
 vdecls_to_string [] "".
 vdecls_to_string (vdecl N T :: VDecls) S :-
@@ -33,7 +33,7 @@ vdecls_to_string (vdecl N T :: VDecls) S :-
     pp T TPP,
     term_to_string N SN,
     (S' is "", S is "(" ^ SN ^ ": " ^ TPP ^ ")", !;
-    S is "(" ^ SN ^ ": " ^ TPP ^ "), " ^ S').
+    S is "(" ^ SN ^ ": " ^ TPP ^ "), " ^ S'), !.
 
 prompt_user Msg Input :-
     print Msg, read Input, print.

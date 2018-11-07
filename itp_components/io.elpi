@@ -2,13 +2,21 @@
 % ---- I/O MODULE ---- %
 % -------------------- %
 
-print_goals (Goal :: Goals) :-
-    length (Goal :: Goals) N,
+print_status (Active, _Inactive, _Levels) :- print_goals Active.
+
+print_status_dbg (Active, Inactive, Levels) :-
+    print_goals Active,
+    print "Inactive:" Inactive,
+    print "Levels:" Levels.
+
+print_goals [] :- print "you got 0 open goals".
+print_goals Goals :-
+    length Goals N,
     term_to_string N SN,
     P is "you got " ^ SN ^ " open goals",
     print,
     print P,
-    print_goal_aux 1 N (Goal :: Goals).
+    print_goal_aux 1 N Goals.
 
 print_goal Goal :-
     print,

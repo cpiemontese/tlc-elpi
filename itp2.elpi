@@ -18,47 +18,7 @@ prove Type ProofTerm OutScript :-
 
 prove Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
-    itp_loop [goal X Type ProofTerm []] InScript OutScript.
-
-% -------------- %
-% ---- LOOP ---- %
-% -------------- %
-
-% itp_loops args:
-% - list of current open goals
-% - input tactics list
-% - output script list
-mode (itp_loop i i o).
-%itp_loop A B C :- print (itp_loop A B C), fail.
-itp_loop [] _ [].
-
-% hole - no input - no choice
-itp_loop [Goal] [] OutScript :- !,
-    print_goal Goal,
-    prompt_user "input tactic" Tac,
-    (Tac = backup, !, fail;
-    itp_loop [Goal] [Tac] OutScript;
-    itp_loop [Goal] [] OutScript).
-
-% hole - no input - choice
-itp_loop Goals [] OutScript :-
-    print_goals Goals,
-    prompt_user "input tactic" Tac,
-    prompt_user "goals to apply to" GoalNums,
-    get_goals GoalNums Goals SelectedGoals Rest,
-    (Tac = backup, !, fail;                     % backtracking point
-    tac_under_ctx Tac SelectedGoals NewGoals,   % try to execute tac
-    append NewGoals Rest UpdatedGoals,
-    itp_loop UpdatedGoals [] OutScript',
-    append [Tac] OutScript' OutScript;
-    itp_loop Goals [] OutScript).               % otherwise retry
-
-% hole - input
-itp_loop (Goal :: Goals) (Tac :: Tacs) OutScript :-
-    tac_under_ctx Tac [Goal] NewGoals,
-    append NewGoals Goals UpdatedGoals,
-    itp_loop UpdatedGoals Tacs OutScript',
-    append [Tac] OutScript' OutScript.
+    itp_loop ([goal X Type ProofTerm []], [], []) InScript OutScript.
 
 % ----------------- %
 % ---- TACTICS ---- %

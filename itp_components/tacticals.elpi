@@ -4,7 +4,7 @@
 
 tactic idtac Goal _ Goal.
 tactic (then T1 T2) Goal FVars NewGoals :-
-    tactic T1 Goal FVars MidGoals, tac_under_ctx T2 MidGoals NewGoals.   
+    tactic T1 Goal FVars MidGoals, exec_tac T2 MidGoals NewGoals.   
 
 tactic (orelse T1 _T2) Goal FVars NewGoals :- tactic T1 Goal FVars NewGoals.
 tactic (orelse _T1 T2) Goal FVars NewGoals :- tactic T2 Goal FVars NewGoals.
@@ -27,4 +27,9 @@ tactic (do N T) Goal FVars NewGoals :-
 tactic (first []) Goal _ Goal.
 tactic (first (Tac :: Tacs)) Goal FVars NewGoals :- tactic (orelse Tac (first Tacs)) Goal FVars NewGoals.
 
-
+tactic maptac A B C :- print (tactic maptac A B C), fail.
+tactic maptac _Tac [] [].
+tactic maptac Tac (Goal :: Goals) NewGoals :-
+    exec_tac Tac Goal NewGoals',
+    tactic maptac Tac Goals NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.

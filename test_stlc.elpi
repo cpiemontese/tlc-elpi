@@ -1,6 +1,23 @@
 accumulate itp2.
 %accumulate stlc/theory.
 
+main T S :-
+    test_pair T [
+        then (intro x) (
+        then (intro y) (
+        then andI (
+        then (maptac andI [1, 2]) (
+        then branch (
+        then (mapp x) (
+        then shift (
+        then shift (
+        then shift (
+        then unbranch (
+        then branch (
+        then (mapp x) (
+        then unbranch ((maptac (mapp y) [1, 2])
+        )))))))))))))] S.
+
 test_itp PTerm InScript OutScript :-
     prove (arr (arr a (arr b c)) (arr a (arr b c))) InScript PTerm OutScript.
 test_itp PTerm OutScript :-

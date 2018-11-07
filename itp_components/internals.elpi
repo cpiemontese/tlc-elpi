@@ -30,35 +30,6 @@ itp_loop State (Tac :: Tacs) OutScript :-
     itp_loop NewState Tacs OutScript',
     append [Tac] OutScript' OutScript.
 
-/*
-% hole - no input - no choice
-itp_loop [Goal] [] OutScript :- !,
-    print_status Goal,
-    prompt_user "input tactic" Tac,
-    (Tac = backup, !, fail;
-    itp_loop [Goal] [Tac] OutScript;
-    itp_loop [Goal] [] OutScript).
-
-% hole - no input - choice
-itp_loop Goals [] OutScript :-
-    print_status Goals,
-    prompt_user "input tactic" Tac,
-    prompt_user "goals to apply to" GoalNums,
-    get_goals GoalNums Goals SelectedGoals Rest,
-    (Tac = backup, !, fail;                     % backtracking point
-    tac_under_ctx Tac SelectedGoals NewGoals,   % try to execute tac
-    append NewGoals Rest UpdatedGoals,
-    itp_loop UpdatedGoals [] OutScript',
-    append [Tac] OutScript' OutScript;
-    itp_loop Goals [] OutScript).               % otherwise retry
-
-% hole - input
-itp_loop (Goal :: Goals) (Tac :: Tacs) OutScript :-
-    tac_under_ctx Tac [Goal] NewGoals,
-    append NewGoals Goals UpdatedGoals,
-    itp_loop UpdatedGoals Tacs OutScript',
-    append [Tac] OutScript' OutScript.
-*/
 
 % ------------------- %
 % ---- INTERNALS ---- %
@@ -161,11 +132,20 @@ process_tac unfocus ((Goals, Inactive, (b :: Levels)) as State) State :-
 
 % ---- MAPTAC ---- %
 
-process_tac (maptac _ []) Goals Goals.
+process_tac (maptac _ []) State State.
 process_tac (maptac Tac GoalIdxs) (Active, Inactive, Levels) (NewActive, Inactive, Levels) :-
     get_goals GoalIdxs Active Selected Rest,
     tactic maptac Tac Selected NewGoals,
     append NewGoals Rest NewActive.
+
+
+% ---- THEN ---- %
+
+process_tac (then T1 T2) State NewState :-
+    process_tac T1 State MidState, process_tac T2 MidState NewState.
+
+
+% ---- DEFAULT ---- %
 
 % default: Tac is applied to the first goal
 process_tac Tac ((Goal :: Active), Inactive, Levels) (NewActive, Inactive, Levels) :-

@@ -17,7 +17,7 @@ mode (itp_loop i i o).
 itp_loop ([], [], []) _ [].
 
 itp_loop State [] OutScript :-
-    print_status_dbg State,
+    print_status State,
     prompt_user "input tactic" Tac,
     (Tac = backup, !, fail;
     process_tac Tac State NewState,
@@ -51,8 +51,7 @@ itp_loop State (Tac :: Tacs) OutScript :-
 % ---- BRANCHING ---- %
 
 mode (process_tac i i o).
-process_tac A B C :- print (process_tac A B C), fail.
-
+%process_tac A B C :- print (process_tac A B C), fail.
 process_tac branch
     (Goal :: Goals, Inactive, Levels)
     ([Goal], (BranchCtx, []) :: Inactive, b :: Levels) :-

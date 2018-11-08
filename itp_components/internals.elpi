@@ -52,107 +52,91 @@ mode (process_tac i i o).
 % branch lables branch context goals but they are only needed for projection,
 % so we can keep numbering goals from max goal number
 process_tac branch
-    (Goal :: Goals, Inactive, Levels, Mgn)
-    ([Goal], (BranchCtx, [], BranchCtx) :: Inactive, b :: Levels, Mgn) :-
+    (Goal :: Goals, I, Levels, M)
+    ([Goal], (BranchCtx, [], BranchCtx) :: I, b :: Levels, M) :-
     label_branch_ctx (Goal :: Goals) BranchCtx.
 
-% shift when goal isn't processed
-%process_tac shift
-%    ([OldHd], (OldHd :: (N, NewHd) :: Rest, CtxCpy) :: Inactive, b :: Levels, Mgn)
-%    ([NewHd], ((N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn).
-
-% shift when goal is processed
 process_tac shift
-    (Active, (OldHd :: (N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    ([NewHd], ((N, NewHd) :: Rest, NewOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
+    (Active, (_ :: (N, NewHd) :: R, BranchOut, C) :: I, b :: L, M)
+    ([NewHd], ((N, NewHd) :: R, NewOut, C) :: I, b :: L, M) :-
     append BranchOut Active NewOut.
 
-% unbranch when goal isn't processed
-%process_tac unbranch
-%    (CurrentCtx, (CurrentCtx :: _Ctxs, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-%    (NewActive, Inactive, Levels, Mgn) :-
-%    get_unclosed_goals CtxCpy Unclosed,
-%    append Unclosed BranchOut NewActive.
-
-% unbranch when goal is processed
 process_tac unbranch
-    (Active, (_Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    (NewActive, Inactive, Levels, Mgn) :-
+    (Active, (_, BranchOut, CtxCpy) :: I, b :: Levels, M)
+    (NewActive, I, Levels, M) :-
     get_unclosed_goals CtxCpy Unclosed,
     append BranchOut Active DirtyActive,
     remove_unclosed Unclosed DirtyActive CleanActive,
     append Unclosed CleanActive NewActive.
 
-
 % can apply project only right after branch open or shift i.e. when the head of
 % the branch context is also the only active goal
 process_tac (project []) State State.
-process_tac (project (M :: Ms))
-    ([Hd], ((M, Hd) :: Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    (Selected, ((Pos, Tail) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
-    all_sequential Ns,
-    get_numbered_goals (M :: Ms) ((M, Hd) :: Ctx) Selected Rest,
+process_tac (project (Idx :: Idxs))
+    ([Hd], ((Idx, Hd) :: Ctx, BranchOut, CtxCpy) :: I, b :: L, M)
+    (Selected, ((Pos, Tail) :: Rest, BranchOut, CtxCpy) :: I, b :: L, M) :-
+    all_sequential (Idx :: Idxs),
+    get_numbered_goals (Idx :: Idxs) ((Idx, Hd) :: Ctx) Selected Rest,
     append _ [Tail] Selected,
     get_pos_in_ctx Tail CtxCpy Pos.
 
 % NOTE: after a project all we don't care about the branch context becuase no
 %       more shifts or projections can be done, only unbranch.
 process_tac (project all)
-    ([Hd], ((M, Hd) :: Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    (Unlabled, ([Tail], BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
-    unlabel_branch_ctx ((M, Hd) :: Ctx) Unlabled,
+    ([Hd], ((Id, Hd) :: Ctx, BranchOut, CtxCpy) :: I, b :: L, M)
+    (Unlabled, ([Tail], BranchOut, CtxCpy) :: I, b :: L, M) :-
+    unlabel_branch_ctx ((Id, Hd) :: Ctx) Unlabled,
     append _ [Tail] CtxCpy.
 
 % error reporting
 process_tac shift
-    ((Active, ([Single], BranchOut, CtxCpy) :: Inactive, Levels, Mgn) as State) State :-
+    ((A, ([S], B, C) :: I, L, M) as State) State :-
     print "error: shift cannot be performed on a single goal context".
-process_tac shift ((Active, Inactive, [], Mgn) as State) State :-
+process_tac shift ((A, I, [], M) as State) State :-
     print "error: can't shift outside of a branch".
-process_tac shift ((Active, Inactive, f :: Levels, Mgn) as State) State :-
+process_tac shift ((A, I, f :: L, M) as State) State :-
     print "error: can't shift inside a focus".
 
-process_tac unbranch ((Active, Inactive, [], Mgn) as State) State :-
+process_tac unbranch ((A, I, [], M) as State) State :-
     print "error: no branch to close".
-process_tac unbranch ((Active, Inactive, (f :: Levels), Mgn) as State) State :-
+process_tac unbranch ((A, I, (f :: L), M) as State) State :-
     print "error: focus must be closed with unfocus".
 
 % if you are here Ns is not empty but Active and Inactive are not in a
 % projectable form i.e. [Hd] ((M, Hd) :: Rest) 
-process_tac (project (M :: Ms))
-    (([Hd], ((N, Hd) :: Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn) as State) State :-
-    term_to_string M SM, term_to_string N SN,
-    ErrMsg is "error: can't project from index " ^ SM ^ " (min index: " ^ SN ^ ")", 
+process_tac (project (Id :: Idxs))
+    (([Hd], ((N, Hd) :: Ct, B, Cp) :: I, b :: L, M) as State) State :-
+    term_to_string Id SId, term_to_string N SN,
+    ErrMsg is "error: can't project from index " ^ SId ^ " (min index: " ^ SN ^ ")", 
     print ErrMsg.
-process_tac (project P) ((Active, Inactive, b :: Levels, Mgn) as State) State :-
+process_tac (project P) ((A, I, b :: L, M) as State) State :-
     print "error: can't project in a developed branch".
-process_tac (project P) ((Active, Inactive, []) as State) State :-
+process_tac (project P) ((A, I, []) as State) State :-
     print "error: can't project outside of a branch".
-process_tac (project P) ((Active, Inactive, f :: Levels, Mgn) as State) State :-
+process_tac (project P) ((A, I, f :: L, M) as State) State :-
     print "error: can't project in a focus".
 
 
 % ---- FOCUS ---- %
 
-process_tac (focus []) State State.
-process_tac (focus GoalIdxs) (Active, Inactive, Levels, Mgn) (NewActive, (Rest :: Inactive), (f :: Levels), Mgn) :-
+process_tac (focus []) S S.
+process_tac (focus GoalIdxs) (Active, Inactive, Levels, M) (NewActive, (Rest :: Inactive), (f :: Levels), M) :-
     get_numbered_goals GoalIdxs Active NewActive Rest.
-    %append [Rest] Inactive NewInactive.
 process_tac unfocus ([], (I :: Inactive), (f :: Levels), Mgn) (I, Inactive, Levels, Mgn).
-% error reporting
 
-process_tac unfocus ((NonEmptyGoals, Inactive, Levels, Mgn) as State) State :-
+% error reporting
+process_tac unfocus ((A, I, L, M) as State) State :-
     print "error: you ain't done".
-process_tac unfocus ((Goals, Inactive, []) as State) State :-
+process_tac unfocus ((A, I, [], M) as State) State :-
     print "error: no focus to close".
-process_tac unfocus ((Goals, Inactive, (b :: Levels), Mgn) as State) State :-
+process_tac unfocus ((A, I, (b :: Levels), M) as State) State :-
     print "error: branch must be closed with unbranch".
     
 
 % ---- MAPTAC ---- %
 
-process_tac (maptac _ []) State State.
-process_tac (maptac Tac GoalIdxs) (Active, Inactive, Levels, Mgn) (NActive, Inactive, Levels, NMgn) :-
+process_tac (maptac _ []) S S.
+process_tac (maptac Tac GoalIdxs) (Active, I, L, Mgn) (NActive, I, L, NMgn) :-
     get_numbered_goals GoalIdxs Active Selected Rest,
     tactic maptac Tac Selected UGoals,
     label_goals Mgn UGoals NMgn LGoals,
@@ -168,7 +152,7 @@ process_tac (then T1 T2) State NewState :-
 % ---- DEFAULT ---- %
 
 % default: Tac is applied to the first goal
-process_tac Tac (((N, Goal) :: Active), Inactive, Levels, Mgn) (NewActive, Inactive, Levels, NMgn) :-
+process_tac Tac (((N, Goal) :: Active), I, L, Mgn) (NewActive, I, L, NMgn) :-
     exec_tac Tac Goal UGoals,
     label_goals Mgn UGoals NMgn LGoals,
     append LGoals Active NewActive.
@@ -178,7 +162,6 @@ process_tac Tac (((N, Goal) :: Active), Inactive, Levels, Mgn) (NewActive, Inact
 %   Execute tactic under context of a goal
 */
 mode (exec_tac i i o).
-exec_tac A B C :- print (exec_tac A B C), fail.
 exec_tac Tac (goal X T Y V as Goal) NewGoals :- exec_tac_aux Tac Goal V [] NewGoals.
 
 mode (exec_tac_aux i i i i o).
@@ -262,22 +245,9 @@ get_pos_in_ctx (N, _) ((_, (O, _)) :: Ctx) M :- not (N is O), get_pos_in_ctx (N,
 % ---- TACTICS HELPERS ---- %
 % ------------------------- %
 
-% get N goals from goal list
-%mode (get_goals i i o o).
-%get_goals A B C D :- print (get_goals A B C D), fail.
-%get_goals [] Rest [] Rest.
-%get_goals (N :: GoalsToPick) Goals OutGoals Rest :-
-%    get_nth N Goals Left Right Goal,
-%    append Left Right Rest',
-%    dec_greater N GoalsToPick GoalsToPickFixed,
-%    get_goals GoalsToPickFixed Rest' OutGoals' Rest,
-%    append [Goal] OutGoals' OutGoals.
-
 mode (get_numbered_goals_aux i i o o o).
 %get_numbered_goal_aux A B C D E :- print (get_numbered_goal_aux A B C D E), fail.
-get_numbered_goal_aux N [] [] nil [] :- fail.
-    %ErrMsg is "get_numbered_goal_aux error: " ^ N ^ " is not in goal list",
-    %print ErrMsg.
+get_numbered_goal_aux N [] [] nil [] :- print "Goal" N "not in list", fail.
 get_numbered_goal_aux N ((M, NGoal) :: NGoals) [] NGoal NGoals :- N is M.
 get_numbered_goal_aux N ((M, NGoal) :: NGoals) ((M, NGoal) :: Left) Selected Right :-
     not (N is M),

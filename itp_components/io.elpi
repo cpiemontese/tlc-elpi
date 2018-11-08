@@ -26,6 +26,7 @@ print_n_open_goals N :-
     P is "you got " ^ SN ^ " open " ^ Q,
     print P.
 
+print_goal Prefix _ (skip_goal) :- P is Prefix ^ "closed branch, skip", print P.
 print_goal Prefix N (goal X T Y V as Goal) :- print_goal_aux Prefix N Goal V.
 
 print_goal_aux Prefix N (goal PTerm Type _ VDecls) [] :-

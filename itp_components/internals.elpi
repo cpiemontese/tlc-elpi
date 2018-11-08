@@ -48,6 +48,10 @@ itp_loop State (Tac :: Tacs) OutScript :-
 % ---- BRANCHING ---- %
 
 mode (process_tac i i o).
+
+% skip_goal blocks the user until he/she acknowledges with skip
+process_tac T (([(0, skip_goal)], I, L, M) as S) S :- print "you have to skip".
+
 %process_tac A B C :- print (process_tac A B C), fail.
 % branch lables branch context goals but they are only needed for projection,
 % so we can keep numbering goals from max goal number
@@ -56,11 +60,24 @@ process_tac branch
     ([Goal], (BranchCtx, [], BranchCtx) :: I, b :: Levels, M) :-
     label_branch_ctx (Goal :: Goals) BranchCtx.
 
+%process_tac shift
+%    (Active, (_ :: (N, (goal X T Y V) as NewHd) :: R, BranchOut, C) :: I, b :: L, M)
+%    ([(0, skip_goal)], ((N, NewHd) :: R, NewOut, C) :: I, b :: L, M) :-
+%    closed_goal NewHd, build_newgoals NewHd V [],
+%    append BranchOut Active NewOut.
+process_tac shift
+    (Active, (_ :: (N, (goal X T Y V) as NewHd) :: R, BranchOut, C) :: I, b :: L, M)
+    (NewActive, ((N, NewHd) :: R, NewOut, C) :: I, b :: L, M) :-
+    closed_goal NewHd, build_newgoals NewHd V NewGoals,
+    (NewGoals = [], NewActive = [(0, skip_goal)], !;
+    NewActive = NewGoals),
+    append BranchOut Active NewOut.
 process_tac shift
     (Active, (_ :: (N, NewHd) :: R, BranchOut, C) :: I, b :: L, M)
     ([NewHd], ((N, NewHd) :: R, NewOut, C) :: I, b :: L, M) :-
     append BranchOut Active NewOut.
 
+% unbranch can't close a branch without skipping first
 process_tac unbranch
     (Active, (_, BranchOut, CtxCpy) :: I, b :: Levels, M)
     (NewActive, I, Levels, M) :-
@@ -96,6 +113,13 @@ process_tac shift ((A, I, [], M) as State) State :-
     print "error: can't shift outside of a branch".
 process_tac shift ((A, I, f :: L, M) as State) State :-
     print "error: can't shift inside a focus".
+
+process_tac skip ((A, I, b :: L, M) as S) S:-
+    print "error: can't skip".
+process_tac skip ((A, I, f :: L, M) as S) S :-
+    print "error: can't skip inside a focus".
+process_tac skip ((A, I, [], M) as S) S :-
+    print "error: can't skip outside of a branch".
 
 process_tac unbranch ((A, I, [], M) as State) State :-
     print "error: no branch to close".

@@ -1,5 +1,8 @@
 % TODO:
 % - controllo degli errori piu' fine per project etc
+% - io stampa goals anche quando c'e' solo 1 goal
+% - cambia stampa contesto branch (mostra con > quello attualmente selezionato)
+% - rimuovi stampa output dal branch
 
 % -------------- %
 % ---- LOOP ---- %
@@ -57,9 +60,9 @@ process_tac branch
     label_branch_ctx (Goal :: Goals) BranchCtx.
 
 % shift when goal isn't processed
-process_tac shift
-    ([OldHd], (OldHd :: (N, NewHd) :: Rest, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    ([NewHd], ((N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn).
+%process_tac shift
+%    ([OldHd], (OldHd :: (N, NewHd) :: Rest, CtxCpy) :: Inactive, b :: Levels, Mgn)
+%    ([NewHd], ((N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn).
 
 % shift when goal is processed
 process_tac shift
@@ -68,40 +71,43 @@ process_tac shift
     append BranchOut Active NewOut.
 
 % unbranch when goal isn't processed
-process_tac unbranch
-    (CurrentCtx, (CurrentCtx :: _Ctxs, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
-    (NewActive, Inactive, Levels, Mgn) :-
-    get_unclosed_goals CtxCpy Unclosed,
-    append Unclosed BranchOut NewActive.
+%process_tac unbranch
+%    (CurrentCtx, (CurrentCtx :: _Ctxs, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+%    (NewActive, Inactive, Levels, Mgn) :-
+%    get_unclosed_goals CtxCpy Unclosed,
+%    append Unclosed BranchOut NewActive.
 
 % unbranch when goal is processed
 process_tac unbranch
     (Active, (_Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
     (NewActive, Inactive, Levels, Mgn) :-
     get_unclosed_goals CtxCpy Unclosed,
-    append Unclosed BranchOut Tmp,
-    append Tmp Active NewActive.
+    append BranchOut Active DirtyActive,
+    remove_unclosed Unclosed DirtyActive CleanActive,
+    append Unclosed CleanActive NewActive.
 
 
 % can apply project only right after branch open or shift i.e. when the head of
 % the branch context is also the only active goal
 process_tac (project []) State State.
-process_tac (project Ns)
-    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels, Mgn)
-    (Selected, (Rest, BranchOut) :: Inactive, b :: Levels, Mgn) :-
+process_tac (project (M :: Ms))
+    ([Hd], ((M, Hd) :: Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    (Selected, ((Pos, Tail) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
     all_sequential Ns,
-    get_numbered_goals Ns ((M, Hd) :: Ctx) Selected Rest.
+    get_numbered_goals (M :: Ms) ((M, Hd) :: Ctx) Selected Rest,
+    append _ [Tail] Selected,
+    get_pos_in_ctx Tail CtxCpy Pos.
 
 % NOTE: after a project all we don't care about the branch context becuase no
 %       more shifts or projections can be done, only unbranch.
 process_tac (project all)
-    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels, Mgn)
-    (Unlabled, ([], BranchOut) :: Inactive, b :: Levels, Mgn) :-
+    ([Hd], ((M, Hd) :: Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    (Unlabled, ([], BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
     unlabel_branch_ctx ((M, Hd) :: Ctx) Unlabled.
 
 % error reporting
 process_tac shift
-    ((Active, ([Single], BranchOut) :: Inactive, Levels, Mgn) as State)
+    ((Active, ([Single], BranchOut, CtxCpy) :: Inactive, Levels, Mgn) as State)
     State :-
     print "error: shift cannot be performed on a single goal context".
 process_tac shift ((Active, Inactive, [], Mgn) as State) State :-
@@ -217,7 +223,7 @@ unlabel_branch_ctx [] [].
 unlabel_branch_ctx ((_L, LGoal) :: LGoals) (LGoal :: Goals) :-
     unlabel_branch_ctx LGoals Goals.
 
-mode (all_sequential i).
+all_sequential [_N].
 all_sequential (N :: N' :: Ns) :-
     N' is N + 1, all_sequential (N' :: Ns).
 
@@ -230,9 +236,25 @@ get_unclosed_goals (Ctx :: Ctxs) UCtxs :-
     get_unclosed_goals Ctxs UCtxs.
 
 mode (closed_goal i).
-closed_goal (goal (uvar as X) _T _Y _V) :- !, fail.
+closed_goal (_N, goal (uvar as X) _T _Y _V) :- !, fail.
 closed_goal G.
 
+mode (remove_unclosed_aux i i o).
+remove_unclosed_aux N [] [].
+remove_unclosed_aux N ((M, Goal) :: Goals) Goals :- N is M. 
+remove_unclosed_aux N ((M, Goal) :: Goals) ((M, Goal) :: Removed) :-
+    not (N is M), remove_unclosed_aux N Goals Removed. 
+
+mode (remove_unclosed i i o).
+remove_unclosed [] Removed Removed.
+remove_unclosed ((N, _) :: Unclosed) Goals Removed :-
+    remove_unclosed_aux N Goals Goals',
+    remove_unclosed Unclosed Goals' Removed.
+
+mode (get_pos_in_ctx i i o).
+get_pos_in_ctx (N, _) [] 0 :- print "error(get_pos_in_ctx): " N " not in ctx".
+get_pos_in_ctx (N, _) ((M, (O, _)) :: _) M :- N is O.
+get_pos_in_ctx (N, _) ((_, (O, _)) :: Ctx) M :- not (N is O), get_pos_in_ctx (N, _) Ctx M.
 
 % ------------------------- %
 % ---- TACTICS HELPERS ---- %

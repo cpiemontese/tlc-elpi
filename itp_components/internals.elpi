@@ -1,8 +1,5 @@
 % TODO:
 % - controllo degli errori piu' fine per project etc
-% - numerazione globale dei goal generati
-% - print_status per inactive basato su f e b (i.e. mostrare qualcosa di info
-%   come ad esempio il branching context o che so)
 
 % -------------- %
 % ---- LOOP ---- %
@@ -14,7 +11,7 @@
 % - output script list
 mode (itp_loop i i o).
 %itp_loop A B C :- print (itp_loop A B C), fail.
-itp_loop ([], [], []) _ [].
+itp_loop ([], [], [], _) _ [].
 
 itp_loop State [] OutScript :-
     print_status State,
@@ -52,90 +49,106 @@ itp_loop State (Tac :: Tacs) OutScript :-
 
 mode (process_tac i i o).
 %process_tac A B C :- print (process_tac A B C), fail.
+% branch lables branch context goals but they are only needed for projection,
+% so we can keep numbering goals from max goal number
 process_tac branch
-    (Goal :: Goals, Inactive, Levels)
-    ([Goal], (BranchCtx, []) :: Inactive, b :: Levels) :-
+    (Goal :: Goals, Inactive, Levels, Mgn)
+    ([Goal], (BranchCtx, [], BranchCtx) :: Inactive, b :: Levels, Mgn) :-
     label_branch_ctx (Goal :: Goals) BranchCtx.
 
+% shift when goal isn't processed
 process_tac shift
-    (Active, (OldHd :: (N, NewHd) :: Rest, BranchOut) :: Inactive, b :: Levels)
-    ([NewHd],  ((N, NewHd) :: Rest, NewOut) :: Inactive, b :: Levels) :-
-    append Active BranchOut NewOut.
+    ([OldHd], (OldHd :: (N, NewHd) :: Rest, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    ([NewHd], ((N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn).
 
+% shift when goal is processed
+process_tac shift
+    (Active, (OldHd :: (N, NewHd) :: Rest, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    ([NewHd], ((N, NewHd) :: Rest, NewOut, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
+    append BranchOut Active NewOut.
+
+% unbranch when goal isn't processed
 process_tac unbranch
-    (Active, (_CurrentCtx :: Ctxs, BranchOut) :: Inactive, b :: Levels)
-    (NewActive, Inactive, Levels) :-
-    get_unclosed_goals Ctxs Unclosed,
-    append Active Unclosed Tmp,
-    append Tmp BranchOut NewActive.
+    (CurrentCtx, (CurrentCtx :: _Ctxs, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    (NewActive, Inactive, Levels, Mgn) :-
+    get_unclosed_goals CtxCpy Unclosed,
+    append Unclosed BranchOut NewActive.
+
+% unbranch when goal is processed
+process_tac unbranch
+    (Active, (_Ctx, BranchOut, CtxCpy) :: Inactive, b :: Levels, Mgn)
+    (NewActive, Inactive, Levels, Mgn) :-
+    get_unclosed_goals CtxCpy Unclosed,
+    append Unclosed BranchOut Tmp,
+    append Tmp Active NewActive.
 
 
 % can apply project only right after branch open or shift i.e. when the head of
 % the branch context is also the only active goal
 process_tac (project []) State State.
 process_tac (project Ns)
-    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels)
-    (Selected, (Rest, BranchOut) :: Inactive, b :: Levels) :-
+    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels, Mgn)
+    (Selected, (Rest, BranchOut) :: Inactive, b :: Levels, Mgn) :-
     all_sequential Ns,
     get_numbered_goals Ns ((M, Hd) :: Ctx) Selected Rest.
 
-%process_tac (project *) State State' :- process_tac (project all) State State'.
 % NOTE: after a project all we don't care about the branch context becuase no
 %       more shifts or projections can be done, only unbranch.
 process_tac (project all)
-    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels)
-    (Unlabled, ([], BranchOut) :: Inactive, b :: Levels) :-
+    ([Hd], ((M, Hd) :: Ctx, BranchOut) :: Inactive, b :: Levels, Mgn)
+    (Unlabled, ([], BranchOut) :: Inactive, b :: Levels, Mgn) :-
     unlabel_branch_ctx ((M, Hd) :: Ctx) Unlabled.
 
 % error reporting
 process_tac shift
-    ((Active, ([Single], BranchOut) :: Inactive, Levels) as State)
+    ((Active, ([Single], BranchOut) :: Inactive, Levels, Mgn) as State)
     State :-
     print "error: shift cannot be performed on a single goal context".
-process_tac shift ((Active, Inactive, []) as State) State :-
+process_tac shift ((Active, Inactive, [], Mgn) as State) State :-
     print "error: can't shift outside of a branch".
-process_tac shift ((Active, Inactive, f :: Levels) as State) State :-
+process_tac shift ((Active, Inactive, f :: Levels, Mgn) as State) State :-
     print "error: can't shift inside a focus".
 
-process_tac unbranch ((Active, Inactive, []) as State) State :-
+process_tac unbranch ((Active, Inactive, [], Mgn) as State) State :-
     print "error: no branch to close".
-process_tac unbranch ((Active, Inactive, (f :: Levels)) as State) State :-
+process_tac unbranch ((Active, Inactive, (f :: Levels), Mgn) as State) State :-
     print "error: focus must be closed with unfocus".
 
 % if you are here Ns is not empty but Active and Inactive are not in a
 % projectable form i.e. [Hd] ((M, Hd) :: Rest) 
-process_tac (project P) ((Active, Inactive, b :: Levels) as State) State :-
+process_tac (project P) ((Active, Inactive, b :: Levels, Mgn) as State) State :-
     print "error: can't project in a developed branch".
 process_tac (project P) ((Active, Inactive, []) as State) State :-
     print "error: can't project outside of a branch".
-process_tac (project P) ((Active, Inactive, f :: Levels) as State) State :-
+process_tac (project P) ((Active, Inactive, f :: Levels, Mgn) as State) State :-
     print "error: can't project in a focus".
 
 
 % ---- FOCUS ---- %
 
 process_tac (focus []) State State.
-process_tac (focus GoalIdxs) (Active, Inactive, Levels) (NewActive, (Rest :: Inactive), (f :: Levels)) :-
-    get_goals GoalIdxs Active NewActive Rest.
+process_tac (focus GoalIdxs) (Active, Inactive, Levels, Mgn) (NewActive, (Rest :: Inactive), (f :: Levels), Mgn) :-
+    get_numbered_goals GoalIdxs Active NewActive Rest.
     %append [Rest] Inactive NewInactive.
-process_tac unfocus ([], (I :: Inactive), (f :: Levels)) (I, Inactive, Levels).
+process_tac unfocus ([], (I :: Inactive), (f :: Levels), Mgn) (I, Inactive, Levels, Mgn).
 % error reporting
 
-process_tac unfocus ((NonEmptyGoals, Inactive, Levels) as State) State :-
+process_tac unfocus ((NonEmptyGoals, Inactive, Levels, Mgn) as State) State :-
     print "error: you ain't done".
 process_tac unfocus ((Goals, Inactive, []) as State) State :-
     print "error: no focus to close".
-process_tac unfocus ((Goals, Inactive, (b :: Levels)) as State) State :-
+process_tac unfocus ((Goals, Inactive, (b :: Levels), Mgn) as State) State :-
     print "error: branch must be closed with unbranch".
     
 
 % ---- MAPTAC ---- %
 
 process_tac (maptac _ []) State State.
-process_tac (maptac Tac GoalIdxs) (Active, Inactive, Levels) (NewActive, Inactive, Levels) :-
-    get_goals GoalIdxs Active Selected Rest,
-    tactic maptac Tac Selected NewGoals,
-    append NewGoals Rest NewActive.
+process_tac (maptac Tac GoalIdxs) (Active, Inactive, Levels, Mgn) (NActive, Inactive, Levels, NMgn) :-
+    get_numbered_goals GoalIdxs Active Selected Rest,
+    tactic maptac Tac Selected UGoals,
+    label_goals Mgn UGoals NMgn LGoals,
+    append LGoals Rest NActive.
 
 
 % ---- THEN ---- %
@@ -147,15 +160,17 @@ process_tac (then T1 T2) State NewState :-
 % ---- DEFAULT ---- %
 
 % default: Tac is applied to the first goal
-process_tac Tac ((Goal :: Active), Inactive, Levels) (NewActive, Inactive, Levels) :-
-    exec_tac Tac Goal NewGoals,
-    append NewGoals Active NewActive.
+process_tac Tac (((N, Goal) :: Active), Inactive, Levels, Mgn) (NewActive, Inactive, Levels, NMgn) :-
+    exec_tac Tac Goal UGoals,
+    label_goals Mgn UGoals NMgn LGoals,
+    append LGoals Active NewActive.
 
 
 /*
 %   Execute tactic under context of a goal
 */
 mode (exec_tac i i o).
+exec_tac A B C :- print (exec_tac A B C), fail.
 exec_tac Tac (goal X T Y V as Goal) NewGoals :- exec_tac_aux Tac Goal V [] NewGoals.
 
 mode (exec_tac_aux i i i i o).
@@ -206,23 +221,6 @@ mode (all_sequential i).
 all_sequential (N :: N' :: Ns) :-
     N' is N + 1, all_sequential (N' :: Ns).
 
-mode (get_numbered_goals_aux i i o o o).
-get_numbered_goal_aux N [] [] nil [] :-
-    ErrMsg is "get_numbered_goal_aux error: " ^ N ^ " is not in goal list",
-    print ErrMsg.
-get_numbered_goal_aux N ((M, NGoal) :: NGoals) [] NGoal NGoals :- N is M.
-get_numbered_goal_aux N ((M, NGoal) :: NGoals) Left Selected Right :-
-    not (N is M),
-    get_numbered_goal_aux N NGoals Left' Selected Right,
-    append (M, NGoal) Left' Left.
-
-mode (get_numbered_goals i i o o).
-get_numbered_goals [] NGoals [] NGoals.
-get_numbered_goals (N :: Ns) NGoals (S :: Selected) Rest :-
-    get_numbered_goal_aux N NGoals Left S Right,
-    append Left Right NGoals',
-    get_numbered_goals Ns NGoals' Selected Rest.
-
 mode (get_unclosed_goals i o).
 get_unclosed_goals [] [].
 get_unclosed_goals ((_N, Goal) :: Ctxs) (Goal :: UCtxs) :-
@@ -241,15 +239,40 @@ closed_goal G.
 % ------------------------- %
 
 % get N goals from goal list
-mode (get_goals i i o o).
+%mode (get_goals i i o o).
 %get_goals A B C D :- print (get_goals A B C D), fail.
-get_goals [] Rest [] Rest.
-get_goals (N :: GoalsToPick) Goals OutGoals Rest :-
-    get_nth N Goals Left Right Goal,
-    append Left Right Rest',
-    dec_greater N GoalsToPick GoalsToPickFixed,
-    get_goals GoalsToPickFixed Rest' OutGoals' Rest,
-    append [Goal] OutGoals' OutGoals.
+%get_goals [] Rest [] Rest.
+%get_goals (N :: GoalsToPick) Goals OutGoals Rest :-
+%    get_nth N Goals Left Right Goal,
+%    append Left Right Rest',
+%    dec_greater N GoalsToPick GoalsToPickFixed,
+%    get_goals GoalsToPickFixed Rest' OutGoals' Rest,
+%    append [Goal] OutGoals' OutGoals.
+
+mode (get_numbered_goals_aux i i o o o).
+%get_numbered_goal_aux A B C D E :- print (get_numbered_goal_aux A B C D E), fail.
+get_numbered_goal_aux N [] [] nil [] :- fail.
+    %ErrMsg is "get_numbered_goal_aux error: " ^ N ^ " is not in goal list",
+    %print ErrMsg.
+get_numbered_goal_aux N ((M, NGoal) :: NGoals) [] NGoal NGoals :- N is M.
+get_numbered_goal_aux N ((M, NGoal) :: NGoals) ((M, NGoal) :: Left) Selected Right :-
+    not (N is M),
+    get_numbered_goal_aux N NGoals Left Selected Right.
+
+mode (get_numbered_goals i i o o).
+%get_numbered_goals A B C D :- print (get_numbered_goals A B C D), fail.
+get_numbered_goals [] NGoals [] NGoals.
+get_numbered_goals (N :: Ns) NGoals (S :: Selected) Rest :-
+    get_numbered_goal_aux N NGoals Left S Right,
+    append Left Right NGoals',
+    get_numbered_goals Ns NGoals' Selected Rest.
+
+mode (label_goals i i o o).
+%label_goals A B C D :- print (label_goals A B C D), fail.
+label_goals Mgn [] Mgn [].
+label_goals Mgn (Goal :: Goals) NMgn ((Mgn', Goal) :: LGoals) :-
+    Mgn' is Mgn + 1,
+    label_goals Mgn' Goals NMgn LGoals.
 
 mode (get_nth i i o o o).
 %get_nth A B C D E :- print (get_nth A B C D E), fail.

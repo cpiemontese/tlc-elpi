@@ -2,44 +2,51 @@
 % ---- I/O MODULE ---- %
 % -------------------- %
 
-print_status (Active, (Ctx, Out) :: Inactive, b :: Levels) :-
+print_status (Active, (Ctx, Out, CtxCpy) :: Inactive, b :: Levels, Mgn) :-
     print_actives Active,
     print "Branching context:",
-    print_ctx "    " Ctx,
+    print_ctx "    " CtxCpy,
     print "Branch output:",
     length Out M,
-    print_goals "    " M Out.
-print_status (Active, Inactive, Levels) :-
+    print_goals "    " Out.
+
+print_status (Active, Inactive, Levels, Mgn) :-
     print_actives Active.
 
 print_actives Active :-
+    print,
     length Active N,
     print_n_open_goals N,
-    print_goals "" N Active.
+    print_goals "" Active.
 
 print_n_open_goals N :-
     term_to_string N SN,
     P is "you got " ^ SN ^ " open goals",
     print P.
 
-print_goals Prefix N Goals :- print_goal_aux 1 N Prefix Goals.
-print_goal Prefix Goal :- print_goal_aux 1 1 Prefix [Goal].
+print_goal Prefix N (goal X T Y V as Goal) :- print_goal_aux Prefix N Goal V.
 
-print_goal_aux _ 0 _ [].
-print_goal_aux Current Length Prefix (goal PTerm Type _ VDecls :: Goals) :-
+print_goal_aux Prefix N (goal PTerm Type _ VDecls) [] :-
     pp Type TypePP,
     vdecls_to_string VDecls VDString,
-    term_to_string Current SCurrent,
+    term_to_string N SN,
     term_to_string PTerm SPTerm,
-    S is Prefix ^ SCurrent ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
-    print S,
-    Length' is Length - 1,
-    Current' is Current + 1,
-    print_goal_aux Current' Length' Prefix Goals, !.
+    S is Prefix ^ SN ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
+    print S.
+
+print_goal_aux Prefix N (goal PTerm Type _ VDecls) (vdecl _ _ :: VDecls') :-
+    pi x\ print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
+
+mode (print_goals i i).
+%print_goals A B :- print (print_goals A B), fail.
+print_goals _ [].
+print_goals Prefix ((N, Goal) :: Goals) :-
+    print_goal Prefix N Goal,
+    print_goals Prefix Goals, !.
 
 print_ctx _ [].
-print_ctx Prefix ((_N, Ctx) :: Ctxs) :-
-    print_goal Prefix Ctx,
+print_ctx Prefix ((N, (_, Goal)) :: Ctxs) :-
+    print_goal Prefix N Goal,
     print_ctx Prefix Ctxs.
 
 vdecls_to_string [] "".

@@ -21,7 +21,6 @@ tactic (do N T) Goal FVars NewGoals :-
 tactic (first []) Goal _ Goal.
 tactic (first (Tac :: Tacs)) Goal FVars NewGoals :- tactic (orelse Tac (first Tacs)) Goal FVars NewGoals.
 
-tactic maptac A B C :- print (tactic maptac A B C), fail.
 tactic maptac _Tac [] [].
 tactic maptac Tac (Goal :: Goals) NewGoals :-
     exec_tac Tac Goal NewGoals',

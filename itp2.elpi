@@ -17,7 +17,7 @@ prove Type ProofTerm OutScript :-
 
 prove Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
-    itp_loop ([(1, goal X Type ProofTerm [])], [], [], 1) InScript OutScript.
+    itp_loop (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript OutScript.
 
 % ----------------- %
 % ---- TACTICS ---- %

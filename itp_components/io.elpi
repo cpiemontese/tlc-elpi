@@ -2,16 +2,16 @@
 % ---- I/O MODULE ---- %
 % -------------------- %
 
-print_status (Active, ([], _, CtxCpy) :: _, b :: _, _) :-
+print_status (state Active [bctx [] _ CtxCpy|_] [b|_] _) :-
     print_actives Active,
     print "Branching context:",
     print_ctx "    " 0 CtxCpy.
-print_status (Active, ((N, _) :: _, _, CtxCpy) :: _, b :: _, _) :-
+print_status (state Active [bctx [(N, _)|_] _ CtxCpy|_] [b|_] _) :-
     print_actives Active,
     print "Branching context:",
     print_ctx "    " N CtxCpy.
 
-print_status (Active, Inactive, Levels, Mgn) :-
+print_status (state Active _ _ _) :-
     print_actives Active.
 
 print_actives Active :-
@@ -37,27 +37,27 @@ print_goal_aux Prefix N (goal PTerm Type _ VDecls) [] :-
     S is Prefix ^ SN ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
     print S.
 
-print_goal_aux Prefix N (goal PTerm Type _ VDecls) (vdecl _ _ :: VDecls') :-
+print_goal_aux Prefix N (goal PTerm Type _ VDecls) [vdecl _ _|VDecls'] :-
     pi x\ print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
 
 mode (print_goals i i).
 %print_goals A B :- print (print_goals A B), fail.
 print_goals _ [].
-print_goals Prefix ((N, Goal) :: Goals) :-
+print_goals Prefix [(N, Goal)|Goals] :-
     print_goal Prefix N Goal,
     print_goals Prefix Goals, !.
 
 print_ctx _ _ [].
-print_ctx Prefix N ((M, (_, Goal)) :: Ctxs) :-
+print_ctx Prefix N [(M, (_, Goal))|Ctxs] :-
     N is M, Prefix' is Prefix ^ "> ",
     print_goal Prefix' M Goal,
     print_ctx Prefix N Ctxs.
-print_ctx Prefix N ((M, (_, Goal)) :: Ctxs) :-
+print_ctx Prefix N [(M, (_, Goal))|Ctxs] :-
     print_goal Prefix M Goal,
     print_ctx Prefix N Ctxs.
 
 vdecls_to_string [] "".
-vdecls_to_string (vdecl N T :: VDecls) S :-
+vdecls_to_string [vdecl N T|VDecls] S :-
     vdecls_to_string VDecls S',
     pp T TPP,
     term_to_string N SN,

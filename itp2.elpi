@@ -7,10 +7,15 @@ accumulate stlc/lang, stlc/typing, stlc/conv, stlc/pp.
 % TODO:
 % - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
 % - questo file potrebbe contenere solo i predicati di interfaccia
+% - rimuovere vecchio prove
 
 % ------------------- %
 % ---- INTERFACE ---- %
 % ------------------- %
+
+prove X T X' S :-
+    of X T X', 
+    itp_loop (state [(1, goal X T X' [])] [] [] 1) [] S.
 
 prove Type ProofTerm OutScript :-
     prove Type [] ProofTerm OutScript.

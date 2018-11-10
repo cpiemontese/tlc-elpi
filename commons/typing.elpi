@@ -17,8 +17,8 @@ mode (isa i o o).
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 isa Te Ty OTe :-
-    conv Ty Ty',
-    of Te Ty' OTe.
+    of Te Ty' OTe,
+    conv Ty Ty'.
 
 /*
 constraint get_type isa get_ctx {

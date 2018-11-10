@@ -18,7 +18,7 @@
 
 % arrow
 of (app Lam N) S (app Lam' N') :- isa Lam (arr T S) Lam', isa N T N'.
-of (lam T F) (arr T S) (lam T F') :- pi x \ isa x T x => isa (F x) S (F' x).
+of (lam T F) (arr T S) (lam T F') :- pi x \ of x T x => isa (F x) S (F' x).
 
 % product
 of (pair Fst Snd) (prod T1 T2) (pair Fst' Snd') :- isa Fst T1 Fst', isa Snd T2 Snd'.

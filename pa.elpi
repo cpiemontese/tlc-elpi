@@ -1,27 +1,33 @@
-% TODO:
-% - testa
-% - fixa conversione che non avviene
-
 accumulate itp2.
 
 loop_end S :- print S.
-loop_aux A B :- print (loop_aux A B), fail.
+%loop_aux A B :- print (loop_aux A B), fail.
 loop_aux D S :-
     read T, (T = quit, loop_end S, !;
     process_input T D D' PS, append S [T, PS] S', loop_aux D' S').
 loop :- loop_aux [] [].
 
-% XXX: forse conv N X' dove X' e' l'elaborato
 mode (process_input i i o o).
-process_input A B C D :- print (process_input A B C D), fail.
+%process_input A B C D :- print (process_input A B C D), fail.
 % arbitrary type introduction
-process_input (axiom N T) _ [conv N T, conv T N, conv N N] [].
-% full definition, check convertibility
+process_input (axiom N T) _ [conv N T, conv T N] [] :- pa_print (axiom N T).
+% full definition, check stepertibility
 process_input (define N (ty T) (te X)) D D' [] :-
-    D => (of X S X', conv S T), append D [of N T N, conv N X', conv X' N, conv N N] D'.
+    D => (of X S X', step S T),
+    append D [of N T N, step N X', step X' N, step N N] D',
+    pa_print (define N (ty T) (te X)).
 % only X, infer T
 process_input (define N (te X)) D D' [] :-
-    D => of X T X', append D [of N T N, conv N X', conv X' N, conv N N] D'.
+    D => of X T X',
+    append D [of N T N, step N X', step X' N, step N N] D',
+    pa_print (define N (ty T) (te X')).
 % only T, enter proof mode
 process_input (define N (ty T)) D D' PS :- 
-    D => (of X T X', prove X T X' PS), append D [of N T N, conv N X', conv X' N, conv N N] D'.
+    D => (of X T X', prove X T X' PS),
+    append D [of N T N, step N X', step X' N, step N N] D',
+    pa_print (define N (ty T) (te X')).
+
+pa_print (axiom N T) :-
+    term_to_string N NS, pp T ST, S is NS ^ ": " ^ ST, print S.
+pa_print (define N (ty T) (te X)) :-
+    term_to_string N NS, pp T ST, pp X SX, S is NS ^ ": " ^ ST ^ " ≅ " ^ SX, print S.

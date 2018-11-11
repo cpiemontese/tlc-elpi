@@ -1,63 +1,108 @@
-accumulate theory.
-accumulate "../utils".
+% TODO:
+% - controllo del tipaggio
+% - se fai unify app (lam T F) T' --> pi x\ copy x T' => unify ... (F x)
 
-% ---- MARK ---- %
+% ------------------------ %
+% ---- STEP EXTENSION ---- %
+% ------------------------ %
 
-mode (mark i o).
-mark A B :- print (mark A B), fail.
+% XXX: non sicuro di cosa mettere (idea e' che non dovrebbe fare nulla)
+step (app (uvar as M) N) (app M N) :- !.
+steps (app (uvar as M) N) (app M N) :- !.
+step (app (lam T (uvar as F)) M) (app (lam T F) M) :- !.
+steps (app (lam T (uvar as F)) M) (app (lam T F) M) :- !.
 
-mark [] [].
-mark [X|XS] [Y|YS] :- mark X Y, mark XS YS.
+% ------------------------ %
+% ---- CONV EXTENSION ---- %
+% ------------------------ %
 
-mark (uvar X L) (meta X L') :- !, mark L L'.
-mark (lam _T F) (lam _T F') :- pi x\ mark (F x) (F' x).
-mark (app M N) (app M' N') :- mark M M', mark N N'.
-mark X X.
+% FLEX - FLEX
+conv (uvar as X) (uvar as Y) :- !, declare_constraint (conv X Y) [X, Y].
 
-t_mark M :- mark (app (X (succ x)) (lam (arr nat nat) (x\ app x (Y (succ x) (Z (succ x)))))) M.
+conv (app (uvar as X) N) T :- !, steps T T', unify X [N] T' [].
+conv T (app (uvar as X) N) :- !, steps T T', unify X [N] T' [].
+conv (uvar as X) T :- !, steps T T', unify X [] T' [].
+conv T (uvar as X) :- !, steps T T', unify X [] T' [].
 
-% ---- COPY ---- %
+% XXX: intercetto i β-redessi per poi mettere predicati copia e fare una
+%      sostituzione "safe"
+conv T (app (lam A F) S) :- !, pi x\ copy x S => conv T (F x).
+conv (app (lam A F) S) T :- !, pi x\ copy x S => conv T (F x).
 
-mode (rcopy i i i).
-rcopy A B C :- print (rcopy A B C), fail.
+/*
+% FLEX - "RIGID"
+conv (uvar K L) T :- !,
+    steps T T',     % term has to be normal
+    steps L L',     % meta args have to be normal
+    subst K L T'.
+% "RIGID" - FLEX
+conv T (uvar K L) :- !,
+    steps T T',
+    steps L L',
+    subst K L T'.
+*/
 
-rcopy V (meta X []) Clause :- !, copy V X => Clause.
-rcopy V (meta X [L|LS]) Clause :- !,
-    of L LTy _,
+% --------------------- %
+% ---- UNIFICATION ---- %
+% --------------------- %
+
+mode (unify i i i i).
+unify A B C D :- print (unify A B C D), fail.
+
+% delay flex-flex
+unify (uvar as X) L (uvar as Y) L' :- declare_constraint (unify X L Y L') [X, Y].
+
+unify T L (app (lam A F) X) L' :-
+    pi x\ copy x X => unify T L (F x) L'.
+unify (app (lam A F) X) L T L' :-
+    pi x\ copy x X => unify (F x) L T L'.
+
+% unwind app
+unify (app X Y) L T L' :- !,
+    append [Y] L LY,
+    unify X LY T L'.
+unify T L' (app X Y) L :- !,
+    append [Y] L LY,
+    unify T L' X LY.
+
+mode (rewind_app i i o).
+rewind_app A [] A.
+rewind_app T [L|Ls] A :-
+    rewind_app (app T L) Ls A.
+
+% ---- TYPE UNIFICATION ---- %
+
+% in stlc we just copy types
+unify (uvar as X) [] nat [] :- !, X = nat.
+unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
+
+% ---- TERM UNIFICATION ---- %
+
+% PROJECTION
+unify (uvar as X) [] Term Arg :-
+    copy Var Term',
+    rewind_app Term Arg App,
+    conv Term' App,
+    X = Var.
+
+% MIMIC
+% Const/Eigenvar
+unify (uvar as X) [] T [] :- !, X = T.
+% App
+unify (uvar as X) [] T [A|As] :-
+    X = app M N,
+    append Body [Tail] [A|As],
+    unify M [] T Body,
+    unify N [] Tail [].
+unify (uvar as X) [] (lam T F) [] :-
+    X = lam T G,
+    pi x\ unify (G x) [] (F x) [].
+
+% Meta with args is a lambda
+unify (uvar as X) [L|Ls] T L' :- !,
+    isa L LTy _,
     X = lam LTy F,
-    pi x\ rcopy x L (rcopy V (meta (F x) LS) Clause).
+    pi x\ copy x L => unify (F x) Ls T L'.
 
-rcopy V (lam _T (meta F L)) Clause :-
-    pi x\ (append L [x] L',
-           rcopy V (meta F L') Clause).
-rcopy V (lam _T F) Clause :- pi x\ rcopy V (F x) Clause.
-
-rcopy V (app M N) Clause :- pi x y\ rcopy x M (rcopy y N Clause).
-
-rcopy V X Clause :- copy V X => Clause.
-
-% ---- UNIFY ---- %
-
-% INVARIANT: terms to be unified must be marked first
-mode (unify i i).
-unify A B :- print (unify A B), fail.
-
-unify (meta X L as M) (meta Y L' as N) :- declare_constraint (unify M N) [X, Y].
-
-% if metas args are empty we can start instantiating
-unify (meta X []) (app M N) :-
-    X = app M' N',
-    unify (meta M' []) M,
-    unify (meta N' []) N.
-unify (meta X []) (lam T F) :-
-    X = lam T F',
-    pi x\ unify (meta (F' x) []) (F x). 
-
-% if we are here T isn't an app, lam or meta
-% so it must be a constant or eigenvar (???)
-unify (meta X []) T :- X = T.
-
-unify (meta X [L|LS]) T :-
-    of L LTy _,
-    X = lam LTy F,
-    pi x\ rcopy x L (unify (meta (F x) LS) T).
+% Simmetric case
+unify T L' (uvar as X) L :- !, unify X L T L'.

@@ -12,7 +12,7 @@
 
 % ---- Copy ---- %
 
-%copy A B :- print (copy A B), fail. % Debug
+copy A B :- print (copy A B), fail. % Debug
 
 copy (lam _ F) (lam _ F') :- pi x\ copy (F x) (F' x).
 copy (app A1 B1) (app A2 B2) :- copy A1 A2, copy B1 B2.
@@ -45,6 +45,30 @@ copy (ite C1 T1 E1) (ite C2 T2 E2) :-
     copy E1 E2.
 
 copy X X.
+%copy X Y :- hcopy X Y.
+%copy X Y :- hcopy Y X.
+%copy X Y :- hcopy X Z, hcopy Z Y.
+
+/*
+% male
+foo (lambda F) ... :- pi x \ hyp x => foo (F x).
+foo (app T1 T2) ... :- foo T1, foo T2.
+
+% CPS e ci rimani
+foo (lambda F) ... K :- pi x \ hyp x => foo (F x) K.
+foo (app T1 T2) ... K :- foo T1 (z \ foo T2 (K z)).
+
+% no CPS. Esempio tipico:  let 5 (x \ T x)
+foo (lambda T F) (syntactic_hyp T O2) :- pi x \ hyp T x => foo (F x) (O2 x).
+foo (app T1 T2) (comb O1 O2) :- foo T1 O1, foo T2 O2.
+
+% combinazione delle due: la continuazione prende le variabili
+foo (lambda F) Vars K :- pi x \ hyp x => foo (F x) [x|Vars] K.
+foo (app T1 T2) Vars K :- foo T1 Vars (Vars' \ z \ foo T2 Vars' (K z)).
+pippo I O :- foo I [] (Vars \ Oa \ put_letins Vars Oa O).
+put_letins [] O O.
+put_letins [X|XS] Oa (syntactic_hyp T O) :- hyp X T, put_letins XS Oa O.
+*/
 
 mode (rcopy i i i i).
 %rcopy A B C D :- print (rcopy A B C D), fail.
@@ -57,9 +81,7 @@ rcopy V (uvar as X) [T|TS] Clause :-
 mode (subst i i i).
 %subst M T S :- print (subst M T S), fail. % Debug
 subst M [] S :- copy M S.
-subst (uvar as M) [(uvar K L)|TS] S :- !,
+subst M [(uvar K L)|TS] S :- !,
     pi x\ rcopy x K L (subst (M x) TS S).
-subst (uvar as M) [T|TS] S :-
+subst M [T|TS] S :-
     pi x\ copy x T => subst (M x) TS S.
-
-

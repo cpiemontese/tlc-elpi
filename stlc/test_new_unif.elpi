@@ -1,5 +1,6 @@
+accumulate "../utils".
+accumulate new_unif.
 accumulate theory.
-accumulate unif.
 
 % Some unification problems from the literature
 % that aren't in PATTERN and their encodings
@@ -12,8 +13,9 @@ accumulate unif.
 % Miller, 1991
 % F x = g b a                   -- x non e' quantificata universalmente
 % (v\ m (X v)) = (y\ X (m y))   -- inf soluzioni
-miller_a F :- conv (F x) (app (app g b) a).
-miller_b X :- conv (lam _ (v\ app m (X v))) (lam _ (y\ (X (app m y)))).
+miller_a F :- [isa x nat x, isa g (arr nat (arr nat nat)) g, isa b nat b, isa a nat a] =>
+    conv (app F x) (app (app g b) a).
+miller_b X :- [isa m (arr nat nat) m, isa v nat v] => conv (lam nat (v\ app m (app X v))) (lam nat (y\ (app X (app m y)))).
 
 % De Moura, 2008
 % ((X (f x)) = f x) & (X (f x) = f (X x))   -- X (f x) non e' nel pattern
@@ -46,27 +48,8 @@ abel_pientka_d X :-
 % Miller & Nadathur, 2012
 % F a = g a a                   -- 4 soluzioni
 % pi w\ (u (F w)) = (F (u w))   -- inf soluzioni
-miller_nadathur_a F :- conv (F a) (app (app g a) a).
-miller_nadathur_b F :- pi w\ conv (app u (F w)) (F (app u w)).
-
-% pi w\ (X (u (succ w))) = (u (Y (succ w)))
-testa X Y :- pi w x y\ (copy y (succ w), copy x (app u y)) => copy (X x) (app u (Y y)).
-% pi \ (X (u (succ w))) = (u (u (Y (succ w))))
-testk X Y :- pi w x y\ (hcopy y (succ w), hcopy x (app u y)) => copy (X x) (app u (app u (Y y))).
-% pi w\ (X (u (succ w))) = (u (u (Y (succ w))))
-testu X :- pi u a b\ (hcopy a u, hcopy b a) => copy (X b) u.
-% pi w\ (X (u w)) = (u (Y w))
-testb X Y :- conv (X (app u w)) (app u (Y w)).
-%testb X :- pi w x y\ copy x (app u w) => copy (X x) (app u (X w)).
-% pi w\ (X w) = (u (Y (succ w)))
-testc X Y :- pi w y\ copy y (succ w) => copy (app u (Y y)) (X w).
-% (X (succ x) y) = (app u (Y x (succ y)))
-testd X Y :- pi m n p q\ (copy n y, copy q (succ n), copy p x, copy m (succ p)) => copy (app u (Y p q)) (X m n).
-testdd X Y :- pi m n p q\ (copy n y, copy q (succ n), copy p x, copy m (succ p)) => copy (X m n) (app u (Y p q)).
-% x\ X x (Y x) = v\ x v
-teste X Y :- pi x n\ copy n (Y x) => copy (X x n) (app x v).
-
-testf F :- pi x\ copy x a => copy (F x) (app (app g a) a).
+miller_nadathur_a F :- [isa a nat a, isa g (arr nat nat) g, isa F (arr nat nat) _] => conv (app F a) (app (app g a) a).
+miller_nadathur_b F :- pi w\ [isa u (arr nat nat) u, isa w nat w, isa F (arr nat nat) _] => conv (app u (app F w)) (app F (app u w)).
 
 % x\ X x (Y x) = v\ x v         -- 2 soluzioni
 % x\ X x (Y (S x)) = v\ x v     -- come sopra
@@ -75,4 +58,5 @@ meta_meta_a X Y :- conv (lam _ (x\ X x (Y x)))  (lam _ (v\ app x v)).
 meta_meta_b X Y :- conv (lam nat (x\ X x (Y (succ x)))) (lam _ (v\ app x v)).
 meta_meta_c X Y :- conv (X x (Y (succ x))) (app (app f x) (succ x)).
 
-pairs? X :- pi x y\ conv (X (pair x y)) x.
+test_a X :- [of X (arr nat nat) X', of x nat x, of f (arr nat nat) f] => conv (app X x) (app f x).
+test_b X :- [of X (arr nat nat) X', of x nat x, of f (arr nat nat) f] => conv (app f (app X x)) (app X (app f x)).

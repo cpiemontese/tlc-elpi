@@ -52,7 +52,7 @@ steps M M.
 % ------------------------- %
 
 mode (conv i i).
-conv X Y :- print (conv X Y), fail.
+%conv X Y :- print (conv X Y), fail.
 
 conv (arr A B) (arr C D) :- conv A C, conv B D.
 conv (prod A B) (prod C D) :- conv A C, conv B D.

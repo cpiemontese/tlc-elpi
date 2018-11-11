@@ -16,13 +16,23 @@ steps (app (lam T (uvar as F)) M) (app (lam T F) M) :- !.
 % ---- CONV EXTENSION ---- %
 % ------------------------ %
 
-% FLEX - FLEX
-conv (uvar as X) (uvar as Y) :- !, declare_constraint (conv X Y) [X, Y].
+mode (is_stuck i).
+is_stuck uvar.
+is_stuck (app M _) :- is_stuck M.
+is_stuck _ :- fail.
 
-conv (app (uvar as X) N) T :- !, steps T T', unify X [N] T' [].
-conv T (app (uvar as X) N) :- !, steps T T', unify X [N] T' [].
-conv (uvar as X) T :- !, steps T T', unify X [] T' [].
-conv T (uvar as X) :- !, steps T T', unify X [] T' [].
+conv X Y :- print (conv X Y), fail.
+conv X Y :- is_stuck X, is_stuck Y, !, declare_constraint (conv X Y) [X, Y].
+conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
+
+% FLEX - FLEX
+
+%conv (uvar as X) (uvar as Y) :- !, declare_constraint (conv X Y) [X, Y].
+
+%conv (app (uvar as X) N) T :- !, steps T T', unify X [N] T' [].
+%conv T (app (uvar as X) N) :- !, steps T T', unify X [N] T' [].
+%conv (uvar as X) T :- !, steps T T', unify X [] T' [].
+%conv T (uvar as X) :- !, steps T T', unify X [] T' [].
 
 % XXX: intercetto i β-redessi per poi mettere predicati copia e fare una
 %      sostituzione "safe"
@@ -52,9 +62,9 @@ unify A B C D :- print (unify A B C D), fail.
 % delay flex-flex
 unify (uvar as X) L (uvar as Y) L' :- declare_constraint (unify X L Y L') [X, Y].
 
-unify T L (app (lam A F) X) L' :-
+unify T L (app (lam A F) X) L' :- !,
     pi x\ copy x X => unify T L (F x) L'.
-unify (app (lam A F) X) L T L' :-
+unify (app (lam A F) X) L T L' :- !,
     pi x\ copy x X => unify (F x) L T L'.
 
 % unwind app
@@ -80,14 +90,10 @@ unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
 
 % PROJECTION
 unify (uvar as X) [] Term Arg :-
-    copy Var Term',
-    rewind_app Term Arg App,
-    conv Term' App,
-    X = Var.
+    copy Var Term', rewind_app Term Arg App,
+    conv Term' App, X = Var.
 
 % MIMIC
-% Const/Eigenvar
-unify (uvar as X) [] T [] :- !, X = T.
 % App
 unify (uvar as X) [] T [A|As] :-
     X = app M N,
@@ -95,8 +101,11 @@ unify (uvar as X) [] T [A|As] :-
     unify M [] T Body,
     unify N [] Tail [].
 unify (uvar as X) [] (lam T F) [] :-
-    X = lam T G,
-    pi x\ unify (G x) [] (F x) [].
+    X = lam T G, pi x\ unify (G x) [] (F x) [].
+unify (uvar as X) [] (succ Y) [] :-
+    X = succ N, unify N [] Y [].
+% Const/Eigenvar
+unify (uvar as X) [] T [] :- !, X = T.
 
 % Meta with args is a lambda
 unify (uvar as X) [L|Ls] T L' :- !,

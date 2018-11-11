@@ -13,9 +13,8 @@ accumulate theory.
 % Miller, 1991
 % F x = g b a                   -- x non e' quantificata universalmente
 % (v\ m (X v)) = (y\ X (m y))   -- inf soluzioni
-miller_a F :- [isa x nat x, isa g (arr nat (arr nat nat)) g, isa b nat b, isa a nat a] =>
-    conv (app F x) (app (app g b) a).
-miller_b X :- [isa m (arr nat nat) m, isa v nat v] => conv (lam nat (v\ app m (app X v))) (lam nat (y\ (app X (app m y)))).
+miller_a F :- [of x nat x, of g (arr nat (arr nat nat)) g, of b nat b, of a nat a] => conv (app F x) (app (app g b) a).
+miller_b X :- [of m (arr nat nat) m] => conv (lam nat (v\ app m (app X v))) (lam nat (y\ (app X (app m y)))).
 
 % De Moura, 2008
 % ((X (f x)) = f x) & (X (f x) = f (X x))   -- X (f x) non e' nel pattern
@@ -29,26 +28,28 @@ de_moura_b X :- conv (lam _ (y\ app y (X w))) (lam _ (x\ app x (app u w))).
 % (x y z\ X (Y x) y)    = ^                     -- meta-meta appl x
 % (x y z\ X x (succ y)) = ^                     -- succ y is not a variable
 abel_pientka_a X :-
+    %[of X (arr (arr nat nat) (arr nat nat)) _] =>
     conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X x) y))))
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
 abel_pientka_b X :-
+    %[of X (arr (arr nat nat) (arr (arr nat nat) nat)) _] =>
     conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x x y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app (app X x) x) y))))
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
 abel_pientka_c X Y :-
     conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x) y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X (app Y x)) y))))
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
 abel_pientka_d X :-
     conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x (succ y)))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X x) (succ y)))))
+        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
 
 % Miller & Nadathur, 2012
 % F a = g a a                   -- 4 soluzioni
 % pi w\ (u (F w)) = (F (u w))   -- inf soluzioni
-miller_nadathur_a F :- [isa a nat a, isa g (arr nat nat) g, isa F (arr nat nat) _] => conv (app F a) (app (app g a) a).
+miller_nadathur_a F :- [of a nat a, of g (arr nat nat) g, of F (arr nat nat) _] => conv (app F a) (app (app g a) a).
 miller_nadathur_b F :- pi w\ [isa u (arr nat nat) u, isa w nat w, isa F (arr nat nat) _] => conv (app u (app F w)) (app F (app u w)).
 
 % x\ X x (Y x) = v\ x v         -- 2 soluzioni

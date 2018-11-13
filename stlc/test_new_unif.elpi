@@ -2,62 +2,55 @@ accumulate "../utils".
 accumulate new_unif.
 accumulate theory.
 
-% Some unification problems from the literature
-% that aren't in PATTERN and their encodings
-% If an atom isn't specified, it's treated as an
-% external constant i.e. supposing we are unifying
-% under a VEV prefix, a constant is in the first V
-
-% All these should pass
-
-% Miller, 1991
-% F x = g b a                   -- x non e' quantificata universalmente
-% (v\ m (X v)) = (y\ X (m y))   -- inf soluzioni
-miller_a F :- [of x nat x, of g (arr nat (arr nat nat)) g, of b nat b, of a nat a] => conv (app F x) (app (app g b) a).
-miller_b X :- [of m (arr nat nat) m] => conv (lam nat (v\ app m (app X v))) (lam nat (y\ (app X (app m y)))).
-
-% De Moura, 2008
-% ((X (f x)) = f x) & (X (f x) = f (X x))   -- X (f x) non e' nel pattern
-% (y\ y (X w)) = (x\ x (u w))               -- 2 soluzioni
-de_moura_a X :- (conv (X (app f x)) (app f x)), (conv (X (app f x)) (app f (X x))).
-de_moura_b X :- conv (lam _ (y\ app y (X w))) (lam _ (x\ app x (app u w))).
 
 % Abel & Pientka, 2011
 % (x y z\ X x y)        = (x y z\ x (succ y))   -- L_lambda
 % (x y z\ X x x y)      = ^                     -- non-linearity
 % (x y z\ X (Y x) y)    = ^                     -- meta-meta appl x
 % (x y z\ X x (succ y)) = ^                     -- succ y is not a variable
-abel_pientka_a X :-
-    %[of X (arr (arr nat nat) (arr nat nat)) _] =>
-    conv
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X x) y))))
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_b X :-
-    %[of X (arr (arr nat nat) (arr (arr nat nat) nat)) _] =>
-    conv
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app (app X x) x) y))))
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_c X Y :-
-    conv
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X (app Y x)) y))))
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_d X :-
-    conv
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app (app X x) (succ y)))))
-        (lam (arr nat nat) (x\ lam nat (y\ lam _ (z\ app x (succ y))))).
+test_i X :-
+    test [] 
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X x) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+test_j X :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app (app X x) x) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+ab_c X Y :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X (app Y x)) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+test_l X :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X x) (succ y))))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
 
-% Miller & Nadathur, 2012
-% F a = g a a                   -- 4 soluzioni
-% pi w\ (u (F w)) = (F (u w))   -- inf soluzioni
-miller_nadathur_a F :- [of a nat a, of g (arr nat nat) g, of F (arr nat nat) _] => conv (app F a) (app (app g a) a).
-miller_nadathur_b F :- pi w\ [isa u (arr nat nat) u, isa w nat w, isa F (arr nat nat) _] => conv (app u (app F w)) (app F (app u w)).
+% questo loopa
+pd Y :- test [] (lam (arr nat nat) (x\ lam nat (y\ app Y x))) (lam (arr nat nat) (x\ lam nat (y\ app x y))).
+pdd X :- test [] (lam nat (x\ lam nat (y\ app X x))) (lam nat (x\ lam nat (y\ y))).
 
-% x\ X x (Y x) = v\ x v         -- 2 soluzioni
-% x\ X x (Y (S x)) = v\ x v     -- come sopra
-% X x (Y succ x) = (f x) (S x)  -- molte soluzioni
-meta_meta_a X Y :- conv (lam _ (x\ X x (Y x)))  (lam _ (v\ app x v)).
-meta_meta_b X Y :- conv (lam nat (x\ X x (Y (succ x)))) (lam _ (v\ app x v)).
-meta_meta_c X Y :- conv (X x (Y (succ x))) (app (app f x) (succ x)).
+main :- ab_c X Y.
 
-test_a X :- [of X (arr nat nat) X', of x nat x, of f (arr nat nat) f] => conv (app X x) (app f x).
-test_b X :- [of X (arr nat nat) X', of x nat x, of f (arr nat nat) f] => conv (app f (app X x)) (app X (app f x)).
+% All these should pass
+% NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:
+%   - assunzioni di tipaggio di costanti
+%   - inferenza dei tipi dei due termini,
+%   - assunzione di convertibilita' dei due tipi
+%   - conversione dei termini
+% NOTE: in caso di meta, il tipaggio generera' dei constraint che, qualora
+%       violati da qualche assegnamento, lo invalideranno
+test_a X :- test [of x nat x, of f (arr nat nat) f] (app X x) (app f x).
+test_b X :- test [of x nat x, of f (arr nat nat) f] (app f (app X x)) (app X (app f x)).
+test_c X :- test [of f (arr (arr nat nat) (arr nat nat)) f, of g (arr nat nat) g, of n nat n] (app (app f g) n) (app (app X g) n).
+test_d X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y x))) (lam nat (v\ app f v)). 
+test_e X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f (succ v))). 
+test_f X :- test [of a nat a, of g (arr nat (arr nat nat)) g] (app X a) (app (app g a) a).
+test_g X :- test [of w nat w, of u (arr nat nat) u] (lam (arr nat nat) (y\ app y (app X w))) (lam (arr nat nat) (x\ app x (app u w))).
+test_h X :- test [of x nat x, of g (arr nat (arr nat nat)) g, of b nat b, of a nat a] (app X x) (app (app g b) a).
+
+test As T T' :- As => (of T A _, of T' B _, conv A B, conv T T').
+
+% test che non passano ma potrebbero
+% COMMENTO: Y ha succ x in input, potrebbe usare una qualche funzione (es. pred o -1)
+% opportunamente definita per manipolare il suo input e ottenere x
+% test_ X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f v). 

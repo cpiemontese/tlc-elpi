@@ -22,22 +22,24 @@ is_stuck (app M _) :- is_stuck M.
 is_stuck _ :- fail.
 
 conv X Y :- print (conv X Y), fail.
-conv X Y :- is_stuck X, is_stuck Y, !, declare_constraint (conv X Y) [X, Y].
+conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
 conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
 
-% FLEX - FLEX
-
-%conv (uvar as X) (uvar as Y) :- !, declare_constraint (conv X Y) [X, Y].
-
-%conv (app (uvar as X) N) T :- !, steps T T', unify X [N] T' [].
-%conv T (app (uvar as X) N) :- !, steps T T', unify X [N] T' [].
-%conv (uvar as X) T :- !, steps T T', unify X [] T' [].
-%conv T (uvar as X) :- !, steps T T', unify X [] T' [].
+mode (conv_constraint i i).
+conv_constraint (app M N) S A B :- conv_constraint M S A B.
+conv_constraint T (app M N) A B :- conv_constraint T M A B. 
+conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
 
 % XXX: intercetto i β-redessi per poi mettere predicati copia e fare una
-%      sostituzione "safe"
-conv T (app (lam A F) S) :- !, pi x\ copy x S => conv T (F x).
-conv (app (lam A F) S) T :- !, pi x\ copy x S => conv T (F x).
+%      sostituzione "safe", pero' non va bene perche' se sto controllando la
+%      convertibilita' di termini chiusi, vorrei effettivamente ridurre e non
+%      fare sta roba.
+% XXX: questo per alcuni test fa la differenza fra trovare altre soluzioni o meno
+% XXX: questo e' sbagliato, es. app (lam nat (x\ app X x)) w quello che succede
+%      e' che metto pi y\ copy y w => app X y ma poi questo diventa X [y], che
+%      mette pi x\ copy z y e quindi non va
+conv T (app (lam A F) S) :- !, pi x\ (of x A x, copy x S) => conv T (F x).
+conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
 
 /*
 % FLEX - "RIGID"
@@ -60,7 +62,7 @@ mode (unify i i i i).
 unify A B C D :- print (unify A B C D), fail.
 
 % delay flex-flex
-unify (uvar as X) L (uvar as Y) L' :- declare_constraint (unify X L Y L') [X, Y].
+unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
 
 unify T L (app (lam A F) X) L' :- !,
     pi x\ copy x X => unify T L (F x) L'.
@@ -89,29 +91,45 @@ unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
 % ---- TERM UNIFICATION ---- %
 
 % PROJECTION
-unify (uvar as X) [] Term Arg :-
-    copy Var Term', rewind_app Term Arg App,
-    conv Term' App, X = Var.
+unify (uvar _ Vs as X) [] Term Arg :- print "proj", rewind_app Term Arg App, try_projection X Vs App.
+
+mode (try_projection i i i).
+try_projection _ [] _ :- fail.
+try_projection X [V|Vs] App :-
+    (copy V Term', conv Term' App, X = V); try_projection X Vs App.
 
 % MIMIC
 % App
 unify (uvar as X) [] T [A|As] :-
+    print "app",
     X = app M N,
     append Body [Tail] [A|As],
     unify M [] T Body,
     unify N [] Tail [].
 unify (uvar as X) [] (lam T F) [] :-
+    print "lam",
     X = lam T G, pi x\ unify (G x) [] (F x) [].
 unify (uvar as X) [] (succ Y) [] :-
+    print "succ",
     X = succ N, unify N [] Y [].
-% Const/Eigenvar
-unify (uvar as X) [] T [] :- !, X = T.
+% Const
+unify (uvar as X) [] T [] :- !, print "const", not (name T), X = T.
+% Universal variable
+% Idea: una variabile quantificata universalmente o e' come input di una meta,
+%       e allora proiezione, altrimenti non ha senso istanziare la meta
+%unify (uvar as X) [] U [] :- print "univar", fail.
 
 % Meta with args is a lambda
-unify (uvar as X) [L|Ls] T L' :- !,
+unify (uvar as X) [L|Ls] T L' :- !, 
+    print "inst",
     isa L LTy _,
     X = lam LTy F,
-    pi x\ copy x L => unify (F x) Ls T L'.
+    pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
 
 % Simmetric case
 unify T L' (uvar as X) L :- !, unify X L T L'.
+
+constraint read-copies copy {
+    rule (Ctx ?- read-copies)
+    | (print Ctx).
+}

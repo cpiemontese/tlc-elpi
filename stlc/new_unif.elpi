@@ -7,6 +7,8 @@
 % ------------------------ %
 
 % XXX: non sicuro di cosa mettere (idea e' che non dovrebbe fare nulla)
+mode (step i o).
+mode (steps i o).
 step (app (uvar as M) N) (app M N) :- !.
 steps (app (uvar as M) N) (app M N) :- !.
 step (app (lam T (uvar as F)) M) (app (lam T F) M) :- !.
@@ -21,6 +23,7 @@ is_stuck uvar.
 is_stuck (app M _) :- is_stuck M.
 is_stuck _ :- fail.
 
+mode (conv i i).
 conv X Y :- print (conv X Y), fail.
 conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
 conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
@@ -30,16 +33,18 @@ conv_constraint (app M N) S A B :- conv_constraint M S A B.
 conv_constraint T (app M N) A B :- conv_constraint T M A B. 
 conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
 
-% XXX: intercetto i β-redessi per poi mettere predicati copia e fare una
-%      sostituzione "safe", pero' non va bene perche' se sto controllando la
-%      convertibilita' di termini chiusi, vorrei effettivamente ridurre e non
-%      fare sta roba.
-% XXX: questo per alcuni test fa la differenza fra trovare altre soluzioni o meno
-% XXX: questo e' sbagliato, es. app (lam nat (x\ app X x)) w quello che succede
-%      e' che metto pi y\ copy y w => app X y ma poi questo diventa X [y], che
-%      mette pi x\ copy z y e quindi non va
-conv T (app (lam A F) S) :- !, pi x\ (of x A x, copy x S) => conv T (F x).
-conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
+%conv T (app (lam A F) S) :- !, pi x\ (of x A x, copy x S) => conv T (F x).
+%conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
+
+% NOTE: if F is closed we can perform β-reduction
+conv T (app (lam A F) S) :- not (is_closed F), !, unify T [] (app (lam A F) S) [].
+conv (app (lam A F) S) T :- not (is_closed F), !, unify (app (lam A F) S) [] T [].
+
+mode (is_closed i).
+is_closed uvar :- fail.
+is_closed (app M N) :- is_closed M, is_closed N.
+is_closed (lam T F) :- pi x\ is_closed (F x).
+is_closed (succ N) :- is_closed N.
 
 /*
 % FLEX - "RIGID"
@@ -65,9 +70,9 @@ unify A B C D :- print (unify A B C D), fail.
 unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
 
 unify T L (app (lam A F) X) L' :- !,
-    pi x\ copy x X => unify T L (F x) L'.
+    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
 unify (app (lam A F) X) L T L' :- !,
-    pi x\ copy x X => unify (F x) L T L'.
+    pi x\ (of x A x, copy x X) => unify (F x) L T L'.
 
 % unwind app
 unify (app X Y) L T L' :- !,
@@ -96,7 +101,10 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj", rewind_app Term Arg App, try
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    (copy V Term', conv Term' App, X = V); try_projection X Vs App.
+    (check_copy V Term', conv Term' App, X = V); try_projection X Vs App.
+
+mode (check_copy i o).
+check_copy V X :- declare_constraint (copy V X) [X].
 
 % MIMIC
 % App
@@ -131,5 +139,17 @@ unify T L' (uvar as X) L :- !, unify X L T L'.
 
 constraint read-copies copy {
     rule (Ctx ?- read-copies)
-    | (print Ctx).
+    | (print "copies: " Ctx).
+
+    rule 
+    \ (E: Ctx ?- copy V R)
+    | (climb_telescope Ctx V V')
+    <=> (E: Ctx ?- R = V').
 }
+
+mode (climb_telescope i i o).
+climb_telescope A B C :- print (climb_telescope A B C), fail.
+climb_telescope [] V V.
+climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
+climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
+climb_telescope [_|Ctx] V R :- climb_telescope Ctx V R.

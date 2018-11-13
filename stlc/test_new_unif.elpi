@@ -1,5 +1,6 @@
 accumulate "../utils".
 accumulate new_unif.
+accumulate pp.
 accumulate theory.
 
 
@@ -29,7 +30,7 @@ test_l X :-
 pd Y :- test [] (lam (arr nat nat) (x\ lam nat (y\ app Y x))) (lam (arr nat nat) (x\ lam nat (y\ app x y))).
 pdd X :- test [] (lam nat (x\ lam nat (y\ app X x))) (lam nat (x\ lam nat (y\ y))).
 
-main :- ab_c X Y.
+main :- test_b X.
 
 % All these should pass
 % NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:
@@ -39,16 +40,36 @@ main :- ab_c X Y.
 %   - conversione dei termini
 % NOTE: in caso di meta, il tipaggio generera' dei constraint che, qualora
 %       violati da qualche assegnamento, lo invalideranno
+
+% res: X = w\ f w | w\ f x
 test_a X :- test [of x nat x, of f (arr nat nat) f] (app X x) (app f x).
+
+% res: X = w\ w | w\ f w | w\ f f w | ...
 test_b X :- test [of x nat x, of f (arr nat nat) f] (app f (app X x)) (app X (app f x)).
+
+% res: X = a b\ f a b | a b\ f g b | a b\ f a n | a b\ f g n
 test_c X :- test [of f (arr (arr nat nat) (arr nat nat)) f, of g (arr nat nat) g, of n nat n] (app (app f g) n) (app (app X g) n).
+
+% res: X = a b\ a, Y = c\ c
 test_d X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y x))) (lam nat (v\ app f v)). 
+
+% res: X = a b\ a, Y = c\ f c
 test_e X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f (succ v))). 
+
+% res: X = x\ g x x | x\ g x a | x\ g a x | x\ g a a 
 test_f X :- test [of a nat a, of g (arr nat (arr nat nat)) g] (app X a) (app (app g a) a).
+
+% res: X = x\ u x | x\ u w
 test_g X :- test [of w nat w, of u (arr nat nat) u] (lam (arr nat nat) (y\ app y (app X w))) (lam (arr nat nat) (x\ app x (app u w))).
+
+% res: X = x\ g b a
 test_h X :- test [of x nat x, of g (arr nat (arr nat nat)) g, of b nat b, of a nat a] (app X x) (app (app g b) a).
 
+% res: X = y\ y | y\ w
+test_m X :- test [of w nat w] (app (lam nat (x\ app X x)) w) w.
+
 test As T T' :- As => (of T A _, of T' B _, conv A B, conv T T').
+    %pp T ST, pp T' ST', S is ST ^ " ≈ " ^ ST', print S.
 
 % test che non passano ma potrebbero
 % COMMENTO: Y ha succ x in input, potrebbe usare una qualche funzione (es. pred o -1)

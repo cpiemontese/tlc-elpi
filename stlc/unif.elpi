@@ -1,14 +1,14 @@
 % TODO:
-% - provare a debuggare esempi che non vanno
-% - provare a portare sta roba al calcolo dipendente
-% - provare a scrivere regole che usano distruttori su input (es. fst pair)
+% - gestione migliore casi flex-flex
+% - piu' euristiche...?
+% - portare sta roba al calcolo dipendente
+% - scrivere regole che usano distruttori su input (es. fst pair)
 
 % ------------------------ %
 % ---- STEP EXTENSION ---- %
 % ------------------------ %
 
-% XXX: non sicuro di cosa mettere (idea e' che non dovrebbe fare nulla)
-% XXX: se ho lam T F dove F contiene meta non vorrei fare step(s)
+% XXX: questo non dovrebbe mai andare
 mode (step i o).
 mode (steps i o).
 step (app (uvar as M) N) (app M N) :- print "step on app uvar", halt.
@@ -35,9 +35,6 @@ conv_constraint (app M N) S A B :- conv_constraint M S A B.
 conv_constraint T (app M N) A B :- conv_constraint T M A B. 
 conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
 
-%conv T (app (lam A F) S) :- !, pi x\ (of x A x, copy x S) => conv T (F x).
-%conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
-
 % NOTE: if F is closed we can perform β-reduction
 conv T (app (lam A F) S) :- not (is_closed (lam A F)), !, unify T [] (app (lam A F) S) [].
 conv (app (lam A F) S) T :- not (is_closed (lam A F)), !, unify (app (lam A F) S) [] T [].
@@ -48,19 +45,7 @@ is_closed uvar :- fail.
 is_closed (app M N) :- is_closed M, is_closed N.
 is_closed (lam T F) :- pi x\ is_closed (F x).
 is_closed (succ N) :- is_closed N.
-
-/*
-% FLEX - "RIGID"
-conv (uvar K L) T :- !,
-    steps T T',     % term has to be normal
-    steps L L',     % meta args have to be normal
-    subst K L T'.
-% "RIGID" - FLEX
-conv T (uvar K L) :- !,
-    steps T T',
-    steps L L',
-    subst K L T'.
-*/
+is_closed M.
 
 % --------------------- %
 % ---- UNIFICATION ---- %
@@ -118,7 +103,7 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    (get_copy V Term', print "got" V Term', conv Term' App, X = V); try_projection X Vs App.
+    (get_copy V Term', conv Term' App, X = V); try_projection X Vs App.
 
 mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].

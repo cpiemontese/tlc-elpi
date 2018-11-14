@@ -1,5 +1,5 @@
 accumulate "../utils".
-accumulate new_unif.
+accumulate unif.
 accumulate pp.
 accumulate theory.
 
@@ -25,7 +25,7 @@ test_a X :- test [of x nat x, of f (arr nat nat) f] (app X x) (app f x).
 %        | w\ f w
 %        | w\ f f w
 %        | ...
-test_b X :- test [of x nat x, of f (arr nat nat) f] (app f (app X x)) (app X (app f x)).
+test_b X :- pi x\ test [of x nat x, of f (arr nat nat) f] (app f (app X x)) (app X (app f x)).
 
 % res: X = x y\ f x y
 %        | x y\ f g y
@@ -93,7 +93,7 @@ test_n X :- test [] (lam (arr nat nat) (x\ lam nat (y\ app X x))) (lam (arr nat 
 % res: no solution (i.e. failure
 test_o X :- test [] (lam nat (x\ lam nat (y\ app X x))) (lam nat (x\ lam nat (y\ y))).
 
-% XXX: controllare da qui in poi (problemi coi tipi)
+% XXX: casi non risolti completamente (solo le prime 2/3 soluzioni, poi problema aperto)
 test_p X Y :- pi w\ test [of u (arr nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app Y (succ w))).
 test_q X Y :- pi w\ test [of u (arr nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app u (app Y (succ w)))).
 test_r X Y :- pi w\ test [of w nat w, of u (arr nat nat) u] (app X (app u w)) (app u (app Y w)).
@@ -104,3 +104,8 @@ test_t X Y :- test [of x nat x, of y nat y, of u (arr nat nat) u] (app (app X (s
 % COMMENTO: Y ha succ x in input, potrebbe usare una qualche funzione (es. pred o -1)
 % opportunamente definita per manipolare il suo input e ottenere x
 % test_ X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f v). 
+
+test_pair_a X :- test [of a nat a, of b nat b] (app X (pair a b)) a.
+test_pair_b X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) c.
+test_pair_c X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) b.
+test_pair_d X :- test [of a nat a, of b nat b, of c nat c, of d nat d] (app X (pair (pair a (pair b c)) d)) c.

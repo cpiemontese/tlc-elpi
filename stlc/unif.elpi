@@ -41,10 +41,13 @@ conv (app (lam A F) S) T :- not (is_closed (lam A F)), !, unify (app (lam A F) S
 
 type is_closed term -> o.
 mode (is_closed i).
-is_closed uvar :- fail.
-is_closed (app M N) :- is_closed M, is_closed N.
-is_closed (lam T F) :- pi x\ is_closed (F x).
-is_closed (succ N) :- is_closed N.
+is_closed uvar :- !, fail.
+is_closed (app M N) :- !, is_closed M, is_closed N.
+is_closed (lam T F) :- !, pi x\ is_closed (F x).
+is_closed (pair M N) :- !, is_closed M, is_closed N.
+is_closed (fst P) :- !, is_closed P.
+is_closed (snd P) :- !, is_closed P.
+is_closed (succ N) :- !, is_closed N.
 is_closed M.
 
 % --------------------- %
@@ -94,6 +97,7 @@ unify (uvar as X) [L|Ls] T L' :- !,
 % in stlc we just copy types
 unify (uvar as X) [] nat [] :- !, X = nat.
 unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
+unify (uvar as X) [] (prod M N) [] :- !, X = prod M N.
 
 % ---- TERM UNIFICATION ---- %
 
@@ -103,13 +107,19 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    (get_copy V Term', conv Term' App, X = V); try_projection X Vs App.
+    (get_copy V T', use_var V T' App V Asgn, X = Asgn); try_projection X Vs App.
 
 mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].
 
+mode (use_var i i i i o).
+%use_var A B C D :- print (use_var A B C D), fail.
+use_var V (pair A _) S V' O :- use_var V A S (fst V') O.
+use_var V (pair _ B) S V' O :- use_var V B S (snd V') O.
+use_var V T S O O :- conv T S.
+
 % MIMIC
-% App
+% Arr
 unify (uvar as X) [] T [A|As] :-
     print "app" X T [A|As],
     X = app M N,
@@ -119,18 +129,28 @@ unify (uvar as X) [] T [A|As] :-
 unify (uvar as X) [] (lam T F) [] :-
     print "lam",
     X = lam T G, pi x\ unify (G x) [] (F x) [].
+
+% Prod
+unift (uvar as X) [] (pair M N) [] :-
+    print "pair",
+    X = pair P Q, unify P [] M [], unify Q [] N [].
+unift (uvar as X) [] (fst P) [] :-
+    print "fst",
+    X = fst Q, unify Q [] P [].
+unift (uvar as X) [] (snd P) [] :-
+    print "snd",
+    X = snd Q, unify Q [] P [].
+
+% Nat
 unify (uvar as X) [] (succ Y) [] :-
     print "succ" X (succ Y),
     X = succ N, unify N [] Y [].
 % Const
 unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.
-% Universal variable
-% Idea: una variabile quantificata universalmente o e' come input di una meta,
-%       e allora proiezione, altrimenti non ha senso istanziare la meta
-%unify (uvar as X) [] U [] :- print "univar", fail.
 
 % Simmetric case
 unify T L' (uvar as X) L :- !, unify X L T L'.
+
 
 constraint read-copies copy {
     rule (Ctx ?- read-copies)

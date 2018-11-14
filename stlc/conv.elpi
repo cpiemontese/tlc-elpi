@@ -54,9 +54,9 @@ steps M M.
 
 mode (conv i i).
 conv (arr A B) (arr C D) :- !, conv A C, conv B D.
-conv (prod A B) (prod C D) :- conv A C, conv B D.
-conv (sum A B) (sum C D) :- conv A C, conv B D.
-conv (void A) (void B) :- conv A B.
+conv (prod A B) (prod C D) :- !, conv A C, conv B D.
+conv (sum A B) (sum C D) :- !, conv A C, conv B D.
+conv (void A) (void B) :- !, conv A B.
 %conv unit unit.
 %conv nat nat.
 %conv bool bool.

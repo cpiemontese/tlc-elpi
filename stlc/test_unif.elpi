@@ -1,78 +1,106 @@
+accumulate "../utils".
+accumulate new_unif.
+accumulate pp.
 accumulate theory.
-accumulate unif.
 
-% Some unification problems from the literature
-% that aren't in PATTERN and their encodings
-% If an atom isn't specified, it's treated as an
-% external constant i.e. supposing we are unifying
-% under a VEV prefix, a constant is in the first V
+% NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:
+%   - assunzioni di tipaggio di costanti
+%   - inferenza dei tipi dei due termini,
+%   - assunzione di convertibilita' dei due tipi
+%   - conversione dei termini
+% in caso di meta, il tipaggio generera' dei constraint che, qualora violati da
+% qualche assegnamento, lo invalideranno
+
+test As T T' :- As => (of T A _, of T' B _, conv A B, conv T T').
+    %pp T ST, pp T' ST', S is ST ^ " ≈ " ^ ST', print S.
+
 
 % All these should pass
 
-% Miller, 1991
-% F x = g b a                   -- x non e' quantificata universalmente
-% (v\ m (X v)) = (y\ X (m y))   -- inf soluzioni
-miller_a F :- conv (F x) (app (app g b) a).
-miller_b X :- conv (lam _ (v\ app m (X v))) (lam _ (y\ (X (app m y)))).
+% res: X = w\ f w
+%        | w\ f x
+test_a X :- test [of x nat x, of f (arr nat nat) f] (app X x) (app f x).
 
-% De Moura, 2008
-% ((X (f x)) = f x) & (X (f x) = f (X x))   -- X (f x) non e' nel pattern
-% (y\ y (X w)) = (x\ x (u w))               -- 2 soluzioni
-de_moura_a X :- (conv (X (app f x)) (app f x)), (conv (X (app f x)) (app f (X x))).
-de_moura_b X :- conv (lam _ (y\ app y (X w))) (lam _ (x\ app x (app u w))).
+% res: X = w\ w
+%        | w\ f w
+%        | w\ f f w
+%        | ...
+test_b X :- test [of x nat x, of f (arr nat nat) f] (app f (app X x)) (app X (app f x)).
 
-% Abel & Pientka, 2011
-% (x y z\ X x y)        = (x y z\ x (succ y))   -- L_lambda
-% (x y z\ X x x y)      = ^                     -- non-linearity
-% (x y z\ X (Y x) y)    = ^                     -- meta-meta appl x
-% (x y z\ X x (succ y)) = ^                     -- succ y is not a variable
-abel_pientka_a X :-
-    conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_b X :-
-    conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x x y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_c X Y :-
-    conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X (Y x) y))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
-abel_pientka_d X :-
-    conv
-        (lam _ (x\ lam _ (y\ lam _ (z\ X x (succ y)))))
-        (lam _ (x\ lam _ (y\ lam _ (z\ app x (succ y))))).
+% res: X = x y\ f x y
+%        | x y\ f g y
+%        | x y\ f x n
+%        | x y\ f g n
+test_c X :- test [of f (arr (arr nat nat) (arr nat nat)) f, of g (arr nat nat) g, of n nat n] (app (app f g) n) (app (app X g) n).
 
-% Miller & Nadathur, 2012
-% F a = g a a                   -- 4 soluzioni
-% pi w\ (u (F w)) = (F (u w))   -- inf soluzioni
-miller_nadathur_a F :- conv (F a) (app (app g a) a).
-miller_nadathur_b F :- pi w\ conv (app u (F w)) (F (app u w)).
+% res: (X, Y) = m n\ n,   y\ app f y
+%             | m n\ f n, ?y
+%             | m n\ n m, y\ f
+%             | m n\ f n, y\ y
+test_d X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y x))) (lam nat (v\ app f v)). 
 
-% pi w\ (X (u (succ w))) = (u (Y (succ w)))
-testa X Y :- pi w x y\ (copy y (succ w), copy x (app u y)) => copy (X x) (app u (Y y)).
-% pi \ (X (u (succ w))) = (u (u (Y (succ w))))
-testk X Y :- pi w x y\ (hcopy y (succ w), hcopy x (app u y)) => copy (X x) (app u (app u (Y y))).
-% pi w\ (X (u (succ w))) = (u (u (Y (succ w))))
-testu X :- pi u a b\ (hcopy a u, hcopy b a) => copy (X b) u.
-% pi w\ (X (u w)) = (u (Y w))
-testb X Y :- conv (X (app u w)) (app u (Y w)).
-%testb X :- pi w x y\ copy x (app u w) => copy (X x) (app u (X w)).
-% pi w\ (X w) = (u (Y (succ w)))
-testc X Y :- pi w y\ copy y (succ w) => copy (app u (Y y)) (X w).
-% (X (succ x) y) = (app u (Y x (succ y)))
-testd X Y :- pi m n p q\ (copy n y, copy q (succ n), copy p x, copy m (succ p)) => copy (app u (Y p q)) (X m n).
-testdd X Y :- pi m n p q\ (copy n y, copy q (succ n), copy p x, copy m (succ p)) => copy (X m n) (app u (Y p q)).
-% x\ X x (Y x) = v\ x v
-teste X Y :- pi x n\ copy n (Y x) => copy (X x n) (app x v).
+% res: (X, Y) = a b\ b,       c\ f c
+%             | a b\ b (S a), c\ f
+%             | a b\ app f b, c\ c
+%             | a b\ f (S b), ?y
+test_e X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f (succ v))). 
 
-testf F :- pi x\ copy x a => copy (F x) (app (app g a) a).
+% res: X = x\ g x x
+%        | x\ g x a
+%        | x\ g a x
+%        | x\ g a a 
+test_f X :- test [of a nat a, of g (arr nat (arr nat nat)) g] (app X a) (app (app g a) a).
 
-% x\ X x (Y x) = v\ x v         -- 2 soluzioni
-% x\ X x (Y (S x)) = v\ x v     -- come sopra
-% X x (Y succ x) = (f x) (S x)  -- molte soluzioni
-meta_meta_a X Y :- conv (lam _ (x\ X x (Y x)))  (lam _ (v\ app x v)).
-meta_meta_b X Y :- conv (lam nat (x\ X x (Y (succ x)))) (lam _ (v\ app x v)).
-meta_meta_c X Y :- conv (X x (Y (succ x))) (app (app f x) (succ x)).
+% res: X = x\ u x
+%        | x\ u w
+test_g X :- test [of w nat w, of u (arr nat nat) u] (lam (arr nat nat) (y\ app y (app X w))) (lam (arr nat nat) (x\ app x (app u w))).
 
-pairs? X :- pi x y\ conv (X (pair x y)) x.
+% res: X = x\ g b a
+test_h X :- test [of x nat x, of g (arr nat (arr nat nat)) g, of b nat b, of a nat a] (app X x) (app (app g b) a).
+
+% res: X = x y\ x (S y)
+test_i X :-
+    test [] 
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X x) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = x y z\ x (S z)
+%        | x y z\ y (S z)
+test_j X :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app (app X x) x) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: (X, Y) = m n\ m (S n), o\ o
+test_k X Y :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X (app Y x)) y)))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = x y\ x y
+test_l X :-
+    test []
+        (lam (arr nat nat) (x\ lam nat (y\ app (app X x) (succ y))))
+        (lam (arr nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = y\ y
+%        | y\ w
+test_m X :- test [of w nat w] (app (lam nat (x\ app X x)) w) w.
+
+% res: no solution (i.e. failure
+test_n X :- test [] (lam (arr nat nat) (x\ lam nat (y\ app X x))) (lam (arr nat nat) (x\ lam nat (y\ app x y))).
+
+% res: no solution (i.e. failure
+test_o X :- test [] (lam nat (x\ lam nat (y\ app X x))) (lam nat (x\ lam nat (y\ y))).
+
+% XXX: controllare da qui in poi (problemi coi tipi)
+test_p X Y :- pi w\ test [of u (arr nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app Y (succ w))).
+test_q X Y :- pi w\ test [of u (arr nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app u (app Y (succ w)))).
+test_r X Y :- pi w\ test [of w nat w, of u (arr nat nat) u] (app X (app u w)) (app u (app Y w)).
+test_s X Y :- pi w\ test [of w nat w, of u (arr nat nat) u] (app X w) (app u (app Y (succ w))).
+test_t X Y :- test [of x nat x, of y nat y, of u (arr nat nat) u] (app (app X (succ x)) y) (app u (app (app Y x) (succ y))).
+
+% test che non passano ma potrebbero
+% COMMENTO: Y ha succ x in input, potrebbe usare una qualche funzione (es. pred o -1)
+% opportunamente definita per manipolare il suo input e ottenere x
+% test_ X Y :- test [of f (arr nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f v). 

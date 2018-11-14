@@ -1,87 +1,165 @@
-% -------------------------- %
-% ---- SUBSTITION RULES ---- %
-% -------------------------- %
+% TODO:
+% - provare a debuggare esempi che non vanno
+% - provare a portare sta roba al calcolo dipendente
+% - provare a scrivere regole che usano distruttori su input (es. fst pair)
 
-% XXX: copy and conv rules are VERY similar
-% but copy doesn't have i i mode i.e. it lets
-% you instantiate... is there a better way
-% to do this?
+% ------------------------ %
+% ---- STEP EXTENSION ---- %
+% ------------------------ %
 
-% TODO: try to fix cases where copy predicates
-% are not in pattern fragment
+% XXX: non sicuro di cosa mettere (idea e' che non dovrebbe fare nulla)
+% XXX: se ho lam T F dove F contiene meta non vorrei fare step(s)
+mode (step i o).
+mode (steps i o).
+step (app (uvar as M) N) (app M N) :- print "step on app uvar", halt.
+steps (app (uvar as M) N) (app M N) :- print "steps on app uvar", halt.
+step (app (lam T (uvar as F)) M) (app (lam T F) M) :- print "step on app lam uvar", halt.
+steps (app (lam T (uvar as F)) M) (app (lam T F) M) :- print "steps on app lam uvar", halt.
 
-% ---- Copy ---- %
+% ------------------------ %
+% ---- CONV EXTENSION ---- %
+% ------------------------ %
 
-copy A B :- print (copy A B), fail. % Debug
+mode (is_stuck i).
+is_stuck uvar.
+is_stuck (app M _) :- is_stuck M.
+is_stuck _ :- fail.
 
-copy (lam _ F) (lam _ F') :- pi x\ copy (F x) (F' x).
-copy (app A1 B1) (app A2 B2) :- copy A1 A2, copy B1 B2.
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
+conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
 
-copy (pair M1 N1) (pair M2 N2) :- copy M1 M2, copy N1 N2.
+mode (conv_constraint i i).
+conv_constraint (app M N) S A B :- conv_constraint M S A B.
+conv_constraint T (app M N) A B :- conv_constraint T M A B. 
+conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
 
-copy (fst P1) (fst P2) :- copy P1 P2.
-copy (snd P1) (snd P2) :- copy P1 P2.
+%conv T (app (lam A F) S) :- !, pi x\ (of x A x, copy x S) => conv T (F x).
+%conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
 
-copy (inl _ S1) (inl _ S2) :- copy S1 S2.
-copy (inr _ S1) (inr _ S2) :- copy S1 S2.
+% NOTE: if F is closed we can perform β-reduction
+conv T (app (lam A F) S) :- not (is_closed (lam A F)), !, unify T [] (app (lam A F) S) [].
+conv (app (lam A F) S) T :- not (is_closed (lam A F)), !, unify (app (lam A F) S) [] T [].
 
-copy (case M1 F1 G1) (case M2 F2 G2) :-
-    copy M1 M2,
-    pi x\ copy (F1 x) (F2 x),
-    pi x\ copy (G1 x) (G2 x).
-
-copy zero zero.
-copy (succ N1) (succ N2) :- copy N1 N2.
-copy (natrec N1 ZE1 F1) (natrec N2 ZE2 F2) :-
-    copy N1 N2,
-    copy ZE1 ZE2,
-    pi x y\ copy (F1 x y) (F2 x y).
-
-copy tt tt.
-copy ff ff.
-copy (ite C1 T1 E1) (ite C2 T2 E2) :-
-    copy C1 C2,
-    copy T1 T2,
-    copy E1 E2.
-
-copy X X.
-%copy X Y :- hcopy X Y.
-%copy X Y :- hcopy Y X.
-%copy X Y :- hcopy X Z, hcopy Z Y.
+type is_closed term -> o.
+mode (is_closed i).
+is_closed uvar :- fail.
+is_closed (app M N) :- is_closed M, is_closed N.
+is_closed (lam T F) :- pi x\ is_closed (F x).
+is_closed (succ N) :- is_closed N.
 
 /*
-% male
-foo (lambda F) ... :- pi x \ hyp x => foo (F x).
-foo (app T1 T2) ... :- foo T1, foo T2.
-
-% CPS e ci rimani
-foo (lambda F) ... K :- pi x \ hyp x => foo (F x) K.
-foo (app T1 T2) ... K :- foo T1 (z \ foo T2 (K z)).
-
-% no CPS. Esempio tipico:  let 5 (x \ T x)
-foo (lambda T F) (syntactic_hyp T O2) :- pi x \ hyp T x => foo (F x) (O2 x).
-foo (app T1 T2) (comb O1 O2) :- foo T1 O1, foo T2 O2.
-
-% combinazione delle due: la continuazione prende le variabili
-foo (lambda F) Vars K :- pi x \ hyp x => foo (F x) [x|Vars] K.
-foo (app T1 T2) Vars K :- foo T1 Vars (Vars' \ z \ foo T2 Vars' (K z)).
-pippo I O :- foo I [] (Vars \ Oa \ put_letins Vars Oa O).
-put_letins [] O O.
-put_letins [X|XS] Oa (syntactic_hyp T O) :- hyp X T, put_letins XS Oa O.
+% FLEX - "RIGID"
+conv (uvar K L) T :- !,
+    steps T T',     % term has to be normal
+    steps L L',     % meta args have to be normal
+    subst K L T'.
+% "RIGID" - FLEX
+conv T (uvar K L) :- !,
+    steps T T',
+    steps L L',
+    subst K L T'.
 */
 
-mode (rcopy i i i i).
-%rcopy A B C D :- print (rcopy A B C D), fail.
-rcopy V X [] Clause :- copy V X => Clause.
-rcopy V (uvar as X) [(uvar K L)|TS] Clause :- !, 
-    pi x\ rcopy x K L (rcopy V (X x) TS Clause).
-rcopy V (uvar as X) [T|TS] Clause :- 
-    pi x\ copy x T => rcopy V (X x) TS Clause.
+% --------------------- %
+% ---- UNIFICATION ---- %
+% --------------------- %
 
-mode (subst i i i).
-%subst M T S :- print (subst M T S), fail. % Debug
-subst M [] S :- copy M S.
-subst M [(uvar K L)|TS] S :- !,
-    pi x\ rcopy x K L (subst (M x) TS S).
-subst M [T|TS] S :-
-    pi x\ copy x T => subst (M x) TS S.
+mode (unify i i i i).
+unify A B C D :- print (unify A B C D), fail.
+
+% delay flex-flex
+%unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
+unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (read-copies) [], declare_constraint (unify X [] Y []) [X, Y].
+
+unify T L (app (lam A F) X) L' :- !,
+    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
+unify (app (lam A F) X) L T L' :- !,
+    pi x\ (of x A x, copy x X) => unify (F x) L T L'.
+
+% unwind app
+unify (app X Y) L T L' :- !,
+    append [Y] L LY,
+    unify X LY T L'.
+unify T L' (app X Y) L :- !,
+    append [Y] L LY,
+    unify T L' X LY.
+
+mode (rewind_app i i o).
+rewind_app A [] A.
+rewind_app T [L|Ls] A :-
+    rewind_app (app T L) Ls A.
+
+% Meta with args is a lambda
+unify (uvar as X) [L|Ls] T L' :- !, 
+    print "inst",
+    isa L LTy _,
+    X = lam LTy F,
+    pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
+
+%unify T L' (uvar as X) [L|Ls] :- !, 
+%    print "inst",
+%    isa L LTy _,
+%    X = lam LTy F,
+%    pi x\ (of x LTy x, copy x L) => unify T L' (F x) Ls.
+
+% ---- TYPE UNIFICATION ---- %
+
+% in stlc we just copy types
+unify (uvar as X) [] nat [] :- !, X = nat.
+unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
+
+% ---- TERM UNIFICATION ---- %
+
+% PROJECTION
+unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term Arg App, try_projection X Vs App.
+
+mode (try_projection i i i).
+try_projection _ [] _ :- fail.
+try_projection X [V|Vs] App :-
+    (get_copy V Term', print "got" V Term', conv Term' App, X = V); try_projection X Vs App.
+
+mode (get_copy i o).
+get_copy V X :- declare_constraint (copy V X) [X].
+
+% MIMIC
+% App
+unify (uvar as X) [] T [A|As] :-
+    print "app" X T [A|As],
+    X = app M N,
+    append Body [Tail] [A|As],
+    unify M [] T Body,
+    unify N [] Tail [].
+unify (uvar as X) [] (lam T F) [] :-
+    print "lam",
+    X = lam T G, pi x\ unify (G x) [] (F x) [].
+unify (uvar as X) [] (succ Y) [] :-
+    print "succ" X (succ Y),
+    X = succ N, unify N [] Y [].
+% Const
+unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.
+% Universal variable
+% Idea: una variabile quantificata universalmente o e' come input di una meta,
+%       e allora proiezione, altrimenti non ha senso istanziare la meta
+%unify (uvar as X) [] U [] :- print "univar", fail.
+
+% Simmetric case
+unify T L' (uvar as X) L :- !, unify X L T L'.
+
+constraint read-copies copy {
+    rule (Ctx ?- read-copies)
+    | (print "copies: " Ctx).
+
+    rule 
+    \ (E: Ctx ?- copy V R)
+    | (climb_telescope Ctx V V')
+    <=> (E: Ctx ?- R = V').
+}
+
+mode (climb_telescope i i o).
+climb_telescope A B C :- print (climb_telescope A B C), fail.
+climb_telescope [] V V.
+climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
+climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
+climb_telescope [_|Ctx] V R :- climb_telescope Ctx V R.

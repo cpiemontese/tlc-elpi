@@ -39,9 +39,10 @@ conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) 
 %conv (app (lam A F) S) T :- !, pi x\ (of x A x, copy x S) => conv T (F x).
 
 % NOTE: if F is closed we can perform β-reduction
-conv T (app (lam A F) S) :- not (is_closed F), !, unify T [] (app (lam A F) S) [].
-conv (app (lam A F) S) T :- not (is_closed F), !, unify (app (lam A F) S) [] T [].
+conv T (app (lam A F) S) :- not (is_closed (lam A F)), !, unify T [] (app (lam A F) S) [].
+conv (app (lam A F) S) T :- not (is_closed (lam A F)), !, unify (app (lam A F) S) [] T [].
 
+type is_closed term -> o.
 mode (is_closed i).
 is_closed uvar :- fail.
 is_closed (app M N) :- is_closed M, is_closed N.
@@ -117,7 +118,7 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    (get_copy V Term', conv Term' App, X = V); try_projection X Vs App.
+    (get_copy V Term', print "got" V Term', conv Term' App, X = V); try_projection X Vs App.
 
 mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].
@@ -161,4 +162,4 @@ climb_telescope A B C :- print (climb_telescope A B C), fail.
 climb_telescope [] V V.
 climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
 climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
-%climb_telescope [_|Ctx] V R :- climb_telescope Ctx V R.
+climb_telescope [_|Ctx] V R :- climb_telescope Ctx V R.

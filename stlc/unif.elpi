@@ -2,7 +2,6 @@
 % - gestione migliore casi flex-flex
 % - pruning/reduction/...?
 % - portare tutto al calcolo dipendente
-% - aggiungere regole use_var per case
 
 % ------------------------ %
 % ---- STEP EXTENSION ---- %
@@ -88,11 +87,37 @@ unify (app (lam A F) X) L T L' :- !,
 unify T L (app (lam A F) X) L' :- !,
     pi x\ (of x A x, copy x X) => unify T L (F x) L'.
 
+% β-redex through copy
+unify (app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unift (F x) L T L'.
+unify T L (app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unift T L (F x) L'.
+
 % catch σ-redex
 unify (case (inl T2 L) Fl Fr) L T L' :- !,
     of L T1 _, pi x\ (of x T1 x, copy x L) => unify (Fl x) L T L'.
-unify (case (inl T1 R) Fl Fr) L T L' :- !,
+unify (case (inr T1 R) Fl Fr) L T L' :- !,
     of R T2 _, pi x\ (of x T2 x, copy x R) => unify (Fr x) L T L'.
+unify T L (case (inl T2 L) Fl Fr) L' :- !,
+    of L T1 _, pi x\ (of x T1 x, copy x L) => unify T L (Fl x) L'.
+unify T L (case (inr T1 R) Fl Fr) L' :- !,
+    of R T2 _, pi x\ (of x T2 x, copy x R) => unify T L (Fr x) L'.
+
+% σ-redex through copy
+unify (case V Fl Fr) L T L' :-
+    name V, get_copy V X, X = inl T2 L,
+    of L T1 _, pi x\ (of x T1 x, copy x L, forbid V) => unify (Fl x) L T L'.
+unify (case V Fl Fr) L T L' :-
+    name V, get_copy V X, X = inr T1 R,
+    of R T2 _, pi x\ (of x T2 x, copy x R, forbid V) => unify (Fr x) L T L'.
+unify T L (case V Fl Fr) L' :-
+    name V, get_copy V X, X = inl T2 L,
+    of L T1 _, pi x\ (of x T1 x, copy x L, forbid V) => unify T L (Fl x) L'.
+unify T L (case V Fl Fr) L' :-
+    name V, get_copy V X, X = inr T1 R,
+    of R T2 _, pi x\ (of x T2 x, copy x R, forbid V) => unify T L (Fr x) L'.
 
 % unwind app
 unify (app X Y) L T L' :- !,
@@ -151,7 +176,7 @@ use_var V (inl T2 L) S O :-
 use_var V (inr T2 R) S O :-
     of R T2 _,
     pi x\ (of x T2 x, copy x R, forbid V) => use_var (case V Fl Fr) (Fr x) S O.
-use_var V T S V :- print "use conv" V T S, conv T S.
+use_var V T S V :- conv T S.
 
 % MIMIC
 % Arr

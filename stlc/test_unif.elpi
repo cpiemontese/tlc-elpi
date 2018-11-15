@@ -109,3 +109,7 @@ test_pair_a X :- test [of a nat a, of b nat b] (app X (pair a b)) a.
 test_pair_b X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) c.
 test_pair_c X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) b.
 test_pair_d X :- test [of a nat a, of b nat b, of c nat c, of d nat d] (app X (pair (pair a (pair b c)) d)) c.
+
+test_sum_a X :- test [] (app X (inl nat zero)) zero.
+test_sum_b X :- test [] (app X (inr nat zero)) (succ zero).
+test_sum_c X :- test [] (app X (inl (prod nat nat) (pair zero (succ zero)))) zero.

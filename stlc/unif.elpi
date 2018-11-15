@@ -8,13 +8,21 @@
 % ---- STEP EXTENSION ---- %
 % ------------------------ %
 
-% XXX: questo non dovrebbe mai andare
+% TODO: rimuovere queste cose, non dovrebbero mai capitare ma servono per
+%       beccare errori
 mode (step i o).
 mode (steps i o).
+
 step (app (uvar as M) N) (app M N) :- print "step on app uvar", halt.
 steps (app (uvar as M) N) (app M N) :- print "steps on app uvar", halt.
+
 step (app (lam T (uvar as F)) M) (app (lam T F) M) :- print "step on app lam uvar", halt.
 steps (app (lam T (uvar as F)) M) (app (lam T F) M) :- print "steps on app lam uvar", halt.
+
+step (case Sum (uvar as U) V) (case Sum U V) :- print "step on case with uvar left", halt.
+step (case Sum U (uvar as V)) (case Sum U V) :- print "step on case with uvar right", halt.
+steps (case Sum (uvar as U) V) (case Sum U V) :- print "steps on case with uvar left", halt.
+steps (case Sum U (uvar as V)) (case Sum U V) :- print "steps on case with uvar right", halt.
 
 % ------------------------ %
 % ---- CONV EXTENSION ---- %
@@ -128,16 +136,22 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    (get_copy V T', use_var V T' App V Asgn, X = Asgn); try_projection X Vs App.
+    (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn); try_projection X Vs App.
 
 mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].
 
-mode (use_var i i i i o).
-%use_var A B C D :- print (use_var A B C D), fail.
-use_var V (pair A _) S V' O :- use_var V A S (fst V') O.
-use_var V (pair _ B) S V' O :- use_var V B S (snd V') O.
-use_var V T S O O :- conv T S.
+mode (use_var i i i o).
+use_var A B C D :- print (use_var A B C D), fail.
+use_var V (pair A _) S O :- use_var (fst V) A S O.
+use_var V (pair _ B) S O :- use_var (snd V) B S O.
+use_var V (inl T2 L) S O :-
+    of L T1 _,
+    pi x\ (of x T1 x, copy x L, forbid V) => use_var (case V Fl Fr) (Fl x) S O.
+use_var V (inr T2 R) S O :-
+    of R T2 _,
+    pi x\ (of x T2 x, copy x R, forbid V) => use_var (case V Fl Fr) (Fr x) S O.
+use_var V T S V :- print "use conv" V T S, conv T S.
 
 % MIMIC
 % Arr
@@ -178,7 +192,7 @@ unify (uvar as X) [] (case S Fl Fr) [] :-
     pi x\ (of x T2 x, copy x x) => unify (Fr' x) [] (Fr x) [].
 
 % Nat
-unify (uvar as X) [] (succ Y) [] :-
+unify (uvar as X) [] (succ Y) [] :- !,
     print "succ",
     X = succ N, unify N [] Y [].
 % Const
@@ -192,8 +206,7 @@ constraint read-copies copy {
     rule (Ctx ?- read-copies)
     | (print "copies: " Ctx).
 
-    rule 
-    \ (E: Ctx ?- copy V R)
+    rule (E: Ctx ?- copy V R)
     | (climb_telescope Ctx V V')
     <=> (E: Ctx ?- R = V').
 }

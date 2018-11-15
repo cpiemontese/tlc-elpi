@@ -1,8 +1,8 @@
 % TODO:
 % - gestione migliore casi flex-flex
-% - piu' euristiche...?
-% - portare sta roba al calcolo dipendente
-% - scrivere regole che usano distruttori su input (es. fst pair)
+% - pruning/reduction/...?
+% - portare tutto al calcolo dipendente
+% - aggiungere regole use_var per case
 
 % ------------------------ %
 % ---- STEP EXTENSION ---- %
@@ -35,9 +35,18 @@ conv_constraint (app M N) S A B :- conv_constraint M S A B.
 conv_constraint T (app M N) A B :- conv_constraint T M A B. 
 conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
 
-% NOTE: if F is closed we can perform β-reduction
-conv T (app (lam A F) S) :- not (is_closed (lam A F)), !, unify T [] (app (lam A F) S) [].
-conv (app (lam A F) S) T :- not (is_closed (lam A F)), !, unify (app (lam A F) S) [] T [].
+% if F is closed we can perform reductions, otherwise stop all reductions
+conv (app (lam A F) S) T :- pi x\ not (is_closed (F x)), !, unify (app (lam A F) S) [] T [].
+conv T (app (lam A F) S) :- pi x\ not (is_closed (F x)), !, unify T [] (app (lam A F) S) [].
+
+conv (case (inl T2 L) Fl Fr) T :-
+    pi x\ not (is_closed (Fl x)), !, unify (case (inl T2 L) Fl Fr) [] T [].
+conv (case (inr T1 R) Fl Fr) T :-
+    pi x\ not (is_closed (Fr x)), !, unify (case (inr T1 R) Fl Fr) [] T [].
+conv T (case (inl T2 L) Fl Fr) :-
+    pi x\ not (is_closed (Fl x)), !, unify T [] (case (inl T2 L) Fl Fr) [].
+conv (case (inr T1 R) Fl Fr) T :-
+    pi x\ not (is_closed (Fr x)), !, unify T [] (case (inr T1 R) Fl Fr) [].
 
 type is_closed term -> o.
 mode (is_closed i).
@@ -47,6 +56,10 @@ is_closed (lam T F) :- !, pi x\ is_closed (F x).
 is_closed (pair M N) :- !, is_closed M, is_closed N.
 is_closed (fst P) :- !, is_closed P.
 is_closed (snd P) :- !, is_closed P.
+is_closed (inl T2 L) :- !, is_closed L.
+is_closed (inr T1 R) :- !, is_closed R.
+is_closed (case S Fl Fr) :- !,
+    is_closed S, pi x\ is_closed (Fl x), pi x\ is_closed (Fr x).
 is_closed (succ N) :- !, is_closed N.
 is_closed M.
 
@@ -61,10 +74,17 @@ unify A B C D :- print (unify A B C D), fail.
 %unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
 unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (read-copies) [], declare_constraint (unify X [] Y []) [X, Y].
 
-unify T L (app (lam A F) X) L' :- !,
-    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
+% catch β-redex
 unify (app (lam A F) X) L T L' :- !,
     pi x\ (of x A x, copy x X) => unify (F x) L T L'.
+unify T L (app (lam A F) X) L' :- !,
+    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
+
+% catch σ-redex
+unify (case (inl T2 L) Fl Fr) L T L' :- !,
+    of L T1 _, pi x\ (of x T1 x, copy x L) => unify (Fl x) L T L'.
+unify (case (inl T1 R) Fl Fr) L T L' :- !,
+    of R T2 _, pi x\ (of x T2 x, copy x R) => unify (Fr x) L T L'.
 
 % unwind app
 unify (app X Y) L T L' :- !,
@@ -95,9 +115,10 @@ unify (uvar as X) [L|Ls] T L' :- !,
 % ---- TYPE UNIFICATION ---- %
 
 % in stlc we just copy types
-unify (uvar as X) [] nat [] :- !, X = nat.
-unify (uvar as X) [] (arr M N) [] :- !, X = arr M N.
+unify (uvar as X) [] nat        [] :- !, X = nat.
+unify (uvar as X) [] (arr M N)  [] :- !, X = arr M N.
 unify (uvar as X) [] (prod M N) [] :- !, X = prod M N.
+unify (uvar as X) [] (sum M N)  [] :- !, X = sum M N.
 
 % ---- TERM UNIFICATION ---- %
 
@@ -128,22 +149,37 @@ unify (uvar as X) [] T [A|As] :-
     unify N [] Tail [].
 unify (uvar as X) [] (lam T F) [] :-
     print "lam",
-    X = lam T G, pi x\ unify (G x) [] (F x) [].
+    X = lam T G, pi x\ (of x T x, copy x x) => unify (G x) [] (F x) [].
 
 % Prod
-unift (uvar as X) [] (pair M N) [] :-
+unify (uvar as X) [] (pair M N) [] :-
     print "pair",
     X = pair P Q, unify P [] M [], unify Q [] N [].
-unift (uvar as X) [] (fst P) [] :-
+unify (uvar as X) [] (fst P) [] :-
     print "fst",
     X = fst Q, unify Q [] P [].
-unift (uvar as X) [] (snd P) [] :-
+unify (uvar as X) [] (snd P) [] :-
     print "snd",
     X = snd Q, unify Q [] P [].
 
+% Sum
+unify (uvar as X) [] (inl T2 L) [] :-
+    print "inl",
+    X = inl T2 L', unify L' [] L [].
+unify (uvar as X) [] (inr T1 R) [] :-
+    print "inr",
+    X = inr T1 R', unify R' [] R [].
+unify (uvar as X) [] (case S Fl Fr) [] :-
+    print "case",
+    of S (sum T1 T2) _,
+    X = case S' Fl' Fr',
+    unify S' [] S [],
+    pi x\ (of x T1 x, copy x x) => unify (Fl' x) [] (Fl x) [],
+    pi x\ (of x T2 x, copy x x) => unify (Fr' x) [] (Fr x) [].
+
 % Nat
 unify (uvar as X) [] (succ Y) [] :-
-    print "succ" X (succ Y),
+    print "succ",
     X = succ N, unify N [] Y [].
 % Const
 unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.

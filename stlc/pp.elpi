@@ -2,26 +2,64 @@
 
 mode (pp i o).
 
-pp (lam Name T1 Body) S :-
+%pp A B :- print (pp A B), fail.
+
+pp (arr T1 T2) S :- !,
+    pp T1 S1,
+    pp T2 S2,
+    S is "(" ^ S1 ^ " →  " ^ S2 ^ ")".
+pp (lam Name T1 Body) S :- !,
     term_to_string Name Name',
     (pi x\ pp x Name' => pp (Body x) S1),
     pp T1 SType,
     S is "λ" ^ Name' ^ ": " ^ SType ^ "." ^ S1.
-pp (lam T1 Body) S :-
+pp (lam T1 Body) S :- !,
     pi x\ (term_to_string x Name, pp x Name => pp (Body x) S1),
     pp T1 SType,
     S is "λ" ^ Name ^ ": " ^ SType ^ "." ^ S1.
-pp (app Lambda Arg) S :-
+pp (app Lambda Arg) S :- !,
     pp Lambda S1,
     pp Arg S2,
-    S is "(" ^ S1 ^ " " ^ S2 ^ ")".
-pp (arr T1 T2) S :-
-    pp T1 S1,
-    pp T2 S2,
-    S is "(" ^ S1 ^ " →  " ^ S2 ^ ")".
-pp (prod T1 T2) S :-
+    S is "((" ^ S1 ^ ") " ^ S2 ^ ")".
+
+pp (prod T1 T2) S :- !,
     pp T1 S1,
     pp T2 S2,
     S is "(" ^ S1 ^ " ∧ " ^ S2 ^ ")".
-pp uvar "_".
+pp (pair Left Right) S :-
+    pp Left SLeft,
+    pp Right SRight,
+    S is "<" ^ SLeft ^ ", " ^ SRight ^ ">".
+pp (fst Pair) S :-
+    pp Pair SPair,
+    S is "π₁(" ^ SPair ^ ")".
+pp (snd Pair) S :-
+    pp Pair SPair,
+    S is "π₂(" ^ SPair ^ ")".
+
+pp (sum T1 T2) S :- !,
+    pp T1 S1,
+    pp T2 S2,
+    S is "(" ^ S1 ^ " ∨ " ^ S2 ^ ")".
+pp (inl T2 L) S :- !,
+    pp T2 ST2,
+    pp L SL,
+    S is "ι¹ " ^ ST2 ^ " " ^ SL.
+pp (inr T1 R) S :-
+    pp T1 ST1,
+    pp R SR,
+    S is "ι² " ^ ST1 ^ " " ^ SR.
+pp (case Sum Fl Fr) S :-
+    pp Sum SSum,
+    pi x\ pp (Fl x) SFl,
+    pi x\ pp x Name => pp (Fr x) SFr,
+    S is "case " ^ SSum ^ "\n\t" ^ SFl ^ "\n\t" ^ SFr.
+
+pp zero "Z" :- !.
+pp (succ N) S :- !,
+    pp N SN,
+    S is "S" ^ SN.
+pp nat "Nat" :- !.
+
+pp uvar "_" :- !.
 pp Term S :- term_to_string Term S.

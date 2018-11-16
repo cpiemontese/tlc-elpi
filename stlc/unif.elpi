@@ -237,8 +237,8 @@ constraint read-copies copy {
 }
 
 mode (climb_telescope i i o).
-climb_telescope A B C :- print (climb_telescope A B C), fail.
+%climb_telescope A B C :- print (climb_telescope A B C), fail.
 climb_telescope [] V V.
 climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
 climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
-climb_telescope [_|Ctx] V R :- climb_telescope Ctx V R.
+climb_telescope [_|Ctx] V R :- !, climb_telescope Ctx V R.

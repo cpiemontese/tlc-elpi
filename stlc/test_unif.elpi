@@ -1,6 +1,4 @@
 accumulate "../utils".
-accumulate unif.
-accumulate pp.
 accumulate theory.
 
 % NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:

@@ -1,2 +1,2 @@
 accumulate "../commons/typing".
-accumulate lang, typing, subst, conv, recovery, tactics.
+accumulate lang, typing, unif, subst, conv, tproc, pp.

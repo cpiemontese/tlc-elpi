@@ -1,47 +1,47 @@
 accumulate utils.
+accumulate itp_components/all.
+
+accumulate "commons/typing".
+accumulate stlc/theory.
+
+% TODO:
+% - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
+% - questo file potrebbe contenere solo i predicati di interfaccia
+% - rimuovere vecchio prove
+
+% ------------------- %
+% ---- INTERFACE ---- %
+% ------------------- %
+
+prove X T X' S :-
+    of X T X', 
+    itp_loop (state [(1, goal X T X' [])] [] [] 1) [] S.
 
 prove Type ProofTerm OutScript :-
     prove Type [] ProofTerm OutScript.
 
 prove Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
-    loop [([],X)] OutScript InScript,
-    print "finished" ProofTerm.
+    itp_loop (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript OutScript.
 
-% ------------------ %
-% ---- ITP LOOP ---- %
-% ------------------ %
+% ----------------- %
+% ---- TACTICS ---- %
+% ----------------- %
 
-% base call
-loop [] OutScript InScript :-
-    reverse OutScript OutReversed,
-    print "Total script:" OutReversed.
+% tactic name goals fresh_vars new_goals
 
-loop [(Vars,X)|TL] OutScript [] :-
-    print_constraints,
-    print, print Vars "|-" X,
-    read T,
-    tactic T X Vars (Goals \ sigma TL' \
-        append Goals TL TL',
-        loop TL' [T|OutScript] []).
+tactic (intro N) (goal X (arr A B) RTerm VDecls) FVars NewGoals :-
+    X = lam N A F,
+    build_newgoals RTerm VDecls NewGoals.
 
-% call with script
-loop [(Vars,X)|TL] OutScript [T|InScript] :-
-    tactic T X Vars (Goals \ sigma TL' \
-        append Goals TL TL',
-        loop TL' [T|OutScript] InScript).
+tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
+    get_named N FVars Lam,
+    X = app Lam dots,
+    build_newgoals RTerm VDecls NewGoals.
 
-lookup X Y :- declare_constraint (read-evar X Y) [X].
-lookdown X Y :- declare_constraint (read-refined X Y) [X].
+tactic andI (goal X (prod A B) RTerm VDecls) FVars NewGoals :-
+    X = pair P Q,
+    build_newgoals RTerm VDecls NewGoals.
 
-constraint isa read-evar read-refined of {
-    rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1'))
-        \ (E2 : read-evar (uvar K L2) Y)
-        | (L1 = L1')
-        <=> (E2 : Y = uvar O L2).
-
-    rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
-        \ (E2 : read-refined (uvar O L2) X)
-        | (L1 = L1')
-        <=> (E2 : X = uvar K L2).
-}
+tactic (man T) (goal X Type RTerm VDecls) FVars NewGoals :-
+    X = T, build_newgoals RTerm VDecls NewGoals.

@@ -1,33 +1,62 @@
-accumulate itp2.
+% TODO:
+% - rimozione dei (? N) duplicati quando si processa il termine
+% - aggiungere ipotesi a process_term
+% - aggiungere normalizzazione termine
+
+accumulate itp.
 
 loop_end S :- print S.
 %loop_aux A B :- print (loop_aux A B), fail.
 loop_aux D S :-
+    print D, print_constraints, print,
     read T, (T = quit, loop_end S, !;
     process_input T D D' PS, append S [T, PS] S', loop_aux D' S').
-loop :- loop_aux [] [].
+start :- loop_aux [] [].
 
 mode (process_input i i o o).
 %process_input A B C D :- print (process_input A B C D), fail.
+
 % arbitrary type introduction
-process_input (axiom N T) _ [conv N T, conv T N] [] :- pa_print (axiom N T).
-% full definition, check stepertibility
-process_input (define N (ty T) (te X)) D D' [] :-
-    D => (of X S X', step S T),
-    append D [of N T N, step N X', step X' N, step N N] D',
-    pa_print (define N (ty T) (te X)).
+process_input (axiom N T) D D' [] :-
+    append D [conv N T, conv T N, conv N N] D',
+    pa_print (axiom N T).
+
+% full definition, check convertibility
+process_input (define N ty T te X) D D' [] :-
+    process_term T PT M, process_term X PX M',
+    D => (of PX S X', conv S T),
+    append D [of N T X', conv N X', conv X' N, conv N N] Tmp,
+    append Tmp M Tmp', append Tmp' M' D',
+    pa_print (define N ty T te X).
+
 % only X, infer T
-process_input (define N (te X)) D D' [] :-
-    D => of X T X',
-    append D [of N T N, step N X', step X' N, step N N] D',
-    pa_print (define N (ty T) (te X')).
+process_input (define N te X) D D' [] :-
+    D => (process_term X PX M, of PX T X'),
+    append D [of N T X', step N X', step X' N, conv N N] Tmp,
+    append Tmp M D',
+    pa_print (define N ty T te X').
+
 % only T, enter proof mode
-process_input (define N (ty T)) D D' PS :- 
-    D => (of X T X', prove X T X' PS),
-    append D [of N T N, step N X', step X' N, step N N] D',
-    pa_print (define N (ty T) (te X')).
+process_input (define N ty T) D D' PS :- 
+    process_term T PT M,
+    D => (of X PT X', prove X PT X' PS),
+    append D [of N T X, step N X, step X N, conv N N] Tmp,
+    append Tmp M D',
+    pa_print (define N ty T te X').
+
+% unification i.e. assert that two terms are equal
+process_input (eq T T') D D' [] :-
+    D => process_term T PT M, D => process_term T' PT' M',
+    check_conv D PT PT',
+    append D M Tmp, append Tmp M' D',
+    pa_print (eq T T').
+    
+check_conv As T T' :-
+    As => (of T A _, of T' B _, conv A B, conv T T').
 
 pa_print (axiom N T) :-
     term_to_string N NS, pp T ST, S is NS ^ ": " ^ ST, print S.
-pa_print (define N (ty T) (te X)) :-
+pa_print (define N ty T te X) :-
     term_to_string N NS, pp T ST, pp X SX, S is NS ^ ": " ^ ST ^ " ≅ " ^ SX, print S.
+pa_print (eq T T') :-
+    pp T ST, pp T' ST', S is ST ^ " ≡ " ^ ST', print S.

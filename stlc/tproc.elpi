@@ -1,7 +1,6 @@
-% rec_term is called by a tactic
-% when it needs to perform the
-% recovery of metavars
+% Various STLC term processing predicates used by the elaborator
 
+% rec_term is called by a tactic when it needs to perform the recovery of metas
 mode (rec_term i i i).
 
 %rec_term A B C :- print (rec_term A B C), fail.
@@ -12,8 +11,25 @@ rec_term (lam N T F) Vars K :- pi x\ rec_term (F x) [(x, N)|Vars] K.
 rec_term (app M N) Vars K :- rec_term M Vars K, rec_term N Vars K.
 
 rec_term X Vars K :-
-    name X,
-    % dovrei controllare che X sia in Vars?
+    name X, % dovrei controllare che X sia in Vars?
     K [].
 
 
+% Given a user-term, return a system-term + definitions for meta rewriting
+% INV: there can only be ONE dmeta predicate for (? N)
+mode (process_term i o o).
+process_term A B C :- print (process_term A B C), fail.
+
+process_term (app M N) (app M' N') V :- !, process_term M M' V1, process_term N N' V2, append V1 V2 V.
+process_term (lam T F) (lam T F') V :- !, pi x\ process_term (F x) (F' x) V.
+process_term (lam N T F) (lam N T F') V :- !, process_term (lam T F) (lam T F') V.
+
+process_term (? N) M [D] :- dmeta (? N) M, D = dmeta (? N) M, !.
+process_term (? N) M [dmeta (? N) M] :- !.
+
+process_term T T [].
+
+%process_term (inl T2 L) (inl T2 L') :- process_term L L'.
+%process_term (inr T1 R) (inr T1 R') :- process_term R R'.
+%process_term (case S Fl Fr) (case S' Fl' Fr') :-
+%    process_term S S', pi x\ (process_term (Fl x) (Fl' x), process_term (Fr x) (Fr' x)).

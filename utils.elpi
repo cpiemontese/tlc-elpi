@@ -2,21 +2,29 @@
 
 mode (length i o).
 length [] 0.
-length (_ :: TL) L :- length TL L', L is L' + 1.
+length [_|TL] L :- length TL L', L is L' + 1.
 
-nth_element 1 ((X, _) :: _) X.
-nth_element N (_ :: TL) X :- 
+nth_element 1 [(X, _)|_] X.
+nth_element N [_|TL] X :- 
     M is N - 1,
     nth_element M TL X.
 
-get_named N ((X, N) :: _) X.
-get_named N (_ :: TL) X :-
+get_named N [(X, N)|_] X.
+get_named N [_|TL] X :-
     get_named N TL X.
 
 append [] L L.
-append (X :: XS) L (X :: YS) :- append XS L YS.
+append [X|XS] L [X|YS] :- append XS L YS.
+
+append_no_dups [] L L.
+append_no_dups [X|XS] L [X|YS] :- not (mem X L), append_no_dups XS L YS.
+append_no_dups [X|XS] L YS :- append_no_dups XS L YS.
+
+mem _ [] :- !, fail.
+mem E [E|_].
+mem E [_|L] :- mem E L.
 
 reverse [] [].
-reverse (X :: XS) L :-
+reverse [X|XS] L :-
     reverse XS L',
     append L' [X] L.

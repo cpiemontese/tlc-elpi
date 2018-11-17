@@ -1,7 +1,5 @@
 % TODO:
-% - rimozione dei (? N) duplicati quando si processa il termine
-% - aggiungere ipotesi a process_term
-% - aggiungere normalizzazione termine
+% - aggiungere goal generati da eventuali definizioni/unificazioni
 
 accumulate itp.
 
@@ -23,32 +21,36 @@ process_input (axiom N T) D D' [] :-
 
 % full definition, check convertibility
 process_input (define N ty T te X) D D' [] :-
-    process_term T PT M, process_term X PX M',
-    D => (of PX S X', conv S T),
-    append D [of N T X', conv N X', conv X' N, conv N N] Tmp,
-    append Tmp M Tmp', append Tmp' M' D',
+    D => (
+        process_term T PT M, process_term X PX M',
+        of PX S X', conv S T
+    ),
+    append D [of N T X', step N X', conv N N] Tmp,
+    append_no_dups Tmp M Tmp', append_no_dups Tmp' M' D',
     pa_print (define N ty T te X).
 
 % only X, infer T
 process_input (define N te X) D D' [] :-
     D => (process_term X PX M, of PX T X'),
-    append D [of N T X', step N X', step X' N, conv N N] Tmp,
-    append Tmp M D',
+    append D [of N T X', step N X', conv N N] Tmp,
+    append_no_dups Tmp M D',
     pa_print (define N ty T te X').
 
 % only T, enter proof mode
 process_input (define N ty T) D D' PS :- 
-    process_term T PT M,
-    D => (of X PT X', prove X PT X' PS),
-    append D [of N T X, step N X, step X N, conv N N] Tmp,
-    append Tmp M D',
+    D => (
+        process_term T PT M,
+        of X PT X', prove X PT X' PS
+    ),
+    append D [of N T X', step N X', conv N N] Tmp,
+    append_no_dups Tmp M D',
     pa_print (define N ty T te X').
 
 % unification i.e. assert that two terms are equal
 process_input (eq T T') D D' [] :-
-    D => process_term T PT M, D => process_term T' PT' M',
+    D => (process_term T PT M, process_term T' PT' M'),
     check_conv D PT PT',
-    append D M Tmp, append Tmp M' D',
+    append_no_dups D M Tmp, append_no_dups Tmp M' D',
     pa_print (eq T T').
     
 check_conv As T T' :-

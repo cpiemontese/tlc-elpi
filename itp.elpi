@@ -17,6 +17,11 @@ prove X T X' S :-
     of X T X', 
     itp_loop (state [(1, goal X T X' [])] [] [] 1) [] S.
 
+prove Goals S :-
+    label_goals 0 Goals Mgn LGoals,
+    itp_loop (state LGoals [] [] Mgn) [] S.
+
+% Old
 prove Type ProofTerm OutScript :-
     prove Type [] ProofTerm OutScript.
 

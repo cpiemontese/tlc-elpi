@@ -2,14 +2,6 @@
 % ---- SUBSTITION RULES ---- %
 % -------------------------- %
 
-% XXX: copy and conv rules are VERY similar
-% but copy doesn't have i i mode i.e. it lets
-% you instantiate... is there a better way
-% to do this?
-
-% TODO: try to fix cases where copy predicates
-% are not in pattern fragment
-
 % ---- Copy ---- %
 
 copy A B :- print (copy A B), fail. % Debug

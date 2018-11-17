@@ -1,5 +1,8 @@
 % TODO:
-% - aggiungere goal generati da eventuali definizioni/unificazioni
+% - modificare eq per poter prendere in input il nome di un termine e poter
+%   elaborare ulteriormente il termine tramite unificazione
+% - predisporre itp a interrompere la dimostrazione non solo alla chiusura di
+%   tutti i goal
 
 accumulate itp.
 
@@ -9,52 +12,57 @@ loop_aux D S :-
     print D, print_constraints, print,
     read T, (T = quit, loop_end S, !;
     process_input T D D' PS, append S [T, PS] S', loop_aux D' S').
-start :- loop_aux [] [].
+start :- loop_aux (pa_state [] []) [].
 
 mode (process_input i i o o).
 %process_input A B C D :- print (process_input A B C D), fail.
 
 % arbitrary type introduction
-process_input (axiom N T) D D' [] :-
+process_input (axiom N T) (pa_state D NG) (pa_state D' NG) [] :-
     append D [conv N T, conv T N, conv N N] D',
     pa_print (axiom N T).
 
 % full definition, check convertibility
-process_input (define N ty T te X) D D' [] :-
-    D => (
-        process_term T PT M, process_term X PX M',
-        of PX S X', conv S T
-    ),
-    append D [of N T X', step N X', conv N N] Tmp,
-    append_no_dups Tmp M Tmp', append_no_dups Tmp' M' D',
+process_input (define N ty T te X) (pa_state D G) (pa_state D' G') [] :-
+    D => (of X S X', conv S T),
+    build_newgoals X' [] NG,
+    append NG G G',
+    append D [of N T X', step N X', conv N N] D',
     pa_print (define N ty T te X).
 
 % only X, infer T
-process_input (define N te X) D D' [] :-
-    D => (process_term X PX M, of PX T X'),
-    append D [of N T X', step N X', conv N N] Tmp,
-    append_no_dups Tmp M D',
+process_input (define N te X) (pa_state D G) (pa_state D' G') [] :-
+    D => of X T X',
+    build_newgoals X' [] NG,
+    append NG G G',
+    append D [of N T X', step N X', conv N N] D',
     pa_print (define N ty T te X').
 
 % only T, enter proof mode
-process_input (define N ty T) D D' PS :- 
-    D => (
-        process_term T PT M,
-        of X PT X', prove X PT X' PS
-    ),
-    append D [of N T X', step N X', conv N N] Tmp,
-    append_no_dups Tmp M D',
+process_input (define N ty T) (pa_state D G) (pa_state D' G') PS :- 
+    D => (of X T X', prove X T X' PS),
+    build_newgoals X' [] NG,
+    append NG G G',
+    append D [of N T X', step N X', conv N N] D',
     pa_print (define N ty T te X').
 
 % unification i.e. assert that two terms are equal
-process_input (eq T T') D D' [] :-
-    D => (process_term T PT M, process_term T' PT' M'),
-    check_conv D PT PT',
-    append_no_dups D M Tmp, append_no_dups Tmp M' D',
+process_input (eq T T') (pa_state D G) (pa_state D G') [] :-
+    check_conv D T T',
+    build_newgoals T' [] NG,
+    append NG G G',
     pa_print (eq T T').
     
 check_conv As T T' :-
     As => (of T A _, of T' B _, conv A B, conv T T').
+
+% XXX: per ora stiamo assumento che non si possa uscire dalla dimostrazione se
+%      non dopo avere chiuso tutti i goal lasciati aperti
+process_input start_proof_mode (pa_state D G) (pa_state D []) PS :-
+    D => prove G PS.
+    /*
+    D => prove G G' PS. % G' sono i goal lasciati aperti
+    */
 
 pa_print (axiom N T) :-
     term_to_string N NS, pp T ST, S is NS ^ ": " ^ ST, print S.

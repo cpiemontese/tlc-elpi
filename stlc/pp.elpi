@@ -61,5 +61,5 @@ pp (succ N) S :- !,
     S is "S" ^ SN.
 pp nat "Nat" :- !.
 
-pp uvar "_" :- !.
+%pp uvar "_" :- !.
 pp Term S :- term_to_string Term S.

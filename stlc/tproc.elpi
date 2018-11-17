@@ -17,19 +17,28 @@ rec_term X Vars K :-
 
 % Given a user-term, return a system-term + definitions for meta rewriting
 % INV: there can only be ONE dmeta predicate for (? N)
-mode (process_term i o o).
-process_term A B C :- print (process_term A B C), fail.
+mode (process_term i o).
+process_term A B :- print (process_term A B), fail.
 
-process_term (app M N) (app M' N') V :- !, process_term M M' V1, process_term N N' V2, append V1 V2 V.
-process_term (lam T F) (lam T F') V :- !, pi x\ process_term (F x) (F' x) V.
-process_term (lam N T F) (lam N T F') V :- !, process_term (lam T F) (lam T F') V.
+process_term (arr M N) (arr M' N') :- !, process_term M M', process_term N N'.
 
-process_term (? N) M [D] :- dmeta (? N) M, D = dmeta (? N) M, !.
-process_term (? N) M [dmeta (? N) M] :- !.
+process_term (app M N) (app M' N') :- !, process_term M M', process_term N N'.
+process_term (lam T F) (lam T F') :- !, pi x\ process_term (F x) (F' x).
+process_term (lam N T F) (lam N T F') :- !, process_term (lam T F) (lam T F').
 
-process_term T T [].
+process_term (? N) X :- !, declare_constraint (read-mlink (? N) X) [X].
+process_term (? N) M :- !, declare_constraint (mlink (? N) M) [M].
+
+process_term T T.
 
 %process_term (inl T2 L) (inl T2 L') :- process_term L L'.
 %process_term (inr T1 R) (inr T1 R') :- process_term R R'.
 %process_term (case S Fl Fr) (case S' Fl' Fr') :-
 %    process_term S S', pi x\ (process_term (Fl x) (Fl' x), process_term (Fr x) (Fr' x)).
+
+constraint read-mlink mlink {
+    rule (E1: Ctx1 ?- mlink N (uvar X L as M))
+    \ (E2: Ctx2 read-mlink N Y)
+    | (print "match")
+    <=> (E2: Ctx2 ?- Y = M).
+}

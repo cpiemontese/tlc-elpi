@@ -15,13 +15,11 @@ accumulate stlc/theory.
 
 prove X T X' OG S :-
     of X T X', 
-    itp_loop (state [(1, goal X T X' [])] [] [] 1) [] OG' S,
-    unlabel_goals OG' OG.
+    itp_loop (state [(1, goal X T X' [])] [] [] 1) [] OG S.
 
 prove G OG S :-
     label_goals 0 G Mgn LG,
-    itp_loop (state LG [] [] Mgn) [] OG' S,
-    unlabel_goals OG' OG.
+    itp_loop (state LG [] [] Mgn) [] OG S.
 
 % Old
 prove Type ProofTerm OutScript :-

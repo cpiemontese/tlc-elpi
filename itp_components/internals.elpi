@@ -15,13 +15,13 @@
 % - output script list
 mode (itp_loop i i o o).
 %itp_loop A B C :- print (itp_loop A B C), fail.
-itp_loop (state [] [] [] _) _ [] [].
+itp_loop State _ [] [] :- empty_state State.
 
-itp_loop (state OG I L M as State) [] OutGoals OutScript :-
+itp_loop State [] OutGoals OutScript :-
     print_status State,
     prompt_user "input tactic" Tac,
     (Tac = backup, !, fail;
-    Tac = quit, OutGoals = OG, !;
+    Tac = quit, get_outgoals State OutGoals, !;
     process_tac Tac State NewState,
     itp_loop NewState [] OutGoals OutScript',
     append [Tac] OutScript' OutScript;
@@ -32,6 +32,9 @@ itp_loop State [Tac|Tacs] OutGoals OutScript :-
     itp_loop NewState Tacs OutGoals OutScript',
     append [Tac] OutScript' OutScript.
 
+
+empty_state (state [] [] [] _).
+get_outgoals (state OG _ _ _) OG' :- unlabel_goals OG OG'.
 
 % ------------------- %
 % ---- INTERNALS ---- %

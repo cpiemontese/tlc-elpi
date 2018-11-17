@@ -67,6 +67,7 @@ conv (void A) (void B) :- !, conv A B.
 
 conv (app M1 N1) (app M2 N2) :- !, conv M1 M2, conv N1 N2.
 conv (lam T F1) (lam T F2) :- !, pi x\ of x T x => conv (F1 x) (F2 x).
+conv (lam _ T F1) (lam _ T F2) :- !, conv (lam T F1) (lam T F2).
 
 conv (pair M1 N1) (pair M2 N2) :- !, conv M1 M2, conv N1 N2.
 

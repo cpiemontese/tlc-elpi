@@ -25,7 +25,7 @@ process_input (define N ty T te X) (pa_state D G) (pa_state D' G') [] :-
     D => (of X S X', conv S T),
     build_newgoals X' [] NG,
     append NG G G',
-    append D [of N T X', step N X', conv N N] D',
+    append D [of N T X', step N X, conv N N] D',
     pa_print (define N ty T te X).
 
 % only X, infer T
@@ -33,7 +33,7 @@ process_input (define N te X) (pa_state D G) (pa_state D' G') [] :-
     D => of X T X',
     build_newgoals X' [] NG,
     append NG G G',
-    append D [of N T X', step N X', conv N N] D',
+    append D [of N T X', step N X, conv N N] D',
     pa_print (define N ty T te X').
 
 % only T, enter proof mode
@@ -41,7 +41,7 @@ process_input (define N ty T) (pa_state D G) (pa_state D' G') PS :-
     D => (of X T X', prove X T X' PS),
     build_newgoals X' [] NG,
     append NG G G',
-    append D [of N T X', step N X', conv N N] D',
+    append D [of N T X', step N X, conv N N] D',
     pa_print (define N ty T te X').
 
 % unification i.e. assert that two terms are equal

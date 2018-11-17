@@ -11,23 +11,25 @@
 % itp_loops args:
 % - state (current open goals, inactive list, levels, max goal number)
 % - input tactics list
+% - remaining goals
 % - output script list
-mode (itp_loop i i o).
+mode (itp_loop i i o o).
 %itp_loop A B C :- print (itp_loop A B C), fail.
-itp_loop (state [] [] [] _) _ [].
+itp_loop (state [] [] [] _) _ [] [].
 
-itp_loop State [] OutScript :-
+itp_loop (state OG I L M as State) [] OutGoals OutScript :-
     print_status State,
     prompt_user "input tactic" Tac,
     (Tac = backup, !, fail;
+    Tac = quit, OutGoals = OG, !;
     process_tac Tac State NewState,
-    itp_loop NewState [] OutScript',
+    itp_loop NewState [] OutGoals OutScript',
     append [Tac] OutScript' OutScript;
-    itp_loop State [] OutScript).
+    itp_loop State [] OutGoals OutScript).
 
-itp_loop State [Tac|Tacs] OutScript :-
+itp_loop State [Tac|Tacs] OutGoals OutScript :-
     process_tac Tac State NewState,
-    itp_loop NewState Tacs OutScript',
+    itp_loop NewState Tacs OutGoals OutScript',
     append [Tac] OutScript' OutScript.
 
 
@@ -193,7 +195,7 @@ exec_tac_aux Tac (goal X T Y D as G) [] FVars NewGoals :-
     tactic Tac G FVars NewGoals.
 
 mode (build_newgoals i i o).
-%build_newgoals A B C :- print (build_newgoals A B C), fail.
+build_newgoals A B C :- print (build_newgoals A B C), fail.
 build_newgoals (uvar K L as Y) VDecls NewGoals :-
     lookdown Y X T,
     NewGoals = [goal X T K VDecls].
@@ -290,6 +292,10 @@ label_goals Mgn [Goal|Goals] NMgn [(Mgn', Goal)|LGoals] :-
     Mgn' is Mgn + 1,
     label_goals Mgn' Goals NMgn LGoals.
 
+mode (unlabel_goals i o).
+unlabel_goals [] [].
+unlabel_goals [(_, G)|Gs] [G|UGs] :- unlabel_goals Gs UGs.
+
 mode (get_nth i i o o o).
 %get_nth A B C D E :- print (get_nth A B C D E), fail.
 get_nth 1 [X|XS] [] XS X.
@@ -320,6 +326,6 @@ lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
 constraint isa read-evar read-refined of {
      rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
         \ (E2 : read-refined (uvar O L2) X T)
-        | (/* print "match" L1 L1' L2, */ L1 = L1', !; print "align fail on" L1 "=" L1', halt)
+        | (print "align-debug: " K L1 "-" O L1' "-" O L2, L1 = L1', !; print "align fail on" L1 "=" L1', halt)
         <=> (E2 : X = uvar K [], T = Ty).
 }

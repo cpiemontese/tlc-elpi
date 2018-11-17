@@ -1,8 +1,6 @@
 % TODO:
 % - modificare eq per poter prendere in input il nome di un termine e poter
 %   elaborare ulteriormente il termine tramite unificazione
-% - predisporre itp a interrompere la dimostrazione non solo alla chiusura di
-%   tutti i goal
 
 accumulate itp.
 
@@ -56,13 +54,8 @@ process_input (eq T T') (pa_state D G) (pa_state D G') [] :-
 check_conv As T T' :-
     As => (of T A _, of T' B _, conv A B, conv T T').
 
-% XXX: per ora stiamo assumento che non si possa uscire dalla dimostrazione se
-%      non dopo avere chiuso tutti i goal lasciati aperti
-process_input start_proof_mode (pa_state D G) (pa_state D []) PS :-
-    D => prove G PS.
-    /*
-    D => prove G G' PS. % G' sono i goal lasciati aperti
-    */
+process_input start_proof_mode (pa_state D G) (pa_state D G') PS :-
+    D => prove G G' PS.
 
 pa_print (axiom N T) :-
     term_to_string N NS, pp T ST, S is NS ^ ": " ^ ST, print S.

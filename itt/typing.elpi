@@ -8,7 +8,7 @@ kind term type.
 % ------------------------ %
 
 pred of i:term, o:term, o:term.
-%of X T Y :- print (of X T Y), fail. 
+of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
@@ -16,7 +16,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 % ----------------------- %
 
 pred isa i:term, o:term, o:term.
-%isa X T Y :- print (isa X T Y), fail. 
+isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %
@@ -55,7 +55,9 @@ type app term -> term -> term.
 of (app Lam Arg) B_Arg (app Lam' Arg') :-
     isa Lam (prod A B) Lam',
     isa Arg A Arg',
-    subst B [Arg] B_Arg.
+    pi x\ (of x A x, copy x Arg) => conv (B x) B_Arg.
+    %unify B [Arg] B_Arg [].
+    %subst B [Arg] B_Arg.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -74,16 +76,19 @@ type pair term -> term -> term.
 of (pair Left Right) (sum A B) (pair Left' Right') :- 
     isa Left A Left',
     isa Right B_Left Right',
-    subst B [Left] B_Left.
+    pi x\ (of x A x, copy x Left) => conv (B x) B_Left.
+    %subst B [Left] B_Left.
 
 % ELIMINATION
 type split term -> (term -> term -> term) -> term.
 of (split Pair Func) T_Pair (split Pair' Func') :- 
     isa Pair (sum A B) Pair',
-    subst T [Pair] T_Pair,
+    pi p\ (of p (sum A B) p, copy p Pair) => conv (T p) T_Pair,
+    %subst T [Pair] T_Pair,
     pi x y\ (of x A x, of y (B x) y) => (
         isa (Func x y) TSubst (Func' x y),
-        subst T [pair x y] TSubst
+        pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p)  TSubst
+        %subst T [pair x y] TSubst
     ).
 
 type fst term -> term.
@@ -91,9 +96,11 @@ of (fst Pair) A (fst Pair') :-
     isa Pair (sum A B) Pair'.
 
 type snd term -> term.
-of (snd Pair) B_fst (fst Pair') :-
+of (snd Pair) B_fst (snd Pair') :-
     isa Pair (sum A B) Pair',
-    subst B (fst Pair) B_fst.
+    % XXX: Pair = pair P Q
+    pi f\ (of f A f, copy f (fst Pair)) => conv (B f) B_fst.
+    %subst B [fst Pair] B_fst.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
@@ -127,10 +134,12 @@ of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     isa N nat N',
     pi x y\ (of x nat x, of y (T x) y) => (
         isa (RF x y) T_Succ (RF' x y),
-        subst T [succ x] T_Succ
+        pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ
+        %subst T [succ x] T_Succ
     ),
     isa ZE (T zero) ZE',
-    subst T [N] T_N.
+    pi n\ (of n nat n, copy n N) => conv (T n) T_N.
+    %subst T [N] T_N.
 
 % -------------------------- %
 % ---- ELABORATOR TERMS ---- %

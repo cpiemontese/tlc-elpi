@@ -33,18 +33,21 @@ conv M N :- step N N', !, conv M N'.
 
 conv (prod A B) (prod A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
 
-conv (lam _Name A Bd) (lam _Name' _A' Bd') :- pi x\ of x A x => conv (Bd x) (Bd' x).
 conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
+conv (lam A Bd)       (lam _A' Bd')        :- pi x\ of x A x => conv (Bd x) (Bd' x).
+conv (lam _Name A Bd) (lam _Name' _A' Bd') :- conv (lam A Bd) (lam _A' Bd').
 
 % BETA
 step (app Lam Arg) R :-
-    steps Lam (lam _Name _A Bd),
+    (steps Lam (lam _A Bd), !; steps Lam (lam _Name _A Bd)),
     subst Bd [Arg] S,
     steps S R.
 
 % ETA EQUALITY
-conv (lam _Name A F) F' :- pi x \ of x A x => conv (F x) (app F' x).
-conv F' (lam _Name A F) :- pi x \ of x A x => conv (F x) (app F' x).
+conv (lam A F) F' :- pi x\ of x A x => conv (F x) (app F' x).
+conv F' (lam A F) :- pi x\ of x A x => conv (F x) (app F' x).
+conv (lam _Name A F) F' :- conv (lam A F) F'.
+conv F' (lam _Name A F) :- conv F' (lam A F).
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -56,18 +59,21 @@ conv (pair Left Right) (pair Left' Right') :-
     conv Left Left',
     conv Right Right'.
 
-conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
+conv (split Pair Func) (split Pair' Func') :-
     conv Pair Pair',
-    %isa Pair (sum A B) _,
+    isa Pair (sum A B) _,
     pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
+conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
+    conv (split Pair Func) (split Pair' Func').
 
 conv (fst Pair) (fst Pair') :- conv Pair Pair'.
 conv (snd Pair) (snd Pair') :- conv Pair Pair'.
 
 % BETA
-step (split P _ _ F) R :-
+step (split P F) R :-
     steps P (pair X Y),
     subst F [X, Y] R.
+step (split P _ _ F) R :- steps (split P F) R.
 step (fst P) X :- steps P (pair X Y).
 step (snd P) Y :- steps P (pair X Y).
 
@@ -88,15 +94,18 @@ conv (pair (fst P) (snd P)) P.
 
 conv (succ N) (succ M) :- conv N M.
 
-conv (natrec N1 ZeroElement1 _ _ RecFun1) (natrec _T N2 ZeroElement2 _ _ RecFun2) :-
-    conv N1 N2,
-    conv ZeroElement1 ZeroElement2,
-    pi x y\ (of x nat x, of y (T x) y) => conv (RecFun1 x y) (RecFun2 x y).
+conv (natrec N ZE RF) (natrec N' ZE' RF') :-
+    conv N N', conv ZE ZE',
+    % XXX: come ottengo T qui?
+    pi x y\ (of x nat x, of y (T x) y) => conv (RF x y) (RF' x y).
+conv (natrec N ZE N1 N2 RF) (natrec N' ZE' _N1' _N2' RF') :-
+    conv (natrec N ZE RF) (natrec N' ZE' RF').
 
 % BETA
-step (natrec N ZeroElement _ _ RecFun) ZeroElement :- steps N zero.
-step (natrec M ZeroElement _ _ RecFun) R :-
+step (natrec N ZE _RF) ZE :- steps N zero.
+step (natrec M ZE RF) R :-
     steps M (succ N),
-    steps (natrec N ZeroElement _ _ RecFun) R',
-    subst RecFun [N, R'] S,
+    steps (natrec N ZE RF) R',
+    subst RF [N, R'] S,
     steps S R.
+step (natrec N ZE _ _ RF) R :- step (natrec N ZE RF) R.

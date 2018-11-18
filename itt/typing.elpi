@@ -47,8 +47,8 @@ macro @arrow A B :- prod A (x\ B).
 of_type (prod A B) :- of_type A, pi x\ of x A x => of_type (B x).
 
 % INTRODUCTION
-type lam string -> term -> (term -> term) -> term.
-of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => isa (Bd x) (B x) (Bd' x).
+type lam term -> (term -> term) -> term.
+of (lam A Bd) (prod A B) (lam A Bd') :- pi x\ of x A x => isa (Bd x) (B x) (Bd' x).
 
 % ELIMINATION
 type app term -> term -> term.
@@ -77,8 +77,8 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
     subst B [Left] B_Left.
 
 % ELIMINATION
-type split term -> string -> string -> (term -> term -> term) -> term.
-of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
+type split term -> (term -> term -> term) -> term.
+of (split Pair Func) T_Pair (split Pair' Func') :- 
     isa Pair (sum A B) Pair',
     subst T [Pair] T_Pair,
     pi x y\ (of x A x, of y (B x) y) => (
@@ -122,12 +122,27 @@ of zero nat zero.
 of (succ N) nat (succ N') :- isa N nat N'.
 
 % ELIMINATION
-type natrec term -> term -> string -> string -> (term -> term -> term) -> term.
-of (natrec N ZeroElement Name1 Name2 RecFun) T_N (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
+type natrec term -> term -> (term -> term -> term) -> term.
+of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     isa N nat N',
     pi x y\ (of x nat x, of y (T x) y) => (
-        isa (RecFun x y) T_Succ (RecFun' x y),
+        isa (RF x y) T_Succ (RF' x y),
         subst T [succ x] T_Succ
     ),
-    isa ZeroElement (T zero) ZeroElement',
+    isa ZE (T zero) ZE',
     subst T [N] T_N.
+
+% -------------------------- %
+% ---- ELABORATOR TERMS ---- %
+% -------------------------- %
+
+type lam string -> term -> (term -> term) -> term.
+of (lam Name A Bd) Prod (lam Name A Bd') :- of (lam A Bd) Prod (lam A Bd').
+
+type split term -> string -> string -> (term -> term -> term) -> term.
+of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
+    of (split Pair Func) T_Pair (split Pair' Func').
+
+type natrec term -> term -> string -> string -> (term -> term -> term) -> term.
+of (natrec N ZE Name1 Name2 RF) T_N (natrec N' ZE' Name1 Name2 RF') :-
+    of (natrec N ZE RF) T_N (natrec N' ZE' RF').

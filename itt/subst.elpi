@@ -1,6 +1,5 @@
-%type copy tm -> tm -> o.
+% Internalization of substitution notion for closed terms of itt
 
-%copy A B :- print (copy A B), fail. % remove when not debugging
 % PI
 copy (prod A B) (prod T S) :- copy A T, pi x\ copy (B x) (S x).
 copy (app M N) (app P Q) :- copy M P, copy N Q.
@@ -25,20 +24,8 @@ copy (natrec N ZeroElement N1 N2 RecFun) (natrec M ZeroElement' N1 N2 RecFun') :
     copy ZeroElement ZeroElement',
     pi x y\ copy (RecFun x y) (RecFun' x y).
 
-copy A A. % if all else fails, A copies to itself
+copy A A.
 
-%type subst (tm -> tm) -> tm -> tm -> o.
-%subst M T S :- print (subst M T S), fail.
-%subst M T S :- pi x\ copy x T => copy (M x) S.
-
-% substitution/unification with one or more args
 %subst A B C :- print (subst A B C), fail.
 subst M [] S :- copy M S.
 subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.
-% se M e' un termine dovrei avere anche:
-% of M Ty _, subst Ty Ts TyS.
-% la sostituzione nel termine causa una
-% sostituzione anche nel tipo e due termini
-% possono diventare unificabili perche' i
-% loro tipi, opportunamente unificati, li
-% rendono tali...

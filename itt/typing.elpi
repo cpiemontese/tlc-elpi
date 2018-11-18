@@ -1,3 +1,6 @@
+% TODO:
+% - change subst with unification (?)
+
 kind term type.
 
 % ------------------------ %
@@ -41,11 +44,11 @@ type prod term -> (term -> term) -> term.
 macro @arrow A B :- prod A (x\ B).
 
 % TYPE
-of_type (prod A B) :- of_type A, pi x \ of x A x => of_type (B x).
+of_type (prod A B) :- of_type A, pi x\ of x A x => of_type (B x).
 
 % INTRODUCTION
 type lam string -> term -> (term -> term) -> term.
-of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ isa x A x => isa (Bd x) (B x) (Bd' x).
+of (lam Name A Bd) (prod A B) (lam Name A Bd') :- pi x\ of x A x => isa (Bd x) (B x) (Bd' x).
 
 % ELIMINATION
 type app term -> term -> term.
@@ -63,7 +66,7 @@ type sum term -> (term -> term) -> term.
 macro @times A B :- sum A (x\ B).
 
 % TYPE
-of_type (sum A B) :- of_type A, pi x \ isa x A x => of_type (B x).
+of_type (sum A B) :- of_type A, pi x\ of x A x => of_type (B x).
 
 % INTRODUCTION
 
@@ -78,9 +81,9 @@ type split term -> string -> string -> (term -> term -> term) -> term.
 of (split Pair Name1 Name2 Func) T_Pair (split Pair' Name1 Name2 Func') :- 
     isa Pair (sum A B) Pair',
     subst T [Pair] T_Pair,
-    pi x y\ (isa x A x, isa y (B x) y) => ( % problema: per il theorem proving sta parte 
-        isa (Func x y) TSubst (Func' x y),  % e' inutile perche' T_Pair so cos'e' e quindi
-        subst T [pair x y] TSubst         % trovo t usando subst e fine
+    pi x y\ (of x A x, of y (B x) y) => (
+        isa (Func x y) TSubst (Func' x y),
+        subst T [pair x y] TSubst
     ).
 
 type fst term -> term.
@@ -122,7 +125,7 @@ of (succ N) nat (succ N') :- isa N nat N'.
 type natrec term -> term -> string -> string -> (term -> term -> term) -> term.
 of (natrec N ZeroElement Name1 Name2 RecFun) T_N (natrec T N' ZeroElement' Name1 Name2 RecFun') :-
     isa N nat N',
-    pi x y\ (isa x nat x, isa y (T x) y) => (
+    pi x y\ (of x nat x, of y (T x) y) => (
         isa (RecFun x y) T_Succ (RecFun' x y),
         subst T [succ x] T_Succ
     ),

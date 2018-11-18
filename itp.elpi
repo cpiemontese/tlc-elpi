@@ -1,9 +1,6 @@
 accumulate utils.
 accumulate itp_components/all.
 
-accumulate "commons/typing".
-accumulate stlc/theory.
-
 % TODO:
 % - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
 % - questo file potrebbe contenere solo i predicati di interfaccia
@@ -13,40 +10,32 @@ accumulate stlc/theory.
 % ---- INTERFACE ---- %
 % ------------------- %
 
+% Prove with term as input
 prove X T X' OG S :-
+    prove X T X' OG S [].
+prove X T X' OG S In :-
     of X T X', 
-    itp_loop (state [(1, goal X T X' [])] [] [] 1) [] OG S.
+    itp_loop (state [(1, goal X T X' [])] [] [] 1) In OG S.
 
+% Prove with goals as input
 prove G OG S :-
+    prove G OG S [].
+prove G OG S In :-
     label_goals 0 G Mgn LG,
-    itp_loop (state LG [] [] Mgn) [] OG S.
+    itp_loop (state LG [] [] Mgn) In OG S.
+
 
 % Old
-prove Type ProofTerm OutScript :-
+prove_o A B C :- print (prove_o A B C), fail.
+prove_o A B C D :- print (prove_o A B C D), fail.
+prove_o Type ProofTerm OutScript :-
     prove Type [] ProofTerm OutScript.
 
-prove Type InScript ProofTerm OutScript :-
+prove_o Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
     itp_loop (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript _ OutScript.
 
-% ----------------- %
-% ---- TACTICS ---- %
-% ----------------- %
 
-% tactic name goals fresh_vars new_goals
-
-tactic (intro N) (goal X (arr A B) RTerm VDecls) FVars NewGoals :-
-    X = lam N A F,
-    build_newgoals RTerm VDecls NewGoals.
-
-tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
-    get_named N FVars Lam,
-    X = app Lam dots,
-    build_newgoals RTerm VDecls NewGoals.
-
-tactic andI (goal X (prod A B) RTerm VDecls) FVars NewGoals :-
-    X = pair P Q,
-    build_newgoals RTerm VDecls NewGoals.
-
+% Only common tactic: manual input i.e. a name from a proof assistant definition
 tactic (man T) (goal X Type RTerm VDecls) FVars NewGoals :-
     X = T, build_newgoals RTerm VDecls NewGoals.

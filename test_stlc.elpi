@@ -1,5 +1,5 @@
-accumulate itp2.
-%accumulate stlc/theory.
+accumulate itp.
+accumulate stlc/theory.
 
 main T S :-
     test_pair T [

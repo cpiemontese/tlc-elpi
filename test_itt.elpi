@@ -2,15 +2,13 @@ accumulate itp.
 accumulate itt/theory.
 accumulate itt/pp.
 
-main :- interactive elim_id_axiom [intro x, intro y, intro z, intro w] S.
-
 interactive TestName OutputTerm :-
     interactive TestName [] OutputTerm.
 
-interactive TestName TestInput OutputTerm :-
+interactive TestName InScript OutputTerm :-
     TestName Type,
-    prove Type TestInput OutputTerm _.    
-    print_pt X' Type OutputTerm.
+    prove_o Type InScript ProofTerm _,
+    print_pt ProofTerm Type OutputTerm.
 
 print_pt Term Type S :-
     pp Term TermPP, pp Type TypePP, !,

@@ -1,3 +1,24 @@
+% ----------------- %
+% ---- TACTICS ---- %
+% ----------------- %
+
+% TODO: migrate old tactics
+% tactic name goals fresh_vars new_goals
+
+tactic (intro N) (goal X (prod A B) RTerm VDecls) FVars NewGoals :-
+    X = lam N A F,
+    build_newgoals RTerm VDecls NewGoals.
+
+tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
+    get_named N FVars Lam,
+    X = app Lam dots,
+    build_newgoals RTerm VDecls NewGoals.
+
+tactic andI (goal X (sum A B) RTerm VDecls) FVars NewGoals :-
+    X = pair P Q,
+    build_newgoals RTerm VDecls NewGoals.
+
+/*
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
@@ -94,3 +115,4 @@ tactic (var N) H Vars K :-
 %    print H,
 %    print Vars,
 %    print K.
+*/

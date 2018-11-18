@@ -1,0 +1,220 @@
+% ------------------------ %
+% ---- CONV EXTENSION ---- %
+% ------------------------ %
+
+mode (is_stuck i).
+is_stuck uvar.
+is_stuck (app M _) :- is_stuck M.
+is_stuck _ :- fail.
+
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
+conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
+
+mode (conv_constraint i i).
+conv_constraint (app M N) S A B :- conv_constraint M S A B.
+conv_constraint T (app M N) A B :- conv_constraint T M A B. 
+conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
+
+% if F is closed we can perform reductions, otherwise stop all reductions
+conv (app (lam A F) S as BetaRed) T :- pi x\ not (is_closed (F x)), !, unify BetaRed [] T [].
+conv T (app (lam A F) S as BetaRed) :- pi x\ not (is_closed (F x)), !, unify T [] BetaRed [].
+
+conv (split (pair P Q) F as SplitRed) T :- pi x y\ not (is_closed (F x y)), !, unify SplitRed [] T [].
+conv T (split (pair P Q) F as SplitRed) :- pi x y\ not (is_closed (F x y)), !, unify T [] SplitRed [].
+
+conv (natrec (succ N) ZE RF as NatRed) T :- pi x y\ not (is_closed (RF x y)), !, unify NatRed [] T [].
+conv T (natrec (succ N) ZE RF as NatRed) :- pi x y\ not (is_closed (RF x y)), !, unify T [] NatRed [].
+
+type is_closed term -> o.
+mode (is_closed i).
+is_closed uvar :- !, fail.
+is_closed (app M N) :- !, is_closed M, is_closed N.
+is_closed (lam T F) :- !, pi x\ is_closed (F x).
+is_closed (pair M N) :- !, is_closed M, is_closed N.
+is_closed (fst P) :- !, is_closed P.
+is_closed (snd P) :- !, is_closed P.
+is_closed (split P F) :- !, is_closed P, pi x y\ is_closed (F x y).
+is_closed (succ N) :- !, is_closed N.
+is_closed (natrec N ZE RF) :- !, is_closed N, is_closed ZE, pi x y\ is_closed (RF x y).
+is_closed M.
+
+% --------------------- %
+% ---- UNIFICATION ---- %
+% --------------------- %
+
+mode (unify i i i i).
+unify A B C D :- print (unify A B C D), fail.
+
+% delay flex-flex
+%unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
+unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (read-copies) [], declare_constraint (unify X [] Y []) [X, Y].
+
+% catch β-redex
+unify (app (lam A F) X) L T L' :- !,
+    pi x\ (of x A x, copy x X) => unify (F x) L T L'.
+unify T L (app (lam A F) X) L' :- !,
+    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
+
+% β-redex through copy
+unify (app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unift (F x) L T L'.
+unify T L (app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unift T L (F x) L'.
+
+% catch π-redex
+unify (split (pair P Q) F) L T L' :- !,
+    of (pair P Q) (prod A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify (F x y) L T L'.
+unify T L (split (pair P Q) F) L' :- !,
+    of (pair P Q) (prod A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify T L (F x y) L'.
+
+% π-redex through copy
+unify (split Pair F) L T L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (prod A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify (F x y) L T L'.
+unify T L (split Pair F) L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (prod A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify T L (F x y) L'.
+
+% XXX: S da dove lo tiro fuori?
+% catch ν-redex
+unify (natrec (succ N) ZE RF) L T L' :-
+    conv (natrec N ZE RF) R,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y R) => unify (RF x y) L T L'.
+unify T L (natrec (succ N) ZE RF) L' :-
+    conv (natrec N ZE RF) R,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y R) => T L unify (RF x y) L'.
+% ν-redex through copy
+unify (natrec Succ ZE RF) L T L' :-
+    name Succ, get_copy Succ Succ', Succ' = (succ N), conv (natrec N ZE RF) R,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y R, forbid Succ) => unify (RF x y) L T L'.
+unify T L (natrec Succ ZE RF) L' :-
+    name Succ, get_copy Succ Succ', Succ' = (succ N), conv (natrec N ZE RF) R,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y R, forbid Succ) => T L unify (RF x y) L'.
+
+
+% unwind app
+unify (app X Y) L T L' :- !,
+    append [Y] L LY,
+    unify X LY T L'.
+unify T L' (app X Y) L :- !,
+    append [Y] L LY,
+    unify T L' X LY.
+
+mode (rewind_app i i o).
+rewind_app A [] A.
+rewind_app T [L|Ls] A :-
+    rewind_app (app T L) Ls A.
+
+% Meta with args is a lambda
+unify (uvar as X) [L|Ls] T L' :- !, 
+    print "inst",
+    of L LTy _,
+    X = lam LTy F,
+    pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
+
+%unify T L' (uvar as X) [L|Ls] :- !, 
+%    print "inst",
+%    of L LTy _,
+%    X = lam LTy F,
+%    pi x\ (of x LTy x, copy x L) => unify T L' (F x) Ls.
+
+% ---- TYPE UNIFICATION ---- %
+
+% in stlc we just copy types
+unify (uvar as X) [] nat        [] :- !, X = nat.
+unify (uvar as X) [] (prod M N) [] :- !,
+    X = prod P Q, unify P [] M [], pi x\ of x M x => unify (Q x) [] (M x) [].
+unify (uvar as X) [] (sum M N)  [] :- !,
+    X = sum P Q, unify P [] M [], pi x\ of x M x => unify (Q x) [] (M x) [].
+
+% ---- TERM UNIFICATION ---- %
+
+% PROJECTION
+unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term Arg App, try_projection X Vs App.
+
+mode (try_projection i i i).
+try_projection _ [] _ :- fail.
+try_projection X [V|Vs] App :-
+    (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn); try_projection X Vs App.
+
+mode (get_copy i o).
+get_copy V X :- declare_constraint (copy V X) [X].
+
+mode (use_var i i i o).
+use_var A B C D :- print (use_var A B C D), fail.
+use_var V (pair A _) S O :- use_var (fst V) A S O.
+use_var V (pair _ B) S O :- use_var (snd V) B S O.
+use_var V (pair A B) S O :-
+    of (pair A B) (sum T S) _,
+    pi x y\ (of x T x, of y (S x) y, copy x A, copy y B, forbid V) => use_var (split V F) (F x y) S O.
+use_var V (succ N) S O :-
+    conv (natrec N ZE RF) R,
+    pi x y\ (of x nat x, of y (A x) y, copy x (succ N), copy y R, forbid V) => use_var (natrec V ZE RF) (RF x y) S O.
+use_var V T S V :- conv T S.
+
+% MIMIC
+% Prod
+unify (uvar as X) [] T [A|As] :-
+    print "app" X T [A|As],
+    X = app M N,
+    append Body [Tail] [A|As],
+    unify M [] T Body,
+    unify N [] Tail [].
+unify (uvar as X) [] (lam T F) [] :-
+    print "lam",
+    X = lam T G, pi x\ of x T x => unify (G x) [] (F x) [].
+
+% Sum
+unify (uvar as X) [] (pair M N) [] :-
+    print "pair",
+    X = pair P Q, unify P [] M [], unify Q [] N [].
+unify (uvar as X) [] (fst P) [] :-
+    print "fst",
+    X = fst Q, unify Q [] P [].
+unify (uvar as X) [] (snd P) [] :-
+    print "snd",
+    X = snd Q, unify Q [] P [].
+unify (uvar as X) [] (split P F) [] :-
+    of Q (sum A _) _,
+    X = split Q G,
+    unify Q [] P [],
+    pi x\ of x A x => unify (G x) [] (F x) [].
+
+% Nat
+unify (uvar as X) [] (succ Y) [] :-
+    print "succ",
+    X = succ N, unify N [] Y [].
+unify (uvar as X) [] (natrec N ZE RF) [] :-
+    print "natrec",
+    X = natrec N' ZE' RF',
+    unify N' [] N [], unify ZE' [] ZE [],
+    pi x y\ (of x nat x, of y (S x) y) => unify (RF' x y) [] (RF x y) [].
+
+% Const
+unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.
+
+% Simmetric case
+unify T L' (uvar as X) L :- !, unify X L T L'.
+
+
+constraint read-copies copy {
+    rule (Ctx ?- read-copies)
+    | (print "copies: " Ctx).
+
+    rule (E: Ctx ?- copy V R)
+    | (climb_telescope Ctx V V')
+    <=> (E: Ctx ?- R = V').
+}
+
+mode (climb_telescope i i o).
+%climb_telescope A B C :- print (climb_telescope A B C), fail.
+climb_telescope [] V V.
+climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
+climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
+climb_telescope [_|Ctx] V R :- !, climb_telescope Ctx V R.

@@ -67,18 +67,18 @@ unify T L (app Lam X) L' :-
 
 % catch π-redex
 unify (split (pair P Q) F) L T L' :- !,
-    of (pair P Q) (prod A B) _,
+    of (pair P Q) (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify (F x y) L T L'.
 unify T L (split (pair P Q) F) L' :- !,
-    of (pair P Q) (prod A B) _,
+    of (pair P Q) (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify T L (F x y) L'.
 
 % π-redex through copy
 unify (split Pair F) L T L' :- !,
-    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (prod A B) _,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify (F x y) L T L'.
 unify T L (split Pair F) L' :- !,
-    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (prod A B) _,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify T L (F x y) L'.
 
 % XXX: S da dove lo tiro fuori?
@@ -127,11 +127,11 @@ unify (uvar as X) [L|Ls] T L' :- !,
 % ---- TYPE UNIFICATION ---- %
 
 % in stlc we just copy types
-unify (uvar as X) [] nat        [] :- !, X = nat.
-unify (uvar as X) [] (prod M N) [] :- !,
-    X = prod P Q, unify P [] M [], pi x\ of x M x => unify (Q x) [] (M x) [].
-unify (uvar as X) [] (sum M N)  [] :- !,
-    X = sum P Q, unify P [] M [], pi x\ of x M x => unify (Q x) [] (M x) [].
+unify (uvar as X) [] nat        [] :- X = nat.
+unify (uvar as X) [] (prod M N) [] :-
+    X = prod P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
+unify (uvar as X) [] (sum M N)  [] :-
+    X = sum P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
 
 % ---- TERM UNIFICATION ---- %
 

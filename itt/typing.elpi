@@ -77,11 +77,9 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
 type split term -> (term -> term -> term) -> term.
 of (split Pair Func) T_Pair (split Pair' Func') :- 
     isa Pair (sum A B) Pair',
+    pi x y\ (of x A x, of y (B x) y) => isa (Func x y) TSubst (Func' x y),
     pi p\ (of p (sum A B) p, copy p Pair) => conv (T p) T_Pair,
-    pi x y\ (of x A x, of y (B x) y) => (
-        isa (Func x y) TSubst (Func' x y),
-        pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p)  TSubst
-    ).
+    pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p) TSubst.
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
@@ -123,11 +121,10 @@ of (succ N) nat (succ N') :- isa N nat N'.
 type natrec term -> term -> (term -> term -> term) -> term.
 of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     isa N nat N',
-    pi x y\ (of x nat x, of y (T x) y) => (
-        isa (RF x y) T_Succ (RF' x y),
-        pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ
-    ),
-    isa ZE (T zero) ZE',
+    pi x y\ (of x nat x, of y (T x) y) => isa (RF x y) T_Succ (RF' x y),
+    isa ZE (T_Zero) ZE',
+    pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ,
+    pi z\ (of z nat z, copy z zero) => conv (T zero) T_Zero,
     pi n\ (of n nat n, copy n N) => conv (T n) T_N.
 
 % -------------------------- %

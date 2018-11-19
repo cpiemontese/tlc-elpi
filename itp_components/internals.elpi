@@ -193,7 +193,6 @@ exec_tac Tac (goal X T Y V as Goal) NewGoals :- exec_tac_aux Tac Goal V [] NewGo
 
 mode (exec_tac_aux i i i i o).
 exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
-    print "----" N TN,
     pi x\ of x TN x => exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG.
 exec_tac_aux Tac (goal X T Y D as G) [] FVars NewGoals :-
     tactic Tac G FVars NewGoals.

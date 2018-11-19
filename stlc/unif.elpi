@@ -79,7 +79,7 @@ unify A B C D :- print (unify A B C D), fail.
 
 % delay flex-flex
 %unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
-unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (read-copies) [], declare_constraint (unify X [] Y []) [X, Y].
+unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (unify X [] Y []) [X, Y].
 
 % catch β-redex
 unify (app (lam A F) X) L T L' :- !,

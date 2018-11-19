@@ -27,8 +27,8 @@ isa (app Lam dots) T O :- !,
 
 
 isa Te Ty OTe :-
-    conv Ty Ty',
-    of Te Ty' OTe.
+    of Te Ty' OTe,
+    conv Ty Ty'.
 
 of_type T :- print (of_type T), fail.
 

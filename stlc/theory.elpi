@@ -1,2 +1,2 @@
 accumulate "../commons/typing".
-accumulate lang, typing, unif, subst, conv, tproc, pp.
+accumulate lang, typing, unif, subst, conv, build_goals, pp.

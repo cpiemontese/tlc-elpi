@@ -8,6 +8,7 @@ interactive TestName OutputTerm :-
 interactive TestName InScript OutputTerm :-
     TestName Type,
     prove_o Type InScript ProofTerm _,
+    print "raw out" Type "::" ProofTerm,
     print_pt ProofTerm Type OutputTerm.
 
 print_pt Term Type S :-

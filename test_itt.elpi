@@ -23,18 +23,18 @@ test_mapp (@arrow (@arrow a (@arrow b c)) (@arrow a (@arrow b c))).
 % ---- K combinator ---- %
 % ---------------------- %
 
-% [intro x, intro y, app x]
+% [intro x, intro y, mapp x]
 comb_K (@arrow a (@arrow b a)).
 
 % ---------------------- %
 % ---- S combinator ---- %
 % ---------------------- %
 
-% [intro g, intro f, intro x, app g, app f, app x, app x]
+% [intro g, intro f, intro x, mapp g, mapp x, mapp f, mapp x]
 comb_S (@arrow (@arrow a (@arrow b c)) (@arrow (@arrow a b) (@arrow a c))).
 
 % axioms of conjunction
-% [intro f, intro g, andI f g]
+% [intro x, intro y, andI, mapp x, mapp y]
 andIntro (@arrow a (@arrow b (@times a b))).
 
 % [intro p, andEL p]
@@ -43,34 +43,36 @@ andElimL (@arrow (@times a b) a).
 % [intro p, andER p]
 andElimR (@arrow (@times a b) b).
 
-% [intro f, intro z, andE x y z, app, app, app f, app x, app y]
+% [intro f, intro p, andE p y z, mapp f, mapp x, mapp y]
 implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
 
 
-% [intro z, andI, intro x, andEL, app z, app x, intro x, andER, app z, app x]
+% [intro f, andI, maptac (intro x) [3, 4], andEL, mapp f, mapp x, andER, mapp f, mapp x]
 choice (@arrow (prod a (x\ sum b (y\ c))) (sum (prod a (x\ b)) (f\ prod a (x\ c)))).
 
-% [intro x, idIntro, app x]
+% [intro x, idIntro]
 intro_id_axiom (prod a (x\ id a x x)).
 
 elim_id_axiom (prod a (x\ prod a (y\ @arrow (id a x y) (@arrow (B x) (B y))))).
 
 test_all L :-
     print "start",
-    interactive identity [intro x, app x] S1,
-    print "1/8",
-    interactive comb_K [intro x, intro y, app x] S2,
-    print "2/8",
-    interactive comb_S [intro g, intro f, intro x, app g, app f, app x, app x] S3,
-    print "3/8",
-    interactive andIntro [intro f, intro g, andI f g] S4,
-    print "4/8",
+    interactive identity [intro x, mapp x] S1,
+    print "1/9",
+    interactive comb_K [intro x, intro y, mapp x] S2,
+    print "2/9",
+    interactive comb_S [intro g, intro f, intro x, mapp g, mapp x, mapp f, mapp x] S3,
+    print "3/9",
+    interactive andIntro [intro x, intro y, andI, mapp x, mapp y] S4,
+    print "4/9",
     interactive andElimL [intro p, andEL p] S5,
-    print "5/8",
+    print "5/9",
     interactive andElimR [intro p, andER p] S6,
-    print "6/8",
-    interactive implAnd [intro f, intro z, andE x y z, app f, app y, app x] S7,
-    print "7/8",
-    interactive choice [intro z, andI, intro x, andEL, app z, app x, intro x, andER, app z, app x] S8,
-    print "8/8",
-    L = [S1, S2, S3, S4, S5, S6, S7, S8].
+    print "6/9",
+    interactive implAnd [intro f, intro p, andE p x y, mapp f, mapp x, mapp y] S7,
+    print "7/9",
+    interactive choice [intro f, andI, maptac (intro x) [3, 4], andEL, mapp f, mapp x, andER, mapp f, mapp x] S8,
+    print "8/9",
+    interactive intro_id_axiom [intro x, idIntro] S9,
+    print "9/9",
+    L = [S1, S2, S3, S4, S5, S6, S7, S8, S9].

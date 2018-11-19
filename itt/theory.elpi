@@ -1,3 +1,3 @@
 % Accumulator file to gather everything
 %accumulate "../commons/typing".
-accumulate typing, subst, unif, conv, tactics, build_goals.
+accumulate typing, subst, unif, conv, tactics, build_goals, pp.

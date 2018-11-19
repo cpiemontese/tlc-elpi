@@ -2,6 +2,7 @@
 % - modificare eq per poter prendere in input il nome di un termine e poter
 %   elaborare ulteriormente il termine tramite unificazione
 
+accumulate itt/theory.
 accumulate itp.
 
 loop_end S :- print S.

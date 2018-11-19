@@ -85,6 +85,7 @@ conv (pair (fst P) (snd P)) P.
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
+conv (id A M N) (id _ M' N') :- conv M M', conv N N'.
 %conv X Y :- isa Magic (id A X Y) _.
 %conv Magic (refl A X) :- isa Magic (id A X Y) _.
 

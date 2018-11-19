@@ -192,10 +192,14 @@ mode (exec_tac i i o).
 exec_tac Tac (goal X T Y V as Goal) NewGoals :- exec_tac_aux Tac Goal V [] NewGoals.
 
 mode (exec_tac_aux i i i i o).
+%exec_tac_aux A B C D E :- print (exec_tac_aux A B C D E), fail.
+exec_tac_aux Tac (goal X T Y D as G) [] FVars NG :-
+    tactic Tac G FVars NG.
 exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
-    pi x\ of x TN x => exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG.
-exec_tac_aux Tac (goal X T Y D as G) [] FVars NewGoals :-
-    tactic Tac G FVars NewGoals.
+    pi x\ copy_var x N => (
+        copy_to_type TN TN', print "copied to" TN TN',
+        of x TN' x => exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG
+    ).
 
 
 % ------------------------ %
@@ -314,7 +318,7 @@ constraint isa read-evar read-refined of {
         | (%print "align-debug: " K L1 "-" O L1' "-" O L2,
           L1 = L1',
           create_copy_hyps L1' VDecls Hyps,
-          Hyps => copy_type Ty S, !;
+          Hyps => copy_from_type Ty S, !;
           print "align fail on" L1 "=" L1', halt)
         <=> (E2: (X = uvar K [], T = S)).
 }
@@ -327,20 +331,38 @@ mode (create_copy_hyps i i o).
 create_copy_hyps [] [] [].
 create_copy_hyps [V|Vs] [vdecl W _|Ws] [copy_var V W|Hyps] :- create_copy_hyps Vs Ws Hyps.
 
-mode (type_to_string i o).
-copy_type A B :- print (copy_type A B), fail.
+mode (copy_from_type i o).
+%copy_from_type A B :- print (copy_from_type A B), fail.
 
-copy_type [] []. 
-copy_type [X|Xs] [Y|Ys] :- copy_type X Y, copy_type Xs Ys.
+copy_from_type [] []. 
+copy_from_type [X|Xs] [Y|Ys] :- copy_from_type X Y, copy_from_type Xs Ys.
 
-copy_type (uvar K L) X :- !, print K L, copy_type L L', print L', X = (uvar K L').
+copy_from_type (uvar K L) X :- !, print K L, copy_from_type L L', print L', X = (uvar K L').
 
-copy_type (sum A (uvar K L as B)) (sum A' B') :- !, copy_type A A', copy_type B B'.
-copy_type (prod A (uvar K L as B)) (prod A' B') :- !, copy_type A A', copy_type B B'.
+copy_from_type (sum A (uvar K L as B)) (sum A' B') :- !, copy_from_type A A', copy_from_type B B'.
+copy_from_type (prod A (uvar K L as B)) (prod A' B') :- !, copy_from_type A A', copy_from_type B B'.
 
-copy_type (sum A B) (sum A' B') :-  copy_type A A', pi x\ copy_type (B x) (B' x).
-copy_type (prod A B) (prod A' B') :- copy_type A A', pi x\ copy_type (B x) (B' x).
-copy_type (id A X Y) (id A' X' Y') :- !, copy_type A A', copy_type X X', copy_type Y Y'.
-copy_type X Y :- name X, copy_var X Y.
+copy_from_type (sum A B) (sum A' B') :-  copy_from_type A A', pi x\ copy_from_type (B x) (B' x).
+copy_from_type (prod A B) (prod A' B') :- copy_from_type A A', pi x\ copy_from_type (B x) (B' x).
+copy_from_type (id A X Y) (id A' X' Y') :- !, copy_from_type A A', copy_from_type X X', copy_from_type Y Y'.
+copy_from_type X Y :- name X, copy_var X Y.
 
-copy_type X X.
+copy_from_type X X.
+
+mode (copy_to_type i o).
+copy_to_type A B :- print (copy_to_type A B), fail.
+
+copy_to_type [] []. 
+copy_to_type [X|Xs] [Y|Ys] :- copy_to_type X Y, copy_to_type Xs Ys.
+
+copy_to_type (uvar K L) (uvar K L') :- !, copy_to_type L L'.
+
+copy_to_type (sum A (uvar K L as B)) (sum A' B') :- !, copy_to_type A A', copy_to_type B B'.
+copy_to_type (prod A (uvar K L as B)) (prod A' B') :- !, copy_to_type A A', copy_to_type B B'.
+
+copy_to_type (sum A B) (sum A' B') :-  copy_to_type A A', pi x\ copy_to_type (B x) (B' x).
+copy_to_type (prod A B) (prod A' B') :- copy_to_type A A', pi x\ copy_to_type (B x) (B' x).
+copy_to_type (id A X Y) (id A' X' Y') :- !, copy_to_type A A', copy_to_type X X', copy_to_type Y Y'.
+copy_to_type X Y :- copy_var Y X, name Y.
+
+copy_to_type X X.

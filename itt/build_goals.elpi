@@ -10,7 +10,8 @@ build_newgoals (uvar K L as Y) VDecls NewGoals :- !,
 
 % Prod
 build_newgoals (lam N T F) VDecls NewGoals :-
-    append VDecls [vdecl N T] L,
+    copy_from_type T T',
+    append VDecls [vdecl N T'] L,
     pi x\ build_newgoals (F x) L NewGoals.
 build_newgoals (app M N) VDecls NewGoals :-
     build_newgoals M VDecls NewGoals',
@@ -27,7 +28,8 @@ build_newgoals (snd P) VDecls NewGoals :- build_newgoals P VDecls NewGoals.
 build_newgoals (split P N1 N2 F) VDecls NewGoals :-
     build_newgoals P VDecls NP,
     of P (sum A B) _,
-    append VDecls [vdecl N1 A, vdecl N2 B] L,
+    copy_from_type A A', copy_from_type B B',
+    append VDecls [vdecl N1 A', vdecl N2 B'] L,
     pi x y\ build_newgoals (F x y) L NF,
     append NP NF NewGoals.
 
@@ -37,7 +39,8 @@ build_newgoals (succ N) VDecls NewGoals :- build_newgoals N VDecls NewGoals.
 build_newgoals (natrec N ZE N1 N2 RF) :-
     build_newgoals N NN,
     build_newgoals ZE NZE,
-    append VDecls [vdecl N1 nat, vdecl N2 T] L,
+    copy_from_type T T',
+    append VDecls [vdecl N1 nat, vdecl N2 T'] L,
     pi x y\ build_newgoals (RF x y) L NRF,
     append NN NZE Tmp, append Tmp NRF NewGoals.
 

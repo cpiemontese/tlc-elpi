@@ -62,6 +62,7 @@ pp (refl T X) S :-
 pp [L] PPL  :- pp L PPL.
 pp [L|Ls] S :- pp L PPL, pp Ls PPLs, S is PPL ^ ", " ^ PPLs.
 pp (uvar K L) S :-
-    pp L PPL, S is "meta [" ^ PPL ^ "]".
+    term_to_string K SK,
+    pp L PPL, S is SK ^ " [" ^ PPL ^ "]".
 pp N S :- name N, name_of N S.
 pp Term S :- term_to_string Term S. % no special rules, just print the term

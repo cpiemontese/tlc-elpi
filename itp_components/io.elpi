@@ -33,12 +33,13 @@ print_goal_aux Prefix N (goal PTerm Type _ VDecls) [] :-
     pp Type TypePP,
     vdecls_to_string VDecls VDString,
     term_to_string N SN,
-    term_to_string PTerm SPTerm,
+    pp PTerm SPTerm,
     S is Prefix ^ SN ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
     print S.
 
-print_goal_aux Prefix N (goal PTerm Type _ VDecls) [vdecl _ _|VDecls'] :-
-    pi x\ print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
+print_goal_aux Prefix N (goal PTerm Type _ VDecls) [vdecl Name _|VDecls'] :-
+    term_to_string Name SName,
+    pi x\ name_of x SName => print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
 
 mode (print_goals i i).
 %print_goals A B :- print (print_goals A B), fail.

@@ -1,13 +1,12 @@
 % Pretty printing module, basic code borrowed from: https://github.com/LPCIC/elpi/blob/master/ELPI.md
 
-% problema: per ogni tipo dipendente dovrei avere i nomi
-% delle variabili altrimenti non stampa niente di decente
-
 mode (pp i o).
+
+%pp A B :- print (pp A B), fail.
 
 pp (lam Name T1 Body) S :-
     term_to_string Name Name',
-    (pi x\ pp x Name' => pp (Body x) S1),
+    (pi x\ name_of x Name' => pp (Body x) S1),
     pp T1 SType,
     S is "λ" ^ Name' ^ ":" ^ SType ^ "." ^ S1.
 pp (app Lambda Arg) S :-
@@ -16,8 +15,9 @@ pp (app Lambda Arg) S :-
     S is "(" ^ S1 ^ " " ^ S2 ^ ")".
 pp (prod T1 T2) S :-
     pp T1 S1,
-    (pi x\ pp x S1 => pp (T2 x) S2),
+    (pi x\ pp (T2 x) S2),
     S is "∏(" ^ S1 ^ ", " ^ S2 ^ ")".
+
 pp (pair Left Right) S :-
     pp Left SLeft,
     pp Right SRight,
@@ -26,7 +26,7 @@ pp (split Pair Name1 Name2 Func) S :-
     pp Pair SPair,
     term_to_string Name1 Name1',
     term_to_string Name2 Name2',
-    pi x y\ (pp x Name1', pp y Name2') => pp (Func x y) SFunc,
+    pi x y\ (name_of x Name1', name_of y Name2') => pp (Func x y) SFunc,
     S is "E(" ^ SPair  ^ ", (" ^ Name1' ^ ", " ^ Name2' ^ ")" ^ SFunc ^ ")".
 pp (fst Pair) S :-
     pp Pair SPair,
@@ -36,8 +36,9 @@ pp (snd Pair) S :-
     S is "π₂(" ^ SPair ^ ")".
 pp (sum Tl Tr) S :-
     pp Tl Sl,
-    (pi x\ pp x Sl => pp (Tr x) Sr),
+    pi x\ pp (Tr x) Sr,
     S is "∑(" ^ Sl ^ ", " ^ Sr ^ ")".
+
 pp zero "Z".
 pp (succ N) S :-
     pp N SN,
@@ -47,8 +48,20 @@ pp (natrec N ZeroElement Name1 Name2 RecFun) S :-
     pp ZeroElement SZero,
     term_to_string Name1 Name1',
     term_to_string Name2 Name2',
-    pi x y\ (pp x Name1', pp y Name2') => pp (RecFun x y) SRecFun,
+    pi x y\ (name_of x Name1', name_of y Name2') => pp (RecFun x y) SRecFun,
     S is "R(" ^ SN ^ ", " ^ SZero ^ ", " ^ "(" ^ Name1' ^ ", " ^ Name2' ^ ") " ^ SRecFun ^ ")".
 pp nat "Nat".
-pp uvar "_".
+
+pp (id T X Y) S :-
+    pp T TPP, pp X XPP, pp Y YPP,
+    S is "I(" ^ TPP ^ ", " ^ XPP ^ ", " ^ YPP ^ ")".
+pp (refl T X) S :-
+    pp T TPP, pp X XPP,
+    S is "refl(" ^ TPP ^ ", " ^ XPP ^ ")".
+
+pp [L] PPL  :- pp L PPL.
+pp [L|Ls] S :- pp L PPL, pp Ls PPLs, S is PPL ^ ", " ^ PPLs.
+pp (uvar K L) S :-
+    pp L PPL, S is "meta [" ^ PPL ^ "]".
+pp N S :- name N, name_of N S.
 pp Term S :- term_to_string Term S. % no special rules, just print the term

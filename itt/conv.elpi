@@ -4,11 +4,11 @@
 
 % one step conversion
 mode (step i o).
-step X Y :- print (step X Y), fail.
+%step X Y :- print (step X Y), fail.
 
 % multiple step conversion
 mode (steps i o).
-steps X Y :- print (steps X Y), fail.
+%steps X Y :- print (steps X Y), fail.
 steps M N :- step M M', !, steps M' N.
 steps M M.
 

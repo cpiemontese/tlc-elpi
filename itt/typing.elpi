@@ -1,6 +1,3 @@
-% TODO:
-% - change subst with unification (?)
-
 kind term type.
 
 % ------------------------ %
@@ -56,8 +53,6 @@ of (app Lam Arg) B_Arg (app Lam' Arg') :-
     isa Lam (prod A B) Lam',
     isa Arg A Arg',
     pi x\ (of x A x, copy x Arg) => conv (B x) B_Arg.
-    %unify B [Arg] B_Arg [].
-    %subst B [Arg] B_Arg.
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
@@ -77,18 +72,15 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
     isa Left A Left',
     isa Right B_Left Right',
     pi x\ (of x A x, copy x Left) => conv (B x) B_Left.
-    %subst B [Left] B_Left.
 
 % ELIMINATION
 type split term -> (term -> term -> term) -> term.
 of (split Pair Func) T_Pair (split Pair' Func') :- 
     isa Pair (sum A B) Pair',
     pi p\ (of p (sum A B) p, copy p Pair) => conv (T p) T_Pair,
-    %subst T [Pair] T_Pair,
     pi x y\ (of x A x, of y (B x) y) => (
         isa (Func x y) TSubst (Func' x y),
         pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p)  TSubst
-        %subst T [pair x y] TSubst
     ).
 
 type fst term -> term.
@@ -100,7 +92,6 @@ of (snd Pair) B_fst (snd Pair') :-
     isa Pair (sum A B) Pair',
     % XXX: Pair = pair P Q
     pi f\ (of f A f, copy f (fst Pair)) => conv (B f) B_fst.
-    %subst B [fst Pair] B_fst.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
@@ -135,11 +126,9 @@ of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     pi x y\ (of x nat x, of y (T x) y) => (
         isa (RF x y) T_Succ (RF' x y),
         pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ
-        %subst T [succ x] T_Succ
     ),
     isa ZE (T zero) ZE',
     pi n\ (of n nat n, copy n N) => conv (T n) T_N.
-    %subst T [N] T_N.
 
 % -------------------------- %
 % ---- ELABORATOR TERMS ---- %

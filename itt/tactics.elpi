@@ -2,14 +2,11 @@
 % ---- TACTICS ---- %
 % ----------------- %
 
-% TODO: migrate old tactics
-% tactic name goals fresh_vars new_goals
-
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
-tactic (intro N) (goal X (prod A B) RTerm VDecls) FVars NewGoals :-
+tactic (intro N) (goal X (prod _ _) RTerm VDecls) FVars NewGoals :-
     X = lam N A F,
     build_newgoals RTerm VDecls NewGoals.
 
@@ -22,11 +19,17 @@ tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
 % ---- DISJOINT UNION ---- %
 % ------------------------ %
 
-tactic andI (goal X (sum A B) RTerm VDecls) FVars NewGoals :-
+tactic andI (goal X (sum _ _) RTerm VDecls) FVars NewGoals :-
     X = pair P Q,
     build_newgoals RTerm VDecls NewGoals.
 
 % ELIM
+tactic andEL (goal X T RTerm VDecls) FVars NewGoals :-
+    X = fst P,
+    build_newgoals RTerm VDecls NewGoals.
+tactic andER (goal X T RTerm VDecls) FVars NewGoals :-
+    X = snd P,
+    build_newgoals RTerm VDecls NewGoals.
 tactic (andEL N) (goal X T RTerm VDecls) FVars NewGoals :-
     get_named N FVars P,
     X = fst P,
@@ -46,7 +49,7 @@ tactic (andE N N1 N2) (goal X T RTerm VDecls) FVars NewGoals :-
 % ------------------ %
 
 tactic idIntro (goal X T RTerm VDecls) FVars NewGoals :-
-    X = refl A X,
+    X = refl A Y,
     build_newgoals RTerm VDecls NewGoals.
 
 /*

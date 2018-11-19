@@ -305,12 +305,42 @@ add_labels [L|Ls] [Goal|Goals] [(L, Goal)|LGoals] :- add_labels Ls Goals LGoals.
 % ---- META RECOVERY ---- %
 % ----------------------- %
 
-mode (lookdown i i i).
-lookdown (uvar _ _ as X) Y T :- declare_constraint (read-refined X Y T) [X].
+mode (lookdown i i i i).
+lookdown (uvar K L as X) VDecls Y T :- declare_constraint (read-refined X VDecls Y T) [X].
 
 constraint isa read-evar read-refined of {
      rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
-        \ (E2 : read-refined (uvar O L2) X T)
-        | (print "align-debug: " K L1 "-" O L1' "-" O L2, L1 = L1', !; print "align fail on" L1 "=" L1', halt)
-        <=> (E2 : X = uvar K [], T = Ty).
+        \ (E2 : read-refined (uvar O L2) VDecls X T)
+        | (%print "align-debug: " K L1 "-" O L1' "-" O L2,
+          L1 = L1',
+          create_copy_hyps L1' VDecls Hyps,
+          Hyps => copy_type Ty S, !;
+          print "align fail on" L1 "=" L1', halt)
+        <=> (E2: (X = uvar K [], T = S)).
 }
+
+%mode (create_name_of_hyps i i o).
+%create_name_of_hyps [] [] [].
+%create_name_of_hyps [V|Vs] [vdecl W _|Ws] [name_of V StrW|Hyps] :- term_to_string W StrW, create_name_of_hyps Vs Ws Hyps.
+
+mode (create_copy_hyps i i o).
+create_copy_hyps [] [] [].
+create_copy_hyps [V|Vs] [vdecl W _|Ws] [copy_var V W|Hyps] :- create_copy_hyps Vs Ws Hyps.
+
+mode (type_to_string i o).
+copy_type A B :- print (copy_type A B), fail.
+
+copy_type [] []. 
+copy_type [X|Xs] [Y|Ys] :- copy_type X Y, copy_type Xs Ys.
+
+copy_type (uvar K L) X :- !, print K L, copy_type L L', print L', X = (uvar K L').
+
+copy_type (sum A (uvar K L as B)) (sum A' B') :- !, copy_type A A', copy_type B B'.
+copy_type (prod A (uvar K L as B)) (prod A' B') :- !, copy_type A A', copy_type B B'.
+
+copy_type (sum A B) (sum A' B') :-  copy_type A A', pi x\ copy_type (B x) (B' x).
+copy_type (prod A B) (prod A' B') :- copy_type A A', pi x\ copy_type (B x) (B' x).
+copy_type (id A X Y) (id A' X' Y') :- !, copy_type A A', copy_type X X', copy_type Y Y'.
+copy_type X Y :- name X, copy_var X Y.
+
+copy_type X X.

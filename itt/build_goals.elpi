@@ -5,7 +5,7 @@
 mode (build_newgoals i i o).
 build_newgoals A B C :- print (build_newgoals A B C), fail.
 build_newgoals (uvar K L as Y) VDecls NewGoals :- !,
-    lookdown Y X T,
+    lookdown Y VDecls X T,
     NewGoals = [goal X T K VDecls].
 
 % Prod
@@ -40,6 +40,10 @@ build_newgoals (natrec N ZE N1 N2 RF) :-
     append VDecls [vdecl N1 nat, vdecl N2 T] L,
     pi x y\ build_newgoals (RF x y) L NRF,
     append NN NZE Tmp, append Tmp NRF NewGoals.
+
+% Id
+build_newgoals (refl A X) VDecls NewGoals :-
+    build_newgoals X VDecls NewGoals.
 
 % FVars (or const?)
 build_newgoals FVar _ [] :- name FVar.

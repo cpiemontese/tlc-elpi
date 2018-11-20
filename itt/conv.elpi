@@ -23,19 +23,16 @@ steps M M.
 mode (conv i i).
 %conv X Y :- print (conv X Y), fail.
 
-conv M M :- !.
-conv M N :- step M M', !, conv M' N.
-conv M N :- step N N', !, conv M N'.
 
 % --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
 % --------------------------- %
 
-conv (prod A B) (prod A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+conv (prod A B) (prod A' B') :- !, conv A A', pi x\ of x A x => conv (B x) (B' x).
 
-conv (app Lam Arg)    (app Lam' Arg')      :- conv Lam Lam', conv Arg Arg'.
-conv (lam A Bd)       (lam _A' Bd')        :- pi x\ of x A x => conv (Bd x) (Bd' x).
-conv (lam _Name A Bd) (lam _Name' _A' Bd') :- conv (lam A Bd) (lam _A' Bd').
+conv (app Lam Arg)    (app Lam' Arg')      :- !, conv Lam Lam', conv Arg Arg'.
+conv (lam A Bd)       (lam _A' Bd')        :- !, pi x\ of x A x => conv (Bd x) (Bd' x).
+conv (lam _Name A Bd) (lam _Name' _A' Bd') :- !, conv (lam A Bd) (lam _A' Bd').
 
 % BETA
 step (app Lam Arg) R :-
@@ -44,30 +41,30 @@ step (app Lam Arg) R :-
     steps S R.
 
 % ETA EQUALITY
-conv (lam A F) F' :- pi x\ of x A x => conv (F x) (app F' x).
-conv F' (lam A F) :- pi x\ of x A x => conv (F x) (app F' x).
-conv (lam _Name A F) F' :- conv (lam A F) F'.
-conv F' (lam _Name A F) :- conv F' (lam A F).
+conv (lam A F) F' :- !, pi x\ of x A x => conv (F x) (app F' x).
+conv F' (lam A F) :- !, pi x\ of x A x => conv (F x) (app F' x).
+conv (lam _Name A F) F' :- !, conv (lam A F) F'.
+conv F' (lam _Name A F) :- !, conv F' (lam A F).
 
 % ------------------------ %
 % ---- DISJOINT UNION ---- %
 % ------------------------ %
 
-conv (sum A B) (sum A' B') :- conv A A', pi x\ of x A x => conv (B x) (B' x).
+conv (sum A B) (sum A' B') :- !, conv A A', pi x\ of x A x => conv (B x) (B' x).
 
-conv (pair Left Right) (pair Left' Right') :-
+conv (pair Left Right) (pair Left' Right') :- !,
     conv Left Left',
     conv Right Right'.
 
-conv (split Pair Func) (split Pair' Func') :-
+conv (split Pair Func) (split Pair' Func') :- !,
     conv Pair Pair',
     isa Pair (sum A B) _,
     pi x y\ (of x A x, of y (B x) y) => conv (Func x y) (Func' x y).
-conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :-
+conv (split Pair _Name1 _Name2 Func) (split Pair' _Name1 _Name2 Func') :- !,
     conv (split Pair Func) (split Pair' Func').
 
-conv (fst Pair) (fst Pair') :- conv Pair Pair'.
-conv (snd Pair) (snd Pair') :- conv Pair Pair'.
+conv (fst Pair) (fst Pair') :- !, conv Pair Pair'.
+conv (snd Pair) (snd Pair') :- !, conv Pair Pair'.
 
 % BETA
 step (split P F) R :-
@@ -78,14 +75,15 @@ step (fst P) X :- steps P (pair X Y).
 step (snd P) Y :- steps P (pair X Y).
 
 % ETA EQUALITY
-conv P (pair (fst P) (snd P)).
-conv (pair (fst P) (snd P)) P.
+conv P (pair (fst P) (snd P)) :- !.
+conv (pair (fst P) (snd P)) P :- !.
 
 % -------------------------------- %
 % ---- PROPOSITIONAL EQUALITY ---- %
 % -------------------------------- %
 
-conv (id A M N) (id _ M' N') :- conv M M', conv N N'.
+conv (id A M N) (id _ M' N') :- !, conv M M', conv N N'.
+conv (refl A X) (refl _ X') :- !, conv X X'.
 %conv X Y :- isa Magic (id A X Y) _.
 %conv Magic (refl A X) :- isa Magic (id A X Y) _.
 
@@ -93,13 +91,13 @@ conv (id A M N) (id _ M' N') :- conv M M', conv N N'.
 % ---- NATURALS ---- %
 % ------------------ %
 
-conv (succ N) (succ M) :- conv N M.
+conv (succ N) (succ M) :- !, conv N M.
 
-conv (natrec N ZE RF) (natrec N' ZE' RF') :-
+conv (natrec N ZE RF) (natrec N' ZE' RF') :- !,
     conv N N', conv ZE ZE',
     % XXX: come ottengo T qui?
     pi x y\ (of x nat x, of y (T x) y) => conv (RF x y) (RF' x y).
-conv (natrec N ZE N1 N2 RF) (natrec N' ZE' _N1' _N2' RF') :-
+conv (natrec N ZE N1 N2 RF) (natrec N' ZE' _N1' _N2' RF') :- !,
     conv (natrec N ZE RF) (natrec N' ZE' RF').
 
 % BETA
@@ -110,3 +108,7 @@ step (natrec M ZE RF) R :-
     subst RF [N, R'] S,
     steps S R.
 step (natrec N ZE _ _ RF) R :- step (natrec N ZE RF) R.
+
+conv M M :- !.
+conv M N :- step M M', !, conv M' N.
+conv M N :- step N N', !, conv M N'.

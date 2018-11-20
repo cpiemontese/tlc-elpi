@@ -1,6 +1,5 @@
 accumulate itp.
 accumulate itt/theory.
-accumulate itt/pp.
 
 interactive TestName OutputTerm :-
     interactive TestName [] OutputTerm.
@@ -45,7 +44,6 @@ andElimR (@arrow (@times a b) b).
 
 % [intro f, intro p, andE p y z, mapp f, mapp x, mapp y]
 implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
-
 
 % [intro f, andI, maptac (intro x) [3, 4], andEL, mapp f, mapp x, andER, mapp f, mapp x]
 choice (@arrow (prod a (x\ sum b (y\ c))) (sum (prod a (x\ b)) (f\ prod a (x\ c)))).

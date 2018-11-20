@@ -1,11 +1,4 @@
-accumulate theory, pp.
-
-% TODO: usare term_lib, pero' per ora non mi ricordo
-% tutti i nomi. C'e' modo di elencare tutte le query
-% possibili automaticamente?
-
-% TODO: come si fa a fare match con sottoparti di
-% stringhe prese in input?
+accumulate theory.
 
 macro @nat_id :- (lam n nat (x\ x)).
 macro @nat_fun Bd :- (lam n nat Bd).

@@ -21,7 +21,7 @@ steps M M.
 
 % term equivalence
 mode (conv i i).
-conv X Y :- print (conv X Y), fail.
+%conv X Y :- print (conv X Y), fail.
 
 conv M M :- !.
 conv M N :- step M M', !, conv M' N.

@@ -13,6 +13,7 @@ pp (app Lambda Arg) S :-
     pp Lambda S1,
     pp Arg S2,
     S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+pp dots "…".
 pp (prod T1 T2) S :-
     pp T1 S1,
     (pi x\ pp (T2 x) S2),
@@ -59,6 +60,7 @@ pp (refl T X) S :-
     pp T TPP, pp X XPP,
     S is "refl(" ^ TPP ^ ", " ^ XPP ^ ")".
 
+pp [] "".
 pp [L] PPL  :- pp L PPL.
 pp [L|Ls] S :- pp L PPL, pp Ls PPLs, S is PPL ^ ", " ^ PPLs.
 pp (uvar K L) S :-

@@ -5,7 +5,7 @@ kind term type.
 % ------------------------ %
 
 pred of i:term, o:term, o:term.
-of X T Y :- print (of X T Y), fail. 
+%of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
@@ -13,7 +13,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 % ----------------------- %
 
 pred isa i:term, o:term, o:term.
-isa X T Y :- print (isa X T Y), fail. 
+%isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %
@@ -77,9 +77,11 @@ of (pair Left Right) (sum A B) (pair Left' Right') :-
 type split term -> (term -> term -> term) -> term.
 of (split Pair Func) T_Pair (split Pair' Func') :- 
     isa Pair (sum A B) Pair',
-    pi x y\ (of x A x, of y (B x) y) => isa (Func x y) TSubst (Func' x y),
-    pi p\ (of p (sum A B) p, copy p Pair) => conv (T p) T_Pair,
-    pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p) TSubst.
+    pi x y\ (of x A x, of y (B x) y) => (
+        isa (Func x y) TSubst (Func' x y),
+        pi p\ (of p (sum A B) p, copy p (pair x y)) => conv (T p) TSubst
+    ),
+    pi p\ (of p (sum A B) p, copy p Pair) => conv (T p) T_Pair.
 
 type fst term -> term.
 of (fst Pair) A (fst Pair') :-
@@ -88,7 +90,6 @@ of (fst Pair) A (fst Pair') :-
 type snd term -> term.
 of (snd Pair) B_fst (snd Pair') :-
     isa Pair (sum A B) Pair',
-    % XXX: Pair = pair P Q
     pi f\ (of f A f, copy f (fst Pair)) => conv (B f) B_fst.
 
 % -------------------------------- %
@@ -121,9 +122,11 @@ of (succ N) nat (succ N') :- isa N nat N'.
 type natrec term -> term -> (term -> term -> term) -> term.
 of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     isa N nat N',
-    pi x y\ (of x nat x, of y (T x) y) => isa (RF x y) T_Succ (RF' x y),
+    pi x y\ (of x nat x, of y (T x) y) => (
+        isa (RF x y) T_Succ (RF' x y),
+        pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ
+    ),
     isa ZE (T_Zero) ZE',
-    pi s\ (of s nat s, copy s (succ x)) => conv (T s) T_Succ,
     pi z\ (of z nat z, copy z zero) => conv (T zero) T_Zero,
     pi n\ (of n nat n, copy n N) => conv (T n) T_N.
 

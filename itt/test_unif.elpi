@@ -1,0 +1,109 @@
+accumulate "../utils".
+accumulate theory.
+
+% NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:
+%   - assunzioni di tipaggio di costanti
+%   - inferenza dei tipi dei due termini,
+%   - assunzione di convertibilita' dei due tipi
+%   - conversione dei termini
+% in caso di meta, il tipaggio generera' dei constraint che, qualora violati da
+% qualche assegnamento, lo invalideranno
+
+test As T T' :- As => (of T A _, of T' B _, conv A B, conv T T').
+    %pp T ST, pp T' ST', S is ST ^ " ≈ " ^ ST', print S.
+
+
+% All these should pass
+
+% res: X = w\ f w
+%        | w\ f x
+test_a X :- test [of x nat x, of f (@arrow nat nat) f] (app X x) (app f x).
+
+% res: X = w\ w
+%        | w\ f w
+%        | w\ f f w
+%        | ...
+test_b X :- pi x\ test [of x nat x, of f (@arrow nat nat) f] (app f (app X x)) (app X (app f x)).
+
+% res: X = x y\ f x y
+%        | x y\ f g y
+%        | x y\ f x n
+%        | x y\ f g n
+test_c X :- test [of f (@arrow (@arrow nat nat) (@arrow nat nat)) f, of g (@arrow nat nat) g, of n nat n] (app (app f g) n) (app (app X g) n).
+
+% res: (X, Y) = m n\ n,   y\ app f y
+%             | m n\ f n, ?y
+%             | m n\ n m, y\ f
+%             | m n\ f n, y\ y
+test_d X Y :- test [of f (@arrow nat nat) f] (lam nat (x\ app (app X x) (app Y x))) (lam nat (v\ app f v)). 
+
+% res: (X, Y) = a b\ b,       c\ f c
+%             | a b\ b (S a), c\ f
+%             | a b\ app f b, c\ c
+%             | a b\ f (S b), ?y
+test_e X Y :- test [of f (@arrow nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f (succ v))). 
+
+% res: X = x\ g x x
+%        | x\ g x a
+%        | x\ g a x
+%        | x\ g a a 
+test_f X :- test [of a nat a, of g (@arrow nat (@arrow nat nat)) g] (app X a) (app (app g a) a).
+
+% res: X = x\ u x
+%        | x\ u w
+test_g X :- test [of w nat w, of u (@arrow nat nat) u] (lam (@arrow nat nat) (y\ app y (app X w))) (lam (@arrow nat nat) (x\ app x (app u w))).
+
+% res: X = x\ g b a
+test_h X :- test [of x nat x, of g (@arrow nat (@arrow nat nat)) g, of b nat b, of a nat a] (app X x) (app (app g b) a).
+
+% res: X = x y\ x (S y)
+test_i X :-
+    test [] 
+        (lam (@arrow nat nat) (x\ lam nat (y\ app (app X x) y)))
+        (lam (@arrow nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = x y z\ x (S z)
+%        | x y z\ y (S z)
+test_j X :-
+    test []
+        (lam (@arrow nat nat) (x\ lam nat (y\ app (app (app X x) x) y)))
+        (lam (@arrow nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: (X, Y) = m n\ m (S n), o\ o
+test_k X Y :-
+    test []
+        (lam (@arrow nat nat) (x\ lam nat (y\ app (app X (app Y x)) y)))
+        (lam (@arrow nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = x y\ x y
+test_l X :-
+    test []
+        (lam (@arrow nat nat) (x\ lam nat (y\ app (app X x) (succ y))))
+        (lam (@arrow nat nat) (x\ lam nat (y\ app x (succ y)))).
+
+% res: X = y\ y
+%        | y\ w
+test_m X :- test [of w nat w] (app (lam nat (x\ app X x)) w) w.
+
+% res: no solution (i.e. failure)
+test_n X :- test [] (lam (@arrow nat nat) (x\ lam nat (y\ app X x))) (lam (@arrow nat nat) (x\ lam nat (y\ app x y))).
+
+% res: no solution (i.e. failure)
+test_o X :- test [] (lam nat (x\ lam nat (y\ app X x))) (lam nat (x\ lam nat (y\ y))).
+
+% XXX: casi non risolti completamente (solo le prime 2/3 soluzioni, poi problema aperto)
+test_p X Y :- pi w\ test [of u (@arrow nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app Y (succ w))).
+test_q X Y :- pi w\ test [of u (@arrow nat nat) u, of w nat w] (app X (app u (succ w))) (app u (app u (app Y (succ w)))).
+test_r X Y :- pi w\ test [of w nat w, of u (@arrow nat nat) u] (app X (app u w)) (app u (app Y w)).
+test_s X Y :- pi w\ test [of w nat w, of u (@arrow nat nat) u] (app X w) (app u (app Y (succ w))).
+test_t X Y :- test [of x nat x, of y nat y, of u (@arrow nat nat) u] (app (app X (succ x)) y) (app u (app (app Y x) (succ y))).
+
+% test che non passano ma potrebbero
+% COMMENTO: Y ha succ x in input, potrebbe usare una qualche funzione (es. pred o -1)
+% opportunamente definita per manipolare il suo input e ottenere x
+% test_ X Y :- test [of f (@arrow nat nat) f] (lam nat (x\ app (app X x) (app Y (succ x)))) (lam nat (v\ app f v). 
+
+test_pair_a X :- test [of a nat a, of b nat b] (app X (pair a b)) a.
+test_pair_b X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) c.
+test_pair_c X :- test [of a nat a, of b nat b, of c nat c] (app X (pair (pair a b) c)) b.
+test_pair_d X :- test [of a nat a, of b nat b, of c nat c, of d nat d] (app X (pair (pair a (pair b c)) d)) c.

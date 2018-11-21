@@ -109,6 +109,25 @@ step (natrec M ZE RF) R :-
     steps S R.
 step (natrec N ZE _ _ RF) R :- step (natrec N ZE RF) R.
 
+% --------------- %
+% ---- LISTS ---- %
+% --------------- %
+
+conv (list A) (list A') :- conv A A'.
+
+conv (cns L Ls) (cns L' Ls') :- !, conv L L', conv Ls Ls'.
+conv (listrec T C D E) (listrec _T' C' D' E') :-
+    of C (list A) _,
+    conv C C', conv D D',
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z) => conv (E x y z) (E' x y z).
+
+step (listrec _T Nil D _E) D :- steps Nil empty.
+step (listrec _T Cons D E) R :-
+    steps Cons (cns A B),
+    steps (listrec _T B D E) R',
+    subst E [A, B, R'] R'',
+    steps R'' R.
+
 conv M M :- !.
 conv M N :- step M M', !, conv M' N.
 conv M N :- step N N', !, conv M N'.

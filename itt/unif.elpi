@@ -27,6 +27,9 @@ conv T (split (pair P Q) F as SplitRed) :- (pi x y\ not (is_closed (F x y))), !,
 conv (natrec (succ N) ZE RF as NatRed) T :- (pi x y\ not (is_closed (RF x y))), !, unify NatRed [] T [].
 conv T (natrec (succ N) ZE RF as NatRed) :- (pi x y\ not (is_closed (RF x y))), !, unify T [] NatRed [].
 
+conv (listrec S (cns X Y) D E as ListRed) T :- (pi x y z\ not (is_closed (E x y z))), !, unify ListRed [] T [].
+conv T (listrec S (cns X Y) D E as ListRed) :- (pi x y z\ not (is_closed (E x y z))), !, unify ListRed [] T [].
+
 pred is_closed i:term.
 is_closed uvar :- !, fail.
 is_closed (app M N) :- !, is_closed M, is_closed N.
@@ -37,6 +40,8 @@ is_closed (snd P) :- !, is_closed P.
 is_closed (split P F) :- !, is_closed P, pi x y\ is_closed (F x y).
 is_closed (succ N) :- !, is_closed N.
 is_closed (natrec N ZE RF) :- !, is_closed N, is_closed ZE, pi x y\ is_closed (RF x y).
+is_closed (cns X Y) :- !, is_closed X, is_closed Y.
+is_closed (listrec C D E) :- !, is_closed C, is_closed D, pi x y z\ is_closed (E x y z).
 is_closed M.
 
 % --------------------- %
@@ -59,12 +64,12 @@ unify T L (app (lam A F) X) L' :- !,
 % β-redex through copy
 unify (app Lam X) L T L' :-
     name Lam, get_copy Lam Lam', Lam' = lam A F,
-    pi x\ (of x A x, copy x X, forbid Lam) => unift (F x) L T L'.
+    pi x\ (of x A x, copy x X, forbid Lam) => unify (F x) L T L'.
 unify T L (app Lam X) L' :-
     name Lam, get_copy Lam Lam', Lam' = lam A F,
-    pi x\ (of x A x, copy x X, forbid Lam) => unift T L (F x) L'.
+    pi x\ (of x A x, copy x X, forbid Lam) => unify T L (F x) L'.
 
-% catch π-redex
+% catch split-redex
 unify (split (pair P Q) F) L T L' :- !,
     of (pair P Q) (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify (F x y) L T L'.
@@ -72,7 +77,7 @@ unify T L (split (pair P Q) F) L' :- !,
     of (pair P Q) (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify T L (F x y) L'.
 
-% π-redex through copy
+% split-redex through copy
 unify (split Pair F) L T L' :- !,
     name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify (F x y) L T L'.
@@ -80,7 +85,7 @@ unify T L (split Pair F) L' :- !,
     name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
     pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify T L (F x y) L'.
 
-% catch ν-redex
+% catch natrec-redex
 unify (natrec (succ N) ZE RF) L T L' :- !,
     of (natrec N ZE RF) S _,
     pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => unify (RF x y) L T L'.
@@ -88,7 +93,7 @@ unify T L (natrec (succ N) ZE RF) L' :- !,
     %conv (natrec N ZE RF) R,
     of (natrec N ZE RF) S _,
     pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => T L unify (RF x y) L'.
-% ν-redex through copy
+% natrec-redex through copy
 unify (natrec Succ ZE RF) L T L' :- !,
     name Succ, get_copy Succ Succ', Succ' = (succ N),
     of (natrec N ZE RF) S _,
@@ -97,6 +102,26 @@ unify T L (natrec Succ ZE RF) L' :- !,
     name Succ, get_copy Succ Succ', Succ' = (succ N),
     of (natrec N ZE RF) S _,
     pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF), forbid Succ) => T L unify (RF x y) L'.
+
+% catch listrec-redex
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+
+% listrec-redex through copy
+unify (listrec S Cons D E) L T L' :- !,
+    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
 
 
 % unwind app
@@ -199,6 +224,16 @@ unify (uvar as X) [] (natrec N ZE RF) [] :- !,
     X = natrec N' ZE' RF',
     unify N' [] N [], unify ZE' [] ZE [],
     pi x y\ (of x nat x, of y (S x) y) => unify (RF' x y) [] (RF x y) [].
+
+% List
+unify (uvar as X) [] (cns M N) [] :- !,
+    X = cns P Q,
+    unify P [] M [], unify Q [] N [].
+unify (uvar as X) [] (listrec S C D E) [] :- !,
+    of C A _,
+    X = listrec S C' D' E',
+    unify C' [] C [], unify D' [] D [],
+    pi x y z\ (of x A x, of y (list A) y, of z (S y) z) => unify (E' x y z) [] (E x y z) [].
 
 % Const
 unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.

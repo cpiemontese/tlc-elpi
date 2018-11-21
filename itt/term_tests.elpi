@@ -5,6 +5,7 @@ macro @nat_fun Bd :- (lam n nat Bd).
 macro @pred A :- (natrec A zero x y (x\ y\ x)).
 macro @sum A B :- (natrec B A n m (x\ y\ (succ y))).
 macro @mult A B :- (natrec B zero x y (x\ y\ (@sum y A))).
+macro @length L :- (listrec (x\ nat) L zero (x\ y\ z\ @sum (succ zero) z)).
 
 % convert integers to S S S ...
 to_S 0 zero.
@@ -20,6 +21,7 @@ second_split (split Pair x y (x\ y\ y)) :- nat_pair Pair.
 prede (natrec (succ zero) zero x y (x\ y\ x)).
 sum (@sum A B) :- to_S 2 A, to_S 3 B.
 mult (@mult A B) :- to_S 2 A, to_S 3 B.
+length (@length (cns zero (cns zero empty))).
 
 % conv queries
 pairs (pair (app @nat_id zero) (succ zero)) (pair zero (app (@nat_fun (x\ succ x)) zero)).

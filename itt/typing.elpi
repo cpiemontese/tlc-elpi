@@ -5,7 +5,7 @@ kind term type.
 % ------------------------ %
 
 pred of i:term, o:term, o:term.
-%of X T Y :- print (of X T Y), fail. 
+of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
@@ -13,7 +13,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 % ----------------------- %
 
 pred isa i:term, o:term, o:term.
-%isa X T Y :- print (isa X T Y), fail. 
+isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %
@@ -129,6 +129,34 @@ of (natrec N ZE RF) T_N (natrec N' ZE' RF') :-
     isa ZE (T_Zero) ZE',
     pi z\ (of z nat z, copy z zero) => conv (T zero) T_Zero,
     pi n\ (of n nat n, copy n N) => conv (T n) T_N.
+
+
+% --------------- %
+% ---- LISTS ---- %
+% --------------- %
+
+% FORMATION
+type list term -> term.
+of_type (list A) :- of_type A.
+
+% INTRODUCTION
+type empty term.
+type cns term -> term -> term.
+
+of empty (list A) empty.
+of (cns L Ls) (list A) (cns L' Ls') :-
+    isa L A L', isa Ls (list A) Ls'.
+
+type listrec (term -> term) -> term -> term -> (term -> term -> term -> term) -> term.
+of (listrec T C D E) T_C (listrec T C' D' E') :-
+    isa C (list A) C',
+    isa D T_Nil D',
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z) => (
+        isa (E x y z) T_Cons (E' x y z),
+        pi co\ (of co (list A) co, copy co (cns x y)) => conv (T co) T_Cons
+    ),
+    pi n\ (of n (list A) n, copy n empty) => conv (T n) T_Nil,
+    pi c\ (of c (list A) c, copy c C) => conv (T c) T_C.
 
 % -------------------------- %
 % ---- ELABORATOR TERMS ---- %

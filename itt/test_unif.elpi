@@ -1,6 +1,9 @@
 accumulate "../utils".
 accumulate theory.
 
+%macro @sum A B :- (natrec B A n m (x\ y\ (succ y))).
+%macro @length L :- (listrec (x\ nat) L zero (x\ y\ z\ @sum (succ zero) z)).
+
 % NOTE: cosi' e' come dovrebbe essere impostato un problema di unificazione:
 %   - assunzioni di tipaggio di costanti
 %   - inferenza dei tipi dei due termini,

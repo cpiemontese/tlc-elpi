@@ -240,7 +240,8 @@ process_tac (try T) State State' :-
 process_tac (solve T) State State' :-
     process_tac T State State', empty_state State'.
 process_tac (repeat T) State State' :-
-    process_tac (paren [T, (try (repeat T))]) State State'.
+    process_tac T State State'', process_tac (try (repeat T)) State'' State'.
+    %process_tac (paren [T, (try (repeat T))]) State State'.
 
 process_tac (do 0 T) State State.
 process_tac (do N T) State State' :-
@@ -271,7 +272,9 @@ htac Tac [Goal|Goals] NewGoals :-
 
 % HTac come process_tac lato utente, prendono lo stato e ritornano un nuovo
 % stato, possono chiamare tinycal al loro interno
+process_tac Tac (state [] _ _ _) _ :- !, fail.
 process_tac Tac (state Goals I L Mgn) (state NewGoals I L NMgn) :-
+    print "here",
     unlabel_goals Goals UGoals, 
     bind_ltac Tac UGoals NewUnlabeledGoals,
     label_goals Mgn NewUnlabeledGoals NMgn NewGoals.

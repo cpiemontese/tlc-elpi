@@ -1,41 +1,34 @@
 accumulate utils.
 accumulate itp_components/all.
 
-% TODO:
-% - tattiche dovrebbero essere spostate nell'apposito module del linguaggio
-% - questo file potrebbe contenere solo i predicati di interfaccia
-% - rimuovere vecchio prove
-
 % ------------------- %
 % ---- INTERFACE ---- %
 % ------------------- %
 
 % Prove with term as input
-prove X T X' OG S :-
+prove_term X T X' OG S :-
     prove X T X' OG S [].
-prove X T X' OG S In :-
-    of X T X', 
-    itp_loop (state [(1, goal X T X' [])] [] [] 1) In OG S.
+prove_term X T X' In OG S :-
+    of X T X', itp_loop X (state [(1, goal X T X' [])] [] [] 1) In OG S.
 
-% Prove with goals as input
-prove G OG S :-
-    prove G OG S [].
-prove G OG S In :-
-    label_goals 0 G Mgn LG,
-    itp_loop (state LG [] [] Mgn) In OG S.
+% Prove with multiple goals as input coming from the proof assistant
+mode (prove_goals i i o).
+prove_goals [] [] S :-
+prove_goals [G|Gs] [OG|OGs] S :-
+    prove_goal G OG S', append S' S'' S, prove_goals Gs OGs S''.
+mode (prove_goals i i o).
+prove_goal (goal X _ _ _ as G) OG S :-
+    itp_loop X (state [(1, G)] [] [] 1) [] OG S.
 
 
 % Old
-prove_o A B C :- print (prove_o A B C), fail.
-prove_o A B C D :- print (prove_o A B C D), fail.
-prove_o Type ProofTerm OutScript :-
-    prove Type [] ProofTerm OutScript.
+prove X Type ProofTerm OutScript :-
+    prove X Type [] ProofTerm OutScript.
 
-prove_o Type InScript ProofTerm OutScript :-
+prove X Type InScript ProofTerm OutScript :-
     of X Type ProofTerm,
-    itp_loop (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript _ OutScript.
+    itp_loop X (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript _ OutScript.
 
 
 % Only common tactic: manual input i.e. a name from a proof assistant definition
-tactic (man T) (goal X Type RTerm VDecls) FVars NewGoals :-
-    X = T, build_newgoals RTerm VDecls NewGoals.
+tactic (man T) _ _ T.

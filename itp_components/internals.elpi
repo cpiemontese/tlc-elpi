@@ -142,7 +142,7 @@ process_tac (project) _ _ :-
 process_tac (project []) _ _ :-
     print "error: project with no indexes", fail.
 
-macro @empty_goal :- (0, empty_goal).
+macro @empty_goal :- (0, (0, empty_goal)).
 % Invariant: project doesn't unlabel goals i.e. they are still labled as they
 %            appear in the branch context
 process_tac (project [Idx|Idxs])
@@ -203,9 +203,20 @@ process_tac (focus []) _ _ :- print "error: no indexes for focus", fail.
 process_tac (focus GoalIds) (state Active Inactive L M) (state NewActive [Rest|NewInactive] [f|L] M) :-
     search_focused GoalIds Active FActive RemainingIds Rest,
     search_focused_levels RemainingIds Inactive L FInactive RIds NewInactive,
-    append FActive FInactive NewActive,
+    append FActive FInactive UnorderedNew,
+    order_list_by UnorderedNew GoalIds NewActive,
     (RIds = [], !; print "error: focus on non existent goals" RIds).
 process_tac unfocus (state [] [I|Inactive] [f|Levels] M) (state I Inactive Levels M).
+
+mode (order_list_by i i o).
+%order_list_by A B C :- print (order_list_by A B C), fail.
+order_list_by [] [] [].
+order_list_by NonEmpty [] _ :-
+    print "error: order_list_by called with index list bigger than the actual elements".
+order_list_by UnorderedList [Id|Ids] OrderedList :-
+    get_numbered_goal Id UnorderedList Goal Rest,
+    append [Goal] OL' OrderedList,
+    order_list_by Rest Ids OL'.
 
 % error reporting
 process_tac unfocus (state _ _ [] _) _ :-

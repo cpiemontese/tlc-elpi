@@ -15,6 +15,7 @@ get_named N [_|TL] X :-
 
 append [] L L.
 append [X|XS] L [X|YS] :- append XS L YS.
+append X L [X|L].
 
 append_no_dups [] L L.
 append_no_dups [X|XS] L [X|YS] :- not (mem X L), append_no_dups XS L YS.

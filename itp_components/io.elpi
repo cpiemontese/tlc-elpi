@@ -55,14 +55,17 @@ print_goals Prefix [(N, Goal)|Goals] :-
     print_goals Prefix Goals, !.
 
 print_ctx _ _ [].
-print_ctx Prefix N [(_, empty_goal)|Ctxs] :-
+print_ctx Prefix N [(_, (_, empty_goal))|Ctxs] :-
     print_ctx Prefix N Ctxs.
-print_ctx Prefix N [(M, (_, Goal))|Ctxs] :-
-    N is M, Prefix' is Prefix ^ "> ",
-    print_goal Prefix' M Goal,
+print_ctx Prefix N [(N, (O, Goal))|Ctxs] :-
+    term_to_string N NS,
+    Prefix' is Prefix ^ "> " ^ NS ^ "° - ",
+    print_goal Prefix' O Goal,
     print_ctx Prefix N Ctxs.
-print_ctx Prefix N [(M, (_, Goal))|Ctxs] :-
-    print_goal Prefix M Goal,
+print_ctx Prefix N [(M, (O, Goal))|Ctxs] :-
+    term_to_string M MS,
+    Prefix' is Prefix ^ " " ^ MS ^ "° - ",
+    print_goal Prefix' O Goal,
     print_ctx Prefix N Ctxs.
 
 vdecls_to_string [] "".

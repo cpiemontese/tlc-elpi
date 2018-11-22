@@ -42,6 +42,9 @@ andElimL (@arrow (@times a b) a).
 % [intro p, andER p]
 andElimR (@arrow (@times a b) b).
 
+%
+superAnd (@arrow a (@arrow b (@arrow c (@arrow d (@times (@times a b) (@times c d)))))).
+
 % [intro f, intro p, andE p y z, mapp f, mapp x, mapp y]
 implAnd (@arrow (@arrow a (@arrow b c)) (@arrow (@times a b) c)).
 

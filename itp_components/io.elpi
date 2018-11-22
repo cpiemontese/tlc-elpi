@@ -55,6 +55,8 @@ print_goals Prefix [(N, Goal)|Goals] :-
     print_goals Prefix Goals, !.
 
 print_ctx _ _ [].
+print_ctx Prefix N [(_, empty_goal)|Ctxs] :-
+    print_ctx Prefix N Ctxs.
 print_ctx Prefix N [(M, (_, Goal))|Ctxs] :-
     N is M, Prefix' is Prefix ^ "> ",
     print_goal Prefix' M Goal,

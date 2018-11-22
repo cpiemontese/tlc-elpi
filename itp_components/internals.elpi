@@ -114,25 +114,6 @@ process_tac shift
     new_goals_to_new_active NewGoals Mgn NewActive NMgn,
     append BranchOut Active NewOut.
 
-mode (intro_and_build i i o).
-intro_and_build Y V NewGoals :-
-    intro_and_build_aux Y V V [] NewGoals.
-
-mode (intro_and_build_aux i i i i o).
-intro_and_build_aux Y V [] FVars NG :-
-    build_newgoals Y V NG.
-intro_and_build_aux Y V [vdecl N TN|VDecls] FVars NG :-
-    pi x\ copy_var x N => (
-        copy_to_type TN TN',
-        of x TN' x =>
-            intro_and_build_aux (Y x) V VDecls [(x, N)|FVars] NG
-    ).
-
-mode (new_goals_to_new_active i i o o).
-new_goals_to_new_active [] Mgn [(0, skip_goal)] Mgn.
-new_goals_to_new_active NewGoals Mgn NewActive NMgn :-
-    label_goals Mgn NewGoals NMgn NewActive.
-
 % Shift from a non elaborated goal, add to the list of non elaborated branch
 % context goals i.e. BOTop
 process_tac shift
@@ -140,6 +121,7 @@ process_tac shift
     (state [NewHd] [bstate [Goal|Gs] BO NewBOTop|I] L M) :-
     print "horo",
     append BOTop Hd NewBOTop.
+
 % Shift on a non closed goal from an elaborated goal
 process_tac shift
     (state Active [bstate [_, (_, NewHd) as Goal|R] BranchOut C|I] ([b|_] as L) M)
@@ -327,54 +309,38 @@ exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
 % ---- BRANCH HELPERS ---- %
 % ------------------------ %
 
-%mode (label_branch_ctx_aux i i i o).
-%label_branch_ctx_aux M N [] [] :- M is N.
-%label_branch_ctx_aux M N [Goal|Goals] [(SM, Goal)|LGoals] :-
-%    SM is M + 1, label_branch_ctx_aux SM N Goals LGoals.
-
 mode (label_branch_ctx i o).
 label_branch_ctx Goals LGoals :-
     label_goals 0 Goals _ LGoals.
-    %length Goals N,
-    %label_branch_ctx_aux 0 N Goals LGoals.
 
-%all_sequential [_].
-%all_sequential [N, N'|Ns] :-
-%    N' is N + 1, all_sequential [N'|Ns].
 list_is_ordered [].
 list_is_ordered [_].
 list_is_ordered [N, N'|Ns] :-
     N < N', list_is_ordered [N'|Ns].
-
-%mode (get_unclosed_goals i o).
-%get_unclosed_goals [] [].
-%get_unclosed_goals [(_N, Goal)|Ctxs] [Goal|UCtxs] :-
-%    not (closed_goal Goal),
-%    get_unclosed_goals Ctxs UCtxs.
-%get_unclosed_goals [Ctx|Ctxs] UCtxs :-
-%    get_unclosed_goals Ctxs UCtxs.
 
 mode (closed_goal i).
 closed_goal (_, goal (uvar as X) _ _ _) :- !, fail.
 closed_goal (goal (uvar as X) _ _ _) :- !, fail.
 closed_goal G.
 
-%mode (remove_unclosed_aux i i o).
-%remove_unclosed_aux N [] [].
-%remove_unclosed_aux N [(M, Goal)|Goals] Goals :- N is M. 
-%remove_unclosed_aux N [(M, Goal)|Goals] [(M, Goal)|Removed] :-
-%    not (N is M), remove_unclosed_aux N Goals Removed. 
+mode (intro_and_build i i o).
+intro_and_build Y V NewGoals :-
+    intro_and_build_aux Y V V [] NewGoals.
 
-%mode (remove_unclosed i i o).
-%remove_unclosed [] Removed Removed.
-%remove_unclosed [(N, _)|Unclosed] Goals Removed :-
-%    remove_unclosed_aux N Goals Goals',
-%    remove_unclosed Unclosed Goals' Removed.
+mode (intro_and_build_aux i i i i o).
+intro_and_build_aux Y V [] FVars NG :-
+    build_newgoals Y V NG.
+intro_and_build_aux Y V [vdecl N TN|VDecls] FVars NG :-
+    pi x\ copy_var x N => (
+        copy_to_type TN TN',
+        of x TN' x =>
+            intro_and_build_aux (Y x) V VDecls [(x, N)|FVars] NG
+    ).
 
-%mode (get_pos_in_ctx i i o).
-%get_pos_in_ctx (N, _) [] 0 :- print "error(get_pos_in_ctx): " N " not in ctx".
-%get_pos_in_ctx (N, _) [(M, (O, _))|_] M :- N is O.
-%get_pos_in_ctx (N, _) [(_, (O, _))|Ctx] M :- not (N is O), get_pos_in_ctx (N, _) Ctx M.
+mode (new_goals_to_new_active i i o o).
+new_goals_to_new_active [] Mgn [(0, skip_goal)] Mgn.
+new_goals_to_new_active NewGoals Mgn NewActive NMgn :-
+    label_goals Mgn NewGoals NMgn NewActive.
 
 % ------------------------- %
 % ---- TACTICS HELPERS ---- %
@@ -389,16 +355,6 @@ get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :-
     not (Sel N), append [Goal] Rest' Rest,
     get_goals_from_selector Sel Gs Selected Rest'.
 
-%mode (get_numbered_goal_aux i i o o o).
-%get_numbered_goal_aux A B C D E :- print (get_numbered_goal_aux A B C D E), fail.
-    %term_to_string N SN,
-    %ErrMsg is "Goal " ^ SN ^ " not in list",
-    %print ErrMsg, fail.
-%get_numbered_goal_aux N [] [] nil [].
-%get_numbered_goal_aux N [(M, NGoal)|NGoals] [] NGoal NGoals :- N is M.
-%get_numbered_goal_aux N [(M, NGoal)|NGoals] [(M, NGoal)|Left] Selected Right :-
-%    not (N is M), get_numbered_goal_aux N NGoals Left Selected Right.
-
 mode (get_numbered_goal i i o o).
 get_numbered_goal A B C D :- print (get_numbered_goal A B C D), fail.
 get_numbered_goal _ [] none []. % N is not in list
@@ -409,7 +365,6 @@ get_numbered_goal N [(M, _) as Goal|Goals] Selected Rest :-
 
 % Search for goals in an unordered manner
 mode (get_numbered_goals i i o o).
-%get_numbered_goals A B C D :- print (get_numbered_goals A B C D), fail.
 get_numbered_goals [] NGoals [] NGoals.
 get_numbered_goals [N|Ns] NGoals [S|Selected] Rest :-
     get_numbered_goal N NGoals S NGoals',
@@ -417,7 +372,6 @@ get_numbered_goals [N|Ns] NGoals [S|Selected] Rest :-
     get_numbered_goals Ns NGoals' Selected Rest).
 
 mode (label_goals i i o o).
-%label_goals A B C D :- print (label_goals A B C D), fail.
 label_goals Mgn [] Mgn [].
 label_goals Mgn [Goal|Goals] NMgn [(Mgn', Goal)|LGoals] :-
     Mgn' is Mgn + 1,
@@ -426,19 +380,6 @@ label_goals Mgn [Goal|Goals] NMgn [(Mgn', Goal)|LGoals] :-
 mode (unlabel_goals i o).
 unlabel_goals [] [].
 unlabel_goals [(_, G)|Gs] [G|UGs] :- unlabel_goals Gs UGs.
-
-mode (get_nth i i o o o).
-%get_nth A B C D E :- print (get_nth A B C D E), fail.
-get_nth 1 [X|XS] [] XS X.
-get_nth N [X|XS] L R Res :-
-    M is N - 1,
-    get_nth M XS L' R Res,
-    append [X] L' L.     
-
-dec_greater _ [] [].
-dec_greater N [M|MS] [M'|MS'] :-
-    (M > N, M' is M - 1; M' = M),
-    dec_greater N MS MS'.
 
 
 % ---- FOCUS HELPERS ---- %
@@ -462,7 +403,7 @@ mode (search_focused_levels i i i o o o).
 % Two termination cases:
 %   1. no remaining indices
 %   2. some remaining indices but empty levels
-search_focused_levels A B C D E F :- print (search_focused_levels A B C D E F), fail.
+%search_focused_levels A B C D E F :- print (search_focused_levels A B C D E F), fail.
 search_focused_levels [] I _ [] [] I. 
 search_focused_levels RemainingIds I [] [] RemainingIds I. 
 % Focus goals from a branch
@@ -480,7 +421,6 @@ search_focused_levels Ids [bstate BCtx Out1 Out2|I] [b|L] Focused NotFound NewIn
 search_focused_levels Ids [OldActive|I] [f|L] Focused NotFound NewInactive :-
     search_focused Ids OldActive FOldActive RemainingIds RestOldActive,
     append RestOldActive NewInactive' NewInactive,
-    append FOldActive Focused' Focused,
     search_focused_levels RemainingIds I L Focused' NotFound NewInactive'.
 
 

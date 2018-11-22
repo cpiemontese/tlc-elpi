@@ -56,9 +56,9 @@ build_newgoals FVar _ [] :- name FVar.
 
 % ---- GOAL REACHABILITY ---- %
 
-% Invariant: at the start of meta_in_term X isn't applied to any fresh variables
+% Invariant: X isn't applied to any fresh variables
 mode (meta_in_term i i).
-meta_in_term (uvar X _) (uvar Y _) :- !, same_var X Y.
+meta_in_term (uvar X _) (uvar Y _) :- same_var X Y, !.
 meta_in_term X (lam _ _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (app M N) :- meta_in_term X M, !; meta_in_term X N. 
 meta_in_term X (pair M N) :- meta_in_term X M, !; meta_in_term X N. 

@@ -2,16 +2,15 @@
 % ---- I/O MODULE ---- %
 % -------------------- %
 
-print_status (state Active [bstate [] _ CtxCpy|_] [b|_] _) :-
+print_status (state Active [bstate [] _ _|_] [b|_] _) :-
+    print,
+    print_actives Active,
+    print "Branching context: empty".
+print_status (state Active [bstate ([(N, _)|_] as Bctx) _ _|_] [b|_] _) :-
     print,
     print_actives Active,
     print "Branching context:",
-    print_ctx "    " 0 CtxCpy.
-print_status (state Active [bstate [(N, _)|_] _ CtxCpy|_] [b|_] _) :-
-    print,
-    print_actives Active,
-    print "Branching context:",
-    print_ctx "    " N CtxCpy.
+    print_ctx "    " N Bctx.
 print_status (state Active _ [f|_] _) :-
     print,
     print "In focus",

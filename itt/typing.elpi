@@ -5,7 +5,7 @@ kind term type.
 % ------------------------ %
 
 pred of i:term, o:term, o:term.
-of X T Y :- print (of X T Y), fail. 
+%of X T Y :- print (of X T Y), fail. 
 of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % ----------------------- %
@@ -13,7 +13,7 @@ of (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 % ----------------------- %
 
 pred isa i:term, o:term, o:term.
-isa X T Y :- print (isa X T Y), fail. 
+%isa X T Y :- print (isa X T Y), fail. 
 isa (uvar as X) T Y :- !, declare_constraint (isa X T Y) [X, Y].
 
 % -------------- %

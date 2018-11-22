@@ -23,8 +23,6 @@ itp_loop _ State _ [] [] :- empty_state State.
 
 % Loop without script as input
 itp_loop Term State [] OutGoals OutScript :-
-    State = state _ _ L _,
-    print L,
     print_status State,
     prompt_user "input tactic" Tac,
     (Tac = undo, !, fail;
@@ -110,22 +108,43 @@ process_tac branch
 % We need to build new goals (if any can be built), eventually labeling them. If
 % there are no new goals the user has to acknowledge it with a skip
 process_tac shift
-    (state Active [bstate [_, (_, (goal X T Y V) as NewHd) as Goal|Gs] BranchOut C|I] ([b|_] as L) Mgn)
+    (state Active [bstate [_, (_, (_, goal X T Y V) as NewHd) as Goal|Gs] BranchOut C|I] ([b|_] as L) Mgn)
     (state NewActive [bstate [Goal|Gs] NewOut C|I] L NMgn) :-
-    closed_goal NewHd, build_newgoals NewHd V NewGoals,
-    (NewGoals = [], NewActive = [(0, skip_goal)], NMgn = Mgn !;
-    label_goals Mgn NewGoals NMgn LNewGoals, NewActive = LNewGoals),
+    closed_goal NewHd, intro_and_build Y V NewGoals,
+    new_goals_to_new_active NewGoals Mgn NewActive NMgn,
     append BranchOut Active NewOut.
+
+mode (intro_and_build i i o).
+intro_and_build Y V NewGoals :-
+    intro_and_build_aux Y V V [] NewGoals.
+
+mode (intro_and_build_aux i i i i o).
+intro_and_build_aux Y V [] FVars NG :-
+    build_newgoals Y V NG.
+intro_and_build_aux Y V [vdecl N TN|VDecls] FVars NG :-
+    pi x\ copy_var x N => (
+        copy_to_type TN TN',
+        of x TN' x =>
+            intro_and_build_aux (Y x) V VDecls [(x, N)|FVars] NG
+    ).
+
+mode (new_goals_to_new_active i i o o).
+new_goals_to_new_active [] Mgn [(0, skip_goal)] Mgn.
+new_goals_to_new_active NewGoals Mgn NewActive NMgn :-
+    label_goals Mgn NewGoals NMgn NewActive.
+
 % Shift from a non elaborated goal, add to the list of non elaborated branch
 % context goals i.e. BOTop
 process_tac shift
     (state [Hd] [bstate [Hd, (_, NewHd) as Goal|Gs] BO BOTop|I] ([b|_] as L) M)
     (state [NewHd] [bstate [Goal|Gs] BO NewBOTop|I] L M) :-
+    print "horo",
     append BOTop Hd NewBOTop.
 % Shift on a non closed goal from an elaborated goal
 process_tac shift
     (state Active [bstate [_, (_, NewHd) as Goal|R] BranchOut C|I] ([b|_] as L) M)
     (state [NewHd] [bstate [Goal|R] NewOut C|I] L M) :-
+    print "huru",
     append BranchOut Active NewOut.
 
 process_tac unbranch
@@ -203,8 +222,7 @@ process_tac (focus GoalIds) (state Active Inactive L M) (state NewActive [Rest|N
     search_focused GoalIds Active FActive RemainingIds Rest,
     search_focused_levels RemainingIds Inactive L FInactive RIds NewInactive,
     append FActive FInactive NewActive,
-    (RIds = [], !; print "error: focus on non existent goals" RIds),
-    term_to_string GoalIds GIS, Msg is "Focused on " ^ GIS, print Msg.
+    (RIds = [], !; print "error: focus on non existent goals" RIds).
 process_tac unfocus (state [] [I|Inactive] [f|Levels] M) (state I Inactive Levels M).
 
 % error reporting
@@ -240,8 +258,7 @@ process_tac (try T) State State' :-
 process_tac (solve T) State State' :-
     process_tac T State State', empty_state State'.
 process_tac (repeat T) State State' :-
-    process_tac T State State'', process_tac (try (repeat T)) State'' State'.
-    %process_tac (paren [T, (try (repeat T))]) State State'.
+    process_tac (paren [T, (try (repeat T))]) State State'.
 
 process_tac (do 0 T) State State.
 process_tac (do N T) State State' :-
@@ -274,7 +291,6 @@ htac Tac [Goal|Goals] NewGoals :-
 % stato, possono chiamare tinycal al loro interno
 process_tac Tac (state [] _ _ _) _ :- !, fail.
 process_tac Tac (state Goals I L Mgn) (state NewGoals I L NMgn) :-
-    print "here",
     unlabel_goals Goals UGoals, 
     bind_ltac Tac UGoals NewUnlabeledGoals,
     label_goals Mgn NewUnlabeledGoals NMgn NewGoals.
@@ -367,10 +383,10 @@ closed_goal G.
 mode (get_goals_from_selector i i o o).
 get_goals_from_selector _ [] [] [].
 get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :- 
-    Sel N, append Goal Selected' Selected,
+    Sel N, append [Goal] Selected' Selected,
     get_goals_from_selector Sel Gs Selected' Rest.
 get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :-
-    not (Sel N), append Goal Rest' Rest,
+    not (Sel N), append [Goal] Rest' Rest,
     get_goals_from_selector Sel Gs Selected Rest'.
 
 %mode (get_numbered_goal_aux i i o o o).
@@ -384,10 +400,11 @@ get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :-
 %    not (N is M), get_numbered_goal_aux N NGoals Left Selected Right.
 
 mode (get_numbered_goal i i o o).
+get_numbered_goal A B C D :- print (get_numbered_goal A B C D), fail.
 get_numbered_goal _ [] none []. % N is not in list
-get_numbered_goal N [(M, _) as Goal|Goals] Goal Goals :- N is M.
+get_numbered_goal N [(N, _) as Goal|Goals] Goal Goals.
 get_numbered_goal N [(M, _) as Goal|Goals] Selected Rest :-
-    not (N is M), append Goal Rest',
+    not (N is M), append [Goal] Rest' Rest, 
     get_numbered_goal N Goals Selected Rest'.
 
 % Search for goals in an unordered manner
@@ -432,11 +449,11 @@ add_labels [L|Ls] [Goal|Goals] [(L, Goal)|LGoals] :- add_labels Ls Goals LGoals.
 
 % Get indexed goals given a possibly unordered list of indexes.
 mode (search_focused i i o o o).
-search_focused A B C D E :- print (search_focused A B C D E), fail.
+%search_focused A B C D E :- print (search_focused A B C D E), fail.
 search_focused [] RemainingGoals [] [] RemainingGoals.
 search_focused [Id|Ids] Goals Focused NotFound Rest :-
     get_numbered_goal Id Goals Goal Rest',
-    (Goal = nil, append Id NotFound' NotFound,          % Rest' = Goals
+    (Goal = none, append [Id] NotFound' NotFound,          % Rest' = Goals
     search_focused Ids Goals Focused NotFound' Rest, !;
     append [Goal] Focused' Focused,
     search_focused Ids Rest' Focused' NotFound Rest).
@@ -445,9 +462,9 @@ mode (search_focused_levels i i i o o o).
 % Two termination cases:
 %   1. no remaining indices
 %   2. some remaining indices but empty levels
-%search_focused_levels A B C D E F :- print (search_focused A B C D E F), fail.
+search_focused_levels A B C D E F :- print (search_focused_levels A B C D E F), fail.
 search_focused_levels [] I _ [] [] I. 
-search_focused_levels RemainingIds [] [] [] RemainingIds I. 
+search_focused_levels RemainingIds I [] [] RemainingIds I. 
 % Focus goals from a branch
 search_focused_levels Ids [bstate BCtx Out1 Out2|I] [b|L] Focused NotFound NewInactive :-
     unlabel_goals BCtx UBCtx,

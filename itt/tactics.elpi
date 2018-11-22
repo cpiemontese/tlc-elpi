@@ -2,151 +2,26 @@
 % ---- TACTICS ---- %
 % ----------------- %
 
-% --------------------------- %
 % ---- CARTESIAN PRODUCT ---- %
-% --------------------------- %
 
-tactic (intro N) (goal X (prod _ _) RTerm VDecls) FVars NewGoals :-
-    X = lam N A F,
-    build_newgoals RTerm VDecls NewGoals.
+tactic (intro N) (goal _ (prod _ _) _ _) _ (lam N A F).
 
-tactic (mapp N) (goal X Type RTerm VDecls) FVars NewGoals :-
-    get_named N FVars Lam,
-    X = app Lam dots,
-    build_newgoals RTerm VDecls NewGoals.
+tactic (mapp N) _ FVars (app Lam dots) :- get_named N FVars Lam.
 
-% ------------------------ %
+
 % ---- DISJOINT UNION ---- %
-% ------------------------ %
 
-tactic andI (goal X (sum _ _) RTerm VDecls) FVars NewGoals :-
-    X = pair P Q,
-    build_newgoals RTerm VDecls NewGoals.
+tactic andI (goal _ (sum _ _) _ _) FVars (pair P Q).
 
-% ELIM
-tactic andEL (goal X T RTerm VDecls) FVars NewGoals :-
-    X = fst P,
-    build_newgoals RTerm VDecls NewGoals.
-tactic andER (goal X T RTerm VDecls) FVars NewGoals :-
-    X = snd P,
-    build_newgoals RTerm VDecls NewGoals.
-tactic (andEL N) (goal X T RTerm VDecls) FVars NewGoals :-
-    get_named N FVars P,
-    X = fst P,
-    build_newgoals RTerm VDecls NewGoals.
-tactic (andER N) (goal X T RTerm VDecls) FVars NewGoals :-
-    get_named N FVars P,
-    X = snd P,
-    build_newgoals RTerm VDecls NewGoals.
+tactic andEL _ FVars (fst P).
+tactic andER _ FVars (snd P).
 
-tactic (andE N N1 N2) (goal X T RTerm VDecls) FVars NewGoals :-
-    get_named N FVars P,
-    X = split P N1 N2 F,
-    build_newgoals RTerm VDecls NewGoals.
+tactic (andEL N) _ FVars (fst P) :- get_named N FVars P.
+tactic (andER N) _ FVars (snd P) :- get_named N FVars P.
 
-% ------------------ %
+tactic (andE N N1 N2) _ FVars (split P N1 N2 F) :- get_named N FVars P.
+
+
 % ---- PROP. ID ---- %
-% ------------------ %
 
-tactic idIntro (goal X T RTerm VDecls) FVars NewGoals :-
-    X = refl A Y,
-    build_newgoals RTerm VDecls NewGoals.
-
-/*
-% --------------------------- %
-% ---- CARTESIAN PRODUCT ---- %
-% --------------------------- %
-
-tactic (intro Name) (lam Name T Body) Vars K :-
-    pi x \ K [([(x, Name)|Vars], (Body x))].
-
-
-tactic app (app Lambda Arg) Vars K :-
-    K [(Vars, Lambda), (Vars, Arg)].
-
-tactic (mapp N) X Vars K :-
-    get_named N Vars Lambda,
-    lookup X Y,
-    X = app Lambda dots,
-    %print "recuperato" Y "elaborato di" X,
-    rec_term Y Vars K. 
-
-tactic (app N) T Vars K :-
-    get_named N Vars Lambda,
-    many_args Vars Lambda T L,
-    K L.
-
-many_args Vars Lambda Lambda [].
-many_args Vars Lambda (app Lambda' Arg) [(Vars, Arg)|L] :-
-    many_args Vars Lambda Lambda' L.
-
-%tactic (app N M) (app Lambda Arg) Vars K :-
-%    nth_element N Vars Lambda,
-%    nth_element M Vars Arg,
-%    K [].
-
-% ------------------------ %
-% ---- DISJOINT UNION ---- %
-% ------------------------ %
-
-% INTRO
-tactic andI (pair X Y) Vars K :-
-    K [(Vars, X), (Vars, Y)].
-
-tactic (andI N) (pair H Y) Vars K :-
-    get_named N Vars H,
-    K [(Vars, Y)].
-
-tactic (andI N M) (pair H G) Vars K :-
-    get_named N Vars H,
-    get_named M Vars G,
-    K [].
-
-% ELIM
-tactic andEL (fst P) Vars K :-
-    K [(Vars, P)].
-tactic andER (snd P) Vars K :-
-    K [(Vars, P)].
-
-% and elimination but with hypothesis use
-tactic (andEL N) (fst H) Vars K :-
-    get_named N Vars H,
-    K [].
-tactic (andER N) (snd H) Vars K :-
-    get_named N Vars H,
-    K [].
-
-tactic (andE Name1 Name2) (split P Name1 Name2 F) Vars K :-
-    pi x y\ K [(Vars, P), ([(x, Name1), (y, Name2)|Vars], (F x y))].
-
-tactic (andE Name1 Name2 N) (split H Name1 Name2 F) Vars K :-
-    get_named N Vars H,
-    pi x y\ K [([(x, Name1), (y, Name2)|Vars], (F x y))].
-
-tactic (andE Name1 Name2 N M) (split H Name1 Name2 G) Vars K :-
-    get_named N Vars H,
-    get_named M Vars G,
-    K [].
-
-% ------------------ %
-% ---- PROP. ID ---- %
-% ------------------ %
-
-tactic idIntro (refl A X) Vars K :-
-    K [(Vars, X)].
-
-% -------------------- %
-% ---- HYPOTHESIS ---- %
-% -------------------- %
-
-tactic (var N) H Vars K :-
-    get_named N Vars H,
-    K [].
-
-% Error
-%tactic Name H Vars K :- 
-%    print "Error, something went wrong with " Name,
-%    print H,
-%    print Vars,
-%    print K.
-*/
+tactic idIntro _ _ (refl A Y).

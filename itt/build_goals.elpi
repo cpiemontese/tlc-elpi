@@ -11,6 +11,7 @@ build_newgoals (uvar K L as Y) VDecls NewGoals :- !,
 % Prod
 build_newgoals (lam N T F) VDecls NewGoals :-
     copy_from_type T T',
+    not_a_dup N VDecls,
     append VDecls [vdecl N T'] L,
     pi x\ build_newgoals (F x) L NewGoals.
 build_newgoals (app M N) VDecls NewGoals :-
@@ -29,6 +30,7 @@ build_newgoals (split P N1 N2 F) VDecls NewGoals :-
     build_newgoals P VDecls NP,
     of P (sum A B) _,
     copy_from_type A A', copy_from_type B B',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
     append VDecls [vdecl N1 A', vdecl N2 B'] L,
     pi x y\ build_newgoals (F x y) L NF,
     append NP NF NewGoals.
@@ -40,6 +42,7 @@ build_newgoals (natrec N ZE N1 N2 RF) :-
     build_newgoals N NN,
     build_newgoals ZE NZE,
     copy_from_type T T',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
     append VDecls [vdecl N1 nat, vdecl N2 T'] L,
     pi x y\ build_newgoals (RF x y) L NRF,
     append NN NZE Tmp, append Tmp NRF NewGoals.
@@ -50,3 +53,22 @@ build_newgoals (refl A X) VDecls NewGoals :-
 
 % FVars (or const?)
 build_newgoals FVar _ [] :- name FVar.
+
+% ---- GOAL REACHABILITY ---- %
+
+% Invariant: at the start of meta_in_term X isn't applied to any fresh variables
+mode (meta_in_term i i).
+meta_in_term (uvar X _) (uvar Y _) :- !, same_var X Y.
+meta_in_term X (lam _ _ F) :- pi x\ meta_in_term X (F x).
+meta_in_term X (app M N) :- meta_in_term X M, !; meta_in_term X N. 
+meta_in_term X (pair M N) :- meta_in_term X M, !; meta_in_term X N. 
+meta_in_term X (fst P) :- meta_in_term X P.
+meta_in_term X (snd P) :- meta_in_term X P.
+meta_in_term X (split P _ _ F) :-
+    meta_in_term X P; pi x y\ meta_in_term X (F x y).
+meta_in_term _ zero :- fail.
+meta_in_term X (succ N) :- meta_in_term X N.
+meta_in_term X (natrec N ZE _ _ RF) :-
+    meta_in_term X N, !; meta_in_term X ZE, !;
+    pi x y\ meta_in_term X (RF x y).
+meta_in_term X (refl _ Y) :- meta_in_term X Y.

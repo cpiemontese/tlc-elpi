@@ -1,50 +1,72 @@
-% TODO:
-% - controllo degli errori piu' fine per project etc
-% - refactoring
-% - riscrivi funzionamento branching e focus
-% - suddivisone migliore codice
-
 % -------------- %
 % ---- LOOP ---- %
 % -------------- %
 
 % itp_loops args:
+% - input term (for reachability checks)
 % - state (current open goals, inactive list, levels, max goal number)
 % - input tactics list
 % - remaining goals
 % - output script list
-mode (itp_loop i i o o).
+mode (itp_loop i i i o o).
 %itp_loop A B C :- print (itp_loop A B C), fail.
-itp_loop State _ [] [] :- empty_state State.
 
-itp_loop State [] OutGoals OutScript :-
+/*
+Termination:
+- empty state i.e.
+    - no active goals
+    - no inactive goals
+    - no branching, no focus
+- input script can be non empty (?)
+*/
+itp_loop _ State _ [] [] :- empty_state State.
+
+% Loop without script as input
+itp_loop Term State [] OutGoals OutScript :-
     print_status State,
     prompt_user "input tactic" Tac,
-    (Tac = backup, !, fail;
-    Tac = quit, get_outgoals State OutGoals, !;
+    (Tac = undo, !, fail;
+    Tac = quit, get_outgoals Term State OutGoals, !;
     process_tac Tac State NewState,
-    itp_loop NewState [] OutGoals OutScript',
-    append [Tac] OutScript' OutScript;
-    itp_loop State [] OutGoals OutScript).
+    append [Tac] OutScript' OutScript,
+    itp_loop Term NewState [] OutGoals OutScript';
+    print "error with" Tac,
+    itp_loop Term State [] OutGoals OutScript).
 
-itp_loop State [Tac|Tacs] OutGoals OutScript :-
+% Loop with script as input (could be from parens tinycal)
+itp_loop Term State [Tac|Tacs] OutGoals OutScript :-
     process_tac Tac State NewState,
-    itp_loop NewState Tacs OutGoals OutScript',
-    append [Tac] OutScript' OutScript.
+    append [Tac] OutScript' OutScript,
+    itp_loop Term NewState Tacs OutGoals OutScript'.
 
 
 empty_state (state [] [] [] _).
-get_outgoals (state OG _ _ _) OG' :- unlabel_goals OG OG'.
+% Invariant: OG is a list of tuples [(int, goal), (int, goal), ...]
+get_outgoals Term (state OG _ _ _) OG' :-
+    unlabel_goals OG UOG,
+    remove_unreachable_goals Term UOG OG'.
+
+mode (remove_unreachable_goals i i o).
+remove_unreachable_goals _ [] [].
+remove_unreachable_goals Term [Goal|Goals] [Goal|RGoals] :-
+    reachable_goal Term Goal,
+    remove_unreachable_goals Term Goals RGoals.
+remove_unreachable_goals Term [_|Goals] RGoals :-
+    remove_unreachable_goals Term Goals RGoals.
+
+% meta_in_term must be defined by each language
+reachable_goal Term (goal X _ _ _) :-
+    meta_in_term X Term.
+
 
 % ------------------- %
 % ---- INTERNALS ---- %
 % ------------------- %
 
-% key ideas:
-% itp carries around a state which is representeted by a tuple of tre elements:
+% ITP carries around a state which is representeted by a tuple of tre elements:
 %   1. list of active goals,
 %   2. list of inactive goals (which is a list of lists, because of nesting)
-%   3. list of nesting levels L ::= b :: L | f :: L | []
+%   3. list of nesting levels L ::= [b|L] | [f|L] | []
 % branch and focus put b and f on top of Levels then:
 %   - select some goals
 %   - add the remaining goals as an inactive list
@@ -52,153 +74,227 @@ get_outgoals (state OG _ _ _) OG' :- unlabel_goals OG OG'.
 %   - remove b/f from Levels
 %   - restore the current list on top of the inactive list
 
+mode (process_tac i i o).
+%process_tac A B C :- print (process_tac A B C), fail.
 
 % ---- BRANCHING ---- %
 
-mode (process_tac i i o).
+% Invariant: goals are relabeled when put in the branch context, but goals in
+%            the Active list always keep their old label
 
 % skip_goal blocks the user until he/she acknowledges with skip
-process_tac T ((state [(0, skip_goal)] I L M) as S) S :- print "you have to skip".
+% skip just removes skip_goal, unbranch, shift etc will still be needed
+process_tac skip (state [(0, skip_goal)] _I ([b|_] as L) _M) (state [] _I L _M).
 
-%process_tac A B C :- print (process_tac A B C), fail.
+process_tac T (state [(0, skip_goal)] _ _ _) _ :-
+    print "you have to skip", fail.
+
+% Invariant: branch is always called on a state that has at least one goal
 % branch lables branch context goals but they are only needed for projection,
 % so we can keep numbering goals from max goal number
 process_tac branch
-    (state [Goal|Goals] I Levels M)
-    (state [Goal] [bctx BranchCtx [] BranchCtx|I] [b|Levels] M) :-
-    label_branch_ctx [Goal|Goals] BranchCtx.
+    (state ([Goal|_] as Goals) I L M)
+    (state [Goal] [bstate BranchCtx [] []|I] [b|L] M) :-
+    label_branch_ctx Goals BranchCtx.
 
+% XXX(Coen): no build_newgoals, dovrebbero essere recuperati da chi genera i
+%   side-effect (ricorsivamente) fare un check per essere sicuri
+% XXX: non credo che questo sia sbagliato, o meglio puo' essere sbagliata la
+%      semantica i.e. i goal non vengono resi attivi, ma il posto secondo me e'
+%      giusto, anche perche' farlo con metaregole diventa molto error prone
+% Invariant: shift assumes that there is always a goal to shift to (i.e. at
+%            least two goals on top of the branch context). Otherwise we fail
+% Shift on a closed goal i.e. a goal instantiated by another one by side-effect.
+% We need to build new goals (if any can be built), eventually labeling them. If
+% there are no new goals the user has to acknowledge it with a skip
 process_tac shift
-    (state Active [bctx [_, (N, (goal X T Y V) as NewHd)|R] BranchOut C|I] [b|L] M)
-    (state NewActive [bctx [(N, NewHd)|R] NewOut C|I] [b|L] M) :-
+    (state Active [bstate [_, (_, (goal X T Y V) as NewHd) as Goal|Gs] BranchOut C|I] ([b|_] as L) Mgn)
+    (state NewActive [bstate [Goal|Gs] NewOut C|I] L NMgn) :-
     closed_goal NewHd, build_newgoals NewHd V NewGoals,
-    (NewGoals = [], NewActive = [(0, skip_goal)], !;
-    NewActive = NewGoals),
+    (NewGoals = [], NewActive = [(0, skip_goal)], NMgn = Mgn !;
+    label_goals Mgn NewGoals NMgn LNewGoals, NewActive = LNewGoals),
     append BranchOut Active NewOut.
+% Shift from a non elaborated goal, add to the list of non elaborated branch
+% context goals i.e. BOTop
 process_tac shift
-    (state Active [bctx [_, (N, NewHd)|R] BranchOut C|I] [b|L] M)
-    (state [NewHd] [bctx [(N, NewHd)|R] NewOut C|I] [b|L] M) :-
+    (state [Hd] [bstate [Hd, (_, NewHd) as Goal|Gs] BO BOTop|I] ([b|_] as L) M)
+    (state [NewHd] [bstate [Goal|Gs] BO NewBOTop|I] L M) :-
+    append BOTop Hd NewBOTop.
+% Shift on a non closed goal from an elaborated goal
+process_tac shift
+    (state Active [bstate [_, (_, NewHd) as Goal|R] BranchOut C|I] ([b|_] as L) M)
+    (state [NewHd] [bstate [Goal|R] NewOut C|I] L M) :-
     append BranchOut Active NewOut.
 
-% unbranch can't close a branch without skipping first
 process_tac unbranch
-    (state Active [bctx _ BranchOut CtxCpy|I] [b|Levels] M)
-    (state NewActive I Levels M) :-
-    get_unclosed_goals CtxCpy Unclosed,
-    append BranchOut Active DirtyActive,
-    remove_unclosed Unclosed DirtyActive CleanActive,
-    append Unclosed CleanActive NewActive.
+    (state Active [bstate _ BranchOut BranchOutTop|I] [b|L] M)
+    (state NewActive I L M) :-
+    append BranchOut Active NewOut,
+    append BranchOutTop NewOut NewActive.
 
 % can apply project only right after branch open or shift i.e. when the head of
 % the branch context is also the only active goal
-process_tac (project []) State State.
+process_tac (project) _ _ :-
+    print "error: project with no args", fail.
+process_tac (project []) _ _ :-
+    print "error: project with no indexes", fail.
+
+macro @empty_goal :- (0, empty_goal).
+% Invariant: project doesn't unlabel goals i.e. they are still labled as they
+%            appear in the branch context
 process_tac (project [Idx|Idxs])
-    (state [Hd] [bctx [(Idx, Hd)|Ctx] BranchOut CtxCpy|I] [b|L] M)
-    (state Selected [bctx [(Pos, Tail)|Rest] BranchOut CtxCpy|I] [b|L] M) :-
-    all_sequential [Idx|Idxs],
-    get_numbered_goals [Idx|Idxs] [(Idx, Hd)|Ctx] Selected Rest,
-    append _ [Tail] Selected,
-    get_pos_in_ctx Tail CtxCpy Pos.
+    (state [Hd] [bstate ([(_, Hd)|Ctx] as Goals) BO C|I] ([b|_] as L) M)
+    (state Selected [bstate [@empty_goal|Rest] BO C|I] L M) :-
+    get_numbered_goals [Idx|Idxs] Goals LS Rest,
+    unlabel_goals LS Selected.
+
+process_tac (project Selector)
+    (state [Hd] [bstate ([(Idx, Hd)|Ctx] as Goals) BO C|I] ([b|_] as L) M)
+    (state Selected [bstate [@empty_goal|Rest] BO C|I] L M) :-
+    get_goals_from_selector Selector Goals LS Rest,
+    unlabel_goals LS Selected.
 
 % NOTE: after a project all we don't care about the branch context becuase no
 %       more shifts or projections can be done, only unbranch.
+% A shift after a project all fails because shift expects at least two elements
+% on top of the branch context list
 process_tac (project all)
-    (state [Hd] [bctx [(Id, Hd)|Ctx] BranchOut CtxCpy|I] [b|L] M)
-    (state Unlabled [bctx [Tail] BranchOut CtxCpy|I] [b|L] M) :-
-    unlabel_branch_ctx [(Id, Hd)|Ctx] Unlabled,
-    append _ [Tail] CtxCpy.
+    (state [Hd] [bstate ([(_, Hd)|Ctx] as AllCtx) BO C|I] ([b|_] as L) M)
+    (state AllGoals [bstate [@empty_goal] BO C|I] L M) :-
+    unlabel_goals AllCtx AllGoals.
 
 % error reporting
+% Invariant: shift can never be called on a branch context with an empty list
 process_tac shift
-    ((state A [bctx [S] B C|I] L M) as State) State :-
-    print "error: shift cannot be performed on a single goal context".
-process_tac shift ((state A I [] M) as State) State :-
-    print "error: can't shift outside of a branch".
-process_tac shift ((state A I [f|L] M) as State) State :-
-    print "error: can't shift inside a focus".
+    (state A [bstate [_] _ _|_] _ _) _ :-
+    print "error: shift cannot be performed on a single goal context", fail.
+process_tac shift (state _ _ [] _) _ :-
+    print "error: can't shift outside of a branch", fail.
+process_tac shift (state _ _ [f|_] _) _ :-
+    print "error: can't shift inside a focus", fail.
 
-process_tac skip ((state A I [b|L] M) as S) S:-
-    print "error: can't skip".
-process_tac skip ((state A I [f|L] M) as S) S :-
-    print "error: can't skip inside a focus".
-process_tac skip ((state A I [] M) as S) S :-
-    print "error: can't skip outside of a branch".
+process_tac skip (state _ _ [b|_] _) _ :-
+    print "error: nothing to skip", fail.
+process_tac skip (state _ _ [f|_] _) _ :-
+    print "error: can't skip inside a focus", fail.
+process_tac skip (state _ _ [] _) _ :-
+    print "error: can't skip outside of a branch", fail.
 
-process_tac unbranch ((state A I [] M) as State) State :-
-    print "error: no branch to close".
-process_tac unbranch ((state A I [f|L] M) as State) State :-
-    print "error: focus must be closed with unfocus".
+process_tac unbranch (state _ _ [] _) _ :-
+    print "error: no branch to close", fail.
+process_tac unbranch (state _ _ [f|_] _) _ :-
+    print "error: focus must be closed with unfocus", fail.
 
-% if you are here Ns is not empty but Active and Inactive are not in a
-% projectable form i.e. [Hd] [(M, Hd)|Rest] 
-process_tac (project [Id|Idxs])
-    ((state [Hd] [bctx [(N, Hd)|Ct] B Cp|I] [b|L] M) as State) State :-
-    term_to_string Id SId, term_to_string N SN,
-    ErrMsg is "error: can't project from index " ^ SId ^ " (min index: " ^ SN ^ ")", 
-    print ErrMsg.
-process_tac (project P) ((state A I [b|L] M) as State) State :-
-    print "error: can't project in a developed branch".
-process_tac (project P) ((state A I [] M) as State) State :-
-    print "error: can't project outside of a branch".
-process_tac (project P) ((state A I [f|L] M) as State) State :-
-    print "error: can't project in a focus".
+% In a branch but not in a projectable form
+process_tac (project _) (state _ _ [b|_] _) _ :-
+    print "error: can't project in a developed branch", fail.
+process_tac (project _) (state _ _ [] _) _ :-
+    print "error: can't project outside of a branch", fail.
+process_tac (project _) (state _ _ [f|_] _) _ :-
+    print "error: can't project in a focus", fail.
 
 
 % ---- FOCUS ---- %
 
-process_tac (focus []) S S.
-process_tac (focus GoalIdxs) (state Active I Levels M) (state NewActive [Rest|I] [f|Levels] M) :-
-    get_numbered_goals GoalIdxs Active Selected Rest,
-    add_labels GoalIdxs Selected NewActive.
+process_tac (focus []) _ _ :- print "error: no indexes for focus", fail.
+process_tac (focus GoalIds) (state Active Inactive L M) (state NewActive [Rest|NewInactive] [f|L] M) :-
+    search_focused GoalIds Active FActive RemainingIds Rest,
+    search_focused_levels RemainingIds Inactive L FInactive RIds NewInactive,
+    (RIds = [], !; print "error: focus on non existent goals" RIds).
 process_tac unfocus (state [] [I|Inactive] [f|Levels] M) (state I Inactive Levels M).
 
 % error reporting
-process_tac unfocus ((state A I L M) as State) State :-
-    print "error: you ain't done".
-process_tac unfocus ((state A I [] M) as State) State :-
-    print "error: no focus to close".
-process_tac unfocus ((state A I [b|Levels] M) as State) State :-
-    print "error: branch must be closed with unbranch".
+process_tac unfocus (state _ _ _ _) _ :-
+    print "error: you can not unfocus until all goals are closed", fail.
+process_tac unfocus (state _ _ [] _) _ :-
+    print "error: no focus to close", fail.
+process_tac unfocus (state _ - [b|_] _) _ :-
+    print "error: branch must be closed with unbranch", fail.
     
-% ---- MAPTAC ---- %
 
-process_tac (maptac _ []) S S.
-process_tac (maptac Tac GoalIdxs) (state Active I L Mgn) (state NActive I L NMgn) :-
-    get_numbered_goals GoalIdxs Active Selected Rest,
-    tactic maptac Tac Selected UGoals,
-    label_goals Mgn UGoals NMgn LGoals,
-    append LGoals Rest NActive.
+% ---- PAREN ---- %
+
+process_tac (paren []) State State.
+process_tac (paren [T|Ts]) State State' :-
+    process_tac T State State'',
+    process_tac (paren Ts) State'' State'.
 
 
-% ---- THEN ---- %
+% ---- TACTICAL AS TINYCALS ---- %
 
-process_tac (then T1 T2) State NewState :-
-    process_tac T1 State MidState, process_tac T2 MidState NewState.
+process_tac idtac State State.                                                        
+process_tac (fail Msg) _ _ :- print Msg, fail.                                      
+                                                                                 
+process_tac (orelse T1 _T2) State State' :- process_tac T1 State State'.
+process_tac (orelse _T1 T2) State State' :- process_tac T2 State State'.
+
+process_tac (orelse! T1 _T2) State State' :- tactic T1 State State', !.
+process_tac (orelse! _T1 T2) State State' :- tactic T2 State State'.
+
+process_tac (try T) State State' :-
+    process_tac (orelse T idtac) State State'.
+process_tac (solve T) State State' :-
+    process_tac T State State', empty_state State'.
+process_tac (repeat T) State State' :-
+    process_tac (paren [T, (try (repeat T))]) State State'.
+
+process_tac (do 0 T) State State.
+process_tac (do N T) State State' :-
+    M is N - 1, process_tac (paren [T, (do M T)]) State State'.
+
+process_tac (first []) State State.
+process_tac (first [Tac|Tacs]) State State' :-
+    process_tac (orelse Tac (first Tacs)) State State'.
 
 
 % ---- DEFAULT ---- %
 
-% default: Tac is applied to the first goal
-process_tac Tac (state [(N, Goal)|Active] I L Mgn) (state NewActive I L NMgn) :-
-    exec_tac Tac Goal UGoals,
-    label_goals Mgn UGoals NMgn LGoals,
-    append LGoals Active NewActive.
+/*
+% Alternativa a quello scritto sotto i.e. si entra nelle htac.
+% Cosa cambia? Htac non puo' contenere tinycal, diventa una tattica che opera
+% sui goal in un qualche modo senza il supporto dei tinycal
+process_tac Tac (state Goals I L Mgn) (state Newgoals I L NMgn) :-
+    htac Tac Goals UnlabeledGoals,
+    label_goals Mgn UnlabeledGoals NMgn NewGoals.
 
+% Default di htac e' bind
+htac Tac [Goal|Goals] NewGoals :-
+    exec_tac Tac Goal NewGoals',
+    append NewGoals' NewGoals'' NewGoals,
+    htac Tac Goals NewGoals''.
+    
+*/
+
+% HTac come process_tac lato utente, prendono lo stato e ritornano un nuovo
+% stato, possono chiamare tinycal al loro interno
+process_tac Tac (state Goals I L Mgn) (state NewGoals I L NMgn) :-
+    bind_ltac Tac Goals UnlabeledGoals,
+    label_goals Mgn UnlabeledGoals NMgn NewGoals.
+
+mode (bind_ltac i i o).
+bind_ltac _ [] [].
+bind_ltac Tac [Goal|Goals] NewGoals :-
+    exec_tac Tac Goal NewGoals',
+    append NewGoals' NewGoals'' NewGoals,
+    bind_ltac Tac Goals NewGoals''.
+    
 
 /*
 %   Execute tactic under context of a goal
 */
 mode (exec_tac i i o).
-exec_tac Tac (goal X T Y V as Goal) NewGoals :- exec_tac_aux Tac Goal V [] NewGoals.
+exec_tac Tac (goal X T Y V as Goal) NewGoals :-
+    exec_tac_aux Tac Goal V [] NewGoals.
 
 mode (exec_tac_aux i i i i o).
 %exec_tac_aux A B C D E :- print (exec_tac_aux A B C D E), fail.
 exec_tac_aux Tac (goal X T Y D as G) [] FVars NG :-
-    tactic Tac G FVars NG.
+    tactic Tac G FVars Term, X = Term, build_newgoals Y D NG.
 exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
     pi x\ copy_var x N => (
-        copy_to_type TN TN', print "copied to" TN TN',
-        of x TN' x => exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG
+        copy_to_type TN TN',% print "copied to" TN TN',
+        of x TN' x =>
+            exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG
     ).
 
 
@@ -206,73 +302,93 @@ exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
 % ---- BRANCH HELPERS ---- %
 % ------------------------ %
 
-mode (label_branch_ctx_aux i i i o).
-label_branch_ctx_aux M N [] [] :- M is N.
-label_branch_ctx_aux M N [Goal|Goals] [(SM, Goal)|LGoals] :-
-    SM is M + 1, label_branch_ctx_aux SM N Goals LGoals.
+%mode (label_branch_ctx_aux i i i o).
+%label_branch_ctx_aux M N [] [] :- M is N.
+%label_branch_ctx_aux M N [Goal|Goals] [(SM, Goal)|LGoals] :-
+%    SM is M + 1, label_branch_ctx_aux SM N Goals LGoals.
 
 mode (label_branch_ctx i o).
 label_branch_ctx Goals LGoals :-
-    length Goals N,
-    label_branch_ctx_aux 0 N Goals LGoals.
+    label_goals 0 Goals _ LGoals.
+    %length Goals N,
+    %label_branch_ctx_aux 0 N Goals LGoals.
 
-mode (unlabel_branch_ctx i o).
-unlabel_branch_ctx [] [].
-unlabel_branch_ctx [(_L, LGoal)|LGoals] [LGoal|Goals] :-
-    unlabel_branch_ctx LGoals Goals.
+%all_sequential [_].
+%all_sequential [N, N'|Ns] :-
+%    N' is N + 1, all_sequential [N'|Ns].
+list_is_ordered [].
+list_is_ordered [_].
+list_is_ordered [N, N'|Ns] :-
+    N < N', list_is_ordered [N'|Ns].
 
-all_sequential [_].
-all_sequential [N, N'|Ns] :-
-    N' is N + 1, all_sequential [N'|Ns].
-
-mode (get_unclosed_goals i o).
-get_unclosed_goals [] [].
-get_unclosed_goals [(_N, Goal)|Ctxs] [Goal|UCtxs] :-
-    not (closed_goal Goal),
-    get_unclosed_goals Ctxs UCtxs.
-get_unclosed_goals [Ctx|Ctxs] UCtxs :-
-    get_unclosed_goals Ctxs UCtxs.
+%mode (get_unclosed_goals i o).
+%get_unclosed_goals [] [].
+%get_unclosed_goals [(_N, Goal)|Ctxs] [Goal|UCtxs] :-
+%    not (closed_goal Goal),
+%    get_unclosed_goals Ctxs UCtxs.
+%get_unclosed_goals [Ctx|Ctxs] UCtxs :-
+%    get_unclosed_goals Ctxs UCtxs.
 
 mode (closed_goal i).
-closed_goal (_N, goal (uvar as X) _T _Y _V) :- !, fail.
+closed_goal (_, goal (uvar as X) _ _ _) :- !, fail.
+closed_goal (goal (uvar as X) _ _ _) :- !, fail.
 closed_goal G.
 
-mode (remove_unclosed_aux i i o).
-remove_unclosed_aux N [] [].
-remove_unclosed_aux N [(M, Goal)|Goals] Goals :- N is M. 
-remove_unclosed_aux N [(M, Goal)|Goals] [(M, Goal)|Removed] :-
-    not (N is M), remove_unclosed_aux N Goals Removed. 
+%mode (remove_unclosed_aux i i o).
+%remove_unclosed_aux N [] [].
+%remove_unclosed_aux N [(M, Goal)|Goals] Goals :- N is M. 
+%remove_unclosed_aux N [(M, Goal)|Goals] [(M, Goal)|Removed] :-
+%    not (N is M), remove_unclosed_aux N Goals Removed. 
 
-mode (remove_unclosed i i o).
-remove_unclosed [] Removed Removed.
-remove_unclosed [(N, _)|Unclosed] Goals Removed :-
-    remove_unclosed_aux N Goals Goals',
-    remove_unclosed Unclosed Goals' Removed.
+%mode (remove_unclosed i i o).
+%remove_unclosed [] Removed Removed.
+%remove_unclosed [(N, _)|Unclosed] Goals Removed :-
+%    remove_unclosed_aux N Goals Goals',
+%    remove_unclosed Unclosed Goals' Removed.
 
-mode (get_pos_in_ctx i i o).
-get_pos_in_ctx (N, _) [] 0 :- print "error(get_pos_in_ctx): " N " not in ctx".
-get_pos_in_ctx (N, _) [(M, (O, _))|_] M :- N is O.
-get_pos_in_ctx (N, _) [(_, (O, _))|Ctx] M :- not (N is O), get_pos_in_ctx (N, _) Ctx M.
+%mode (get_pos_in_ctx i i o).
+%get_pos_in_ctx (N, _) [] 0 :- print "error(get_pos_in_ctx): " N " not in ctx".
+%get_pos_in_ctx (N, _) [(M, (O, _))|_] M :- N is O.
+%get_pos_in_ctx (N, _) [(_, (O, _))|Ctx] M :- not (N is O), get_pos_in_ctx (N, _) Ctx M.
 
 % ------------------------- %
 % ---- TACTICS HELPERS ---- %
 % ------------------------- %
 
-mode (get_numbered_goals_aux i i o o o).
-%get_numbered_goal_aux A B C D E :- print (get_numbered_goal_aux A B C D E), fail.
-get_numbered_goal_aux N [] [] nil [] :- print "Goal" N "not in list", fail.
-get_numbered_goal_aux N [(M, NGoal)|NGoals] [] NGoal NGoals :- N is M.
-get_numbered_goal_aux N [(M, NGoal)|NGoals] [(M, NGoal)|Left] Selected Right :-
-    not (N is M),
-    get_numbered_goal_aux N NGoals Left Selected Right.
+mode (get_goals_from_selector i i o o).
+get_goals_from_selector _ [] [] [].
+get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :- 
+    Sel N, append Goal Selected' Selected,
+    get_goals_from_selector Sel Gs Selected' Rest.
+get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :-
+    not (Sel N), append Goal Rest' Rest,
+    get_goals_from_selector Sel Gs Selected Rest'.
 
+%mode (get_numbered_goal_aux i i o o o).
+%get_numbered_goal_aux A B C D E :- print (get_numbered_goal_aux A B C D E), fail.
+    %term_to_string N SN,
+    %ErrMsg is "Goal " ^ SN ^ " not in list",
+    %print ErrMsg, fail.
+%get_numbered_goal_aux N [] [] nil [].
+%get_numbered_goal_aux N [(M, NGoal)|NGoals] [] NGoal NGoals :- N is M.
+%get_numbered_goal_aux N [(M, NGoal)|NGoals] [(M, NGoal)|Left] Selected Right :-
+%    not (N is M), get_numbered_goal_aux N NGoals Left Selected Right.
+
+mode (get_numbered_goal i i o o).
+get_numbered_goal _ [] none []. % N is not in list
+get_numbered_goal N [(M, Goal)|Goals] Goal Goals :- N is M.
+get_numbered_goal N [(M, _) as Goal|Goals] Selected Rest :-
+    not (N is M), append Goal Rest',
+    get_numbered_goal N Goals Selected Rest'.
+
+% Search for goals in an unordered manner
 mode (get_numbered_goals i i o o).
 %get_numbered_goals A B C D :- print (get_numbered_goals A B C D), fail.
 get_numbered_goals [] NGoals [] NGoals.
 get_numbered_goals [N|Ns] NGoals [S|Selected] Rest :-
-    get_numbered_goal_aux N NGoals Left S Right,
-    append Left Right NGoals',
-    get_numbered_goals Ns NGoals' Selected Rest.
+    get_numbered_goal N NGoals S NGoals',
+    (S = none, print S "not in list", !, fail;
+    get_numbered_goals Ns NGoals' Selected Rest).
 
 mode (label_goals i i o o).
 %label_goals A B C D :- print (label_goals A B C D), fail.
@@ -304,6 +420,49 @@ dec_greater N [M|MS] [M'|MS'] :-
 mode (add_labels i i o).
 add_labels [] [] [].
 add_labels [L|Ls] [Goal|Goals] [(L, Goal)|LGoals] :- add_labels Ls Goals LGoals.
+
+% Get indexed goals given a possibly unordered list of indexes.
+mode (search_focused i i o o o).
+search_focused [] RemainingGoals [] [] RemainingGoals.
+search_focused [Id|Ids] Goals Focused NotFound Rest :-
+    get_numbered_goal Id Goals Goal Rest',
+    (Goal = nil, append Id NotFound' NotFound,          % Rest' = Goals
+    search_focused Ids Goals Focused NotFound' Rest, !;
+    append G Focused' Focused, search_focused Ids Rest' NotFound Rest).
+
+mode (search_focused i i i o o o).
+% Two termination cases:
+%   1. no remaining indices
+%   2. some remaining indices but empty levels
+search_focused_levels [] I _ [] [] I. 
+search_focused_levels RemainingIds [] [] [] RemainingIds I. 
+% Focus goals from a branch
+search_focused_levels Ids [bstate BCtx Out1 Out2|I] [b|L] Focused NotFound NewInactive :-
+    unlabel_goals BCtx UBCtx,
+    search_focused Ids UBCtx FocusedBCtx RemIdsBCtx _,
+    search_focused RemIdsBCtx Out1 FocusedOut1 RemIds1 RestOut1,
+    search_focused RemIds1 Out2 FocusedOut2 RemIds2 RestOut2,
+    append FocusedOut1 FocusedOut2 Tmp,
+    append FocusedBCtx Tmp AllFocused,
+    append AllFocused Focused' Focused,
+    append [bstate BCtx RestOut1 RestOut2] NewInactive' NewInactive,
+    search_focused_levels RemIds2 I L Focused' NotFound NewInactive'.
+% focus goals from another focus
+search_focused_levels Ids [OldActive|I] [f|L] Focused NotFound NewInactive :-
+    search_focused Ids OldActive FOldActive RemainingIds RestOldActive,
+    append RestOldActive NewInactive' NewInactive,
+    append FOldActive Focused' Focused,
+    search_focused_levels RemainingIds I L Focused' NotFound NewInactive'.
+
+
+% -------------------------------- %
+% ---- BUILD NEWGOALS HELPERS ---- %
+% -------------------------------- %
+
+not_a_dup _ [].
+not_a_dup N [vdecl N _|_] :- !, print "Varname" N "already used", fail.
+not_a_dup N [vdecl _ _|VDecls] :- not_a_dup N VDecls. 
+
 
 % ----------------------- %
 % ---- META RECOVERY ---- %

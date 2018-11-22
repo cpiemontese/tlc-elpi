@@ -3,19 +3,25 @@
 % -------------------- %
 
 print_status (state Active [bstate [] _ CtxCpy|_] [b|_] _) :-
+    print,
     print_actives Active,
     print "Branching context:",
     print_ctx "    " 0 CtxCpy.
 print_status (state Active [bstate [(N, _)|_] _ CtxCpy|_] [b|_] _) :-
+    print,
     print_actives Active,
     print "Branching context:",
     print_ctx "    " N CtxCpy.
+print_status (state Active _ [f|_] _) :-
+    print,
+    print "In focus",
+    print_actives Active.
 
 print_status (state Active _ _ _) :-
+    print,
     print_actives Active.
 
 print_actives Active :-
-    print,
     length Active N,
     print_n_open_goals N,
     print_goals "" Active.

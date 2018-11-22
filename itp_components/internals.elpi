@@ -23,6 +23,8 @@ itp_loop _ State _ [] [] :- empty_state State.
 
 % Loop without script as input
 itp_loop Term State [] OutGoals OutScript :-
+    State = state _ _ L _,
+    print L,
     print_status State,
     prompt_user "input tactic" Tac,
     (Tac = undo, !, fail;
@@ -75,7 +77,7 @@ reachable_goal Term (goal X _ _ _) :-
 %   - restore the current list on top of the inactive list
 
 mode (process_tac i i o).
-%process_tac A B C :- print (process_tac A B C), fail.
+process_tac A B C :- print (process_tac A B C), fail.
 
 % ---- BRANCHING ---- %
 
@@ -200,16 +202,18 @@ process_tac (focus []) _ _ :- print "error: no indexes for focus", fail.
 process_tac (focus GoalIds) (state Active Inactive L M) (state NewActive [Rest|NewInactive] [f|L] M) :-
     search_focused GoalIds Active FActive RemainingIds Rest,
     search_focused_levels RemainingIds Inactive L FInactive RIds NewInactive,
-    (RIds = [], !; print "error: focus on non existent goals" RIds).
+    append FActive FInactive NewActive,
+    (RIds = [], !; print "error: focus on non existent goals" RIds),
+    term_to_string GoalIds GIS, Msg is "Focused on " ^ GIS, print Msg.
 process_tac unfocus (state [] [I|Inactive] [f|Levels] M) (state I Inactive Levels M).
 
 % error reporting
-process_tac unfocus (state _ _ _ _) _ :-
-    print "error: you can not unfocus until all goals are closed", fail.
 process_tac unfocus (state _ _ [] _) _ :-
     print "error: no focus to close", fail.
 process_tac unfocus (state _ - [b|_] _) _ :-
     print "error: branch must be closed with unbranch", fail.
+process_tac unfocus (state _ _ _ _) _ :-
+    print "error: you can not unfocus until all goals are closed", fail.
     
 
 % ---- PAREN ---- %
@@ -268,10 +272,12 @@ htac Tac [Goal|Goals] NewGoals :-
 % HTac come process_tac lato utente, prendono lo stato e ritornano un nuovo
 % stato, possono chiamare tinycal al loro interno
 process_tac Tac (state Goals I L Mgn) (state NewGoals I L NMgn) :-
-    bind_ltac Tac Goals UnlabeledGoals,
-    label_goals Mgn UnlabeledGoals NMgn NewGoals.
+    unlabel_goals Goals UGoals, 
+    bind_ltac Tac UGoals NewUnlabeledGoals,
+    label_goals Mgn NewUnlabeledGoals NMgn NewGoals.
 
 mode (bind_ltac i i o).
+%bind_ltac A B C :- print (bind_ltac A B C), fail.
 bind_ltac _ [] [].
 bind_ltac Tac [Goal|Goals] NewGoals :-
     exec_tac Tac Goal NewGoals',
@@ -376,7 +382,7 @@ get_goals_from_selector Sel [(N, _) as Goal|Gs] Selected Rest :-
 
 mode (get_numbered_goal i i o o).
 get_numbered_goal _ [] none []. % N is not in list
-get_numbered_goal N [(M, Goal)|Goals] Goal Goals :- N is M.
+get_numbered_goal N [(M, _) as Goal|Goals] Goal Goals :- N is M.
 get_numbered_goal N [(M, _) as Goal|Goals] Selected Rest :-
     not (N is M), append Goal Rest',
     get_numbered_goal N Goals Selected Rest'.
@@ -423,17 +429,20 @@ add_labels [L|Ls] [Goal|Goals] [(L, Goal)|LGoals] :- add_labels Ls Goals LGoals.
 
 % Get indexed goals given a possibly unordered list of indexes.
 mode (search_focused i i o o o).
+search_focused A B C D E :- print (search_focused A B C D E), fail.
 search_focused [] RemainingGoals [] [] RemainingGoals.
 search_focused [Id|Ids] Goals Focused NotFound Rest :-
     get_numbered_goal Id Goals Goal Rest',
     (Goal = nil, append Id NotFound' NotFound,          % Rest' = Goals
     search_focused Ids Goals Focused NotFound' Rest, !;
-    append G Focused' Focused, search_focused Ids Rest' NotFound Rest).
+    append [Goal] Focused' Focused,
+    search_focused Ids Rest' Focused' NotFound Rest).
 
-mode (search_focused i i i o o o).
+mode (search_focused_levels i i i o o o).
 % Two termination cases:
 %   1. no remaining indices
 %   2. some remaining indices but empty levels
+%search_focused_levels A B C D E F :- print (search_focused A B C D E F), fail.
 search_focused_levels [] I _ [] [] I. 
 search_focused_levels RemainingIds [] [] [] RemainingIds I. 
 % Focus goals from a branch

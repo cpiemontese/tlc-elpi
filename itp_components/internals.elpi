@@ -41,16 +41,14 @@ itp_loop Term State [Tac|Tacs] OutGoals OutScript :-
 
 
 empty_state (state [] [] [] _).
-% Invariant: OG is a list of tuples [(int, goal), (int, goal), ...]
+% OG is a list of tuples [(int, goal), (int, goal), ...]
 get_outgoals Term (state OG _ _ _) OG' :-
-    unlabel_goals OG UOG,
-    remove_unreachable_goals Term UOG OG'.
+    unlabel_goals OG UOG, remove_unreachable_goals Term UOG OG'.
 
 mode (remove_unreachable_goals i i o).
 remove_unreachable_goals _ [] [].
 remove_unreachable_goals Term [Goal|Goals] [Goal|RGoals] :-
-    reachable_goal Term Goal,
-    remove_unreachable_goals Term Goals RGoals.
+    reachable_goal Term Goal, remove_unreachable_goals Term Goals RGoals.
 remove_unreachable_goals Term [_|Goals] RGoals :-
     remove_unreachable_goals Term Goals RGoals.
 
@@ -83,50 +81,48 @@ process_tac A B C :- print (process_tac A B C), fail.
 %            the Active list always keep their old label
 
 % skip_goal blocks the user until he/she acknowledges with skip
-% skip just removes skip_goal, unbranch, shift etc will still be needed
 process_tac skip (state [(0, skip_goal)] _I ([b|_] as L) _M) (state [] _I L _M).
 
 process_tac T (state [(0, skip_goal)] _ _ _) _ :-
     print "you have to skip", fail.
 
-% Invariant: branch is always called on a state that has at least one goal
-% branch lables branch context goals but they are only needed for projection,
-% so we can keep numbering goals from max goal number
+/*
+- branch is always called on a state that has at least one goal, otherwise fail
+- branch lables branch context goals but they are only needed for projection, so
+  we can keep numbering goals from max goal number
+*/
 process_tac branch
     (state ([Goal|_] as Goals) I L M)
     (state [Goal] [bstate BranchCtx [] []|I] [b|L] M) :-
     label_branch_ctx Goals BranchCtx.
 
-% XXX(Coen): no build_newgoals, dovrebbero essere recuperati da chi genera i
-%   side-effect (ricorsivamente) fare un check per essere sicuri
-% XXX: non credo che questo sia sbagliato, o meglio puo' essere sbagliata la
-%      semantica i.e. i goal non vengono resi attivi, ma il posto secondo me e'
-%      giusto, anche perche' farlo con metaregole diventa molto error prone
-% Invariant: shift assumes that there is always a goal to shift to (i.e. at
-%            least two goals on top of the branch context). Otherwise we fail
-% Shift on a closed goal i.e. a goal instantiated by another one by side-effect.
-% We need to build new goals (if any can be built), eventually labeling them. If
-% there are no new goals the user has to acknowledge it with a skip
-process_tac shift
-    (state Active [bstate [_, (_, (_, goal X T Y V) as NewHd) as Goal|Gs] BranchOut C|I] ([b|_] as L) Mgn)
-    (state NewActive [bstate [Goal|Gs] NewOut C|I] L NMgn) :-
-    closed_goal NewHd, intro_and_build Y V NewGoals,
-    new_goals_to_new_active NewGoals Mgn NewActive NMgn,
-    append BranchOut Active NewOut.
+/*
+- shift assumes that there is always a goal to shift to (i.e. at least two goals
+  on top of the branch context, otherwise fail
+*/
 
-% Shift from a non elaborated goal, add to the list of non elaborated branch
-% context goals i.e. BOTop
+% shift ON a closed goal FROM an NON elaborated branch
 process_tac shift
-    (state [Hd] [bstate [Hd, (_, NewHd) as Goal|Gs] BO BOTop|I] ([b|_] as L) M)
-    (state [NewHd] [bstate [Goal|Gs] BO NewBOTop|I] L M) :-
-    print "horo",
+    (state [Hd] [bstate [(_, Hd), (_, (_, closed_goal)) as ClosedGoal|Gs] BO BOTop|I] ([b|_] as L) M)
+    (state [(0, skip_goal)] [bstate [ClosedGoal|Gs] BO NewBOTop|I] ([b|_] as L) M) :-
     append BOTop Hd NewBOTop.
 
-% Shift on a non closed goal from an elaborated goal
+% shift ON a closed goal FROM an elaborated branch
 process_tac shift
-    (state Active [bstate [_, (_, NewHd) as Goal|R] BranchOut C|I] ([b|_] as L) M)
-    (state [NewHd] [bstate [Goal|R] NewOut C|I] L M) :-
-    print "huru",
+    (state Active [bstate [_, (_, (_, closed_goal)) as ClosedGoal|Gs] BranchOut BOT|I] ([b|_] as L) M)
+    (state [(0, skip_goal)] [bstate [ClosedGoal|Gs] NewOut BOT|I] ([b|_] as L) M) :-
+    append BranchOut Active NewOut.
+
+% shift ON a NON closed goal FROM a NON elaborated goal
+process_tac shift
+    (state [Hd] [bstate [(_, Hd), (_, NewHd) as Goal|Gs] BO BOTop|I] ([b|_] as L) M)
+    (state [NewHd] [bstate [Goal|Gs] BO NewBOTop|I] L M) :-
+    append BOTop Hd NewBOTop.
+
+% shift ON a NON closed goal FROM an elaborated goal
+process_tac shift
+    (state Active [bstate [_, (_, NewHd) as Goal|R] BranchOut BOT|I] ([b|_] as L) M)
+    (state [NewHd] [bstate [Goal|R] NewOut BOT|I] L M) :-
     append BranchOut Active NewOut.
 
 process_tac unbranch
@@ -157,17 +153,14 @@ process_tac (project Selector)
     get_goals_from_selector Selector Goals LS Rest,
     unlabel_goals LS Selected.
 
-% NOTE: after a project all we don't care about the branch context becuase no
-%       more shifts or projections can be done, only unbranch.
-% A shift after a project all fails because shift expects at least two elements
-% on top of the branch context list
+% after a project all we don't care about the branch context becuase no more
+% shifts or projections can be done, only unbranch.
 process_tac (project all)
     (state [Hd] [bstate ([(_, Hd)|Ctx] as AllCtx) BO C|I] ([b|_] as L) M)
     (state AllGoals [bstate [@empty_goal] BO C|I] L M) :-
     unlabel_goals AllCtx AllGoals.
 
 % error reporting
-% Invariant: shift can never be called on a branch context with an empty list
 process_tac shift
     (state A [bstate [_] _ _|_] _ _) _ :-
     print "error: shift cannot be performed on a single goal context", fail.
@@ -188,7 +181,7 @@ process_tac unbranch (state _ _ [] _) _ :-
 process_tac unbranch (state _ _ [f|_] _) _ :-
     print "error: focus must be closed with unfocus", fail.
 
-% In a branch but not in a projectable form
+% in a branch but not in a projectable form
 process_tac (project _) (state _ _ [b|_] _) _ :-
     print "error: can't project in a developed branch", fail.
 process_tac (project _) (state _ _ [] _) _ :-
@@ -212,7 +205,8 @@ mode (order_list_by i i o).
 %order_list_by A B C :- print (order_list_by A B C), fail.
 order_list_by [] [] [].
 order_list_by NonEmpty [] _ :-
-    print "error: order_list_by called with index list bigger than the actual elements".
+    print "error: order_list_by, index list bigger than the actual elements",
+    fail.
 order_list_by UnorderedList [Id|Ids] OrderedList :-
     get_numbered_goal Id UnorderedList Goal Rest,
     append [Goal] OL' OrderedList,
@@ -280,11 +274,22 @@ htac Tac [Goal|Goals] NewGoals :-
     
 */
 
-% HTac come process_tac lato utente, prendono lo stato e ritornano un nuovo
-% stato, possono chiamare tinycal al loro interno
+% Invariant: here Tac is either an htac or an ltac, but it can't contain
+%            tinycals or tacticals
 process_tac Tac (state [] _ _ _) _ :- !, fail.
+% After process_tac Tac in a branch NewGoals will contain all new local goals
+% and also new goals from branches closed by side effect. Those branches will be
+% replaced with a closed_goal
+process_tac Tac
+    (state Goals [bstate BCtx BO BOT|I] ([b|_] as L) Mgn)
+    (state NewGoals [bstate NewBCtx BO BOT|I] L NMgn) :-
+    unlabel_goals Goals UGoals,
+    bind_ltac Tac UGoals NewUnlabeledGoals,
+    label_goals Mgn NewUnlabeledGoals NMgn NewLabeledGoals,
+    get_side_effect_goals BCtx NewBCtx SideEffectGoals,
+    append NewLabeledGoals SideEffectGoals NewGoals.
 process_tac Tac (state Goals I L Mgn) (state NewGoals I L NMgn) :-
-    unlabel_goals Goals UGoals, 
+    unlabel_goals Goals UGoals,
     bind_ltac Tac UGoals NewUnlabeledGoals,
     label_goals Mgn NewUnlabeledGoals NMgn NewGoals.
 
@@ -295,6 +300,16 @@ bind_ltac Tac [Goal|Goals] NewGoals :-
     exec_tac Tac Goal NewGoals',
     append NewGoals' NewGoals'' NewGoals,
     bind_ltac Tac Goals NewGoals''.
+
+mode (get_side_effect_goals i o o).
+get_side_effect_goals A B C :- print (get_side_effect_goals A B C), fail.
+get_side_effect_goals [] [] [].
+get_side_effect_goals [(M, (N, goal _ _ Y V as Goal))|Goals] [(M, (N, closed_goal))|NewBCtx] SideEffectGoals :-
+    closed_goal Goal, intro_and_build Y V SEG',
+    append SEG' SEG'' SideEffectGoals,
+    get_side_effect_goals Goals NewBCtx SEG''.
+get_side_effect_goals [Goal|Goals] [Goal|NewBCtx] SideEffectGoals :-
+    get_side_effect_goals Goals NewBCtx SideEffectGoals.
     
 
 /*
@@ -348,10 +363,6 @@ intro_and_build_aux Y V [vdecl N TN|VDecls] FVars NG :-
             intro_and_build_aux (Y x) V VDecls [(x, N)|FVars] NG
     ).
 
-mode (new_goals_to_new_active i i o o).
-new_goals_to_new_active [] Mgn [(0, skip_goal)] Mgn.
-new_goals_to_new_active NewGoals Mgn NewActive NMgn :-
-    label_goals Mgn NewGoals NMgn NewActive.
 
 % ------------------------- %
 % ---- TACTICS HELPERS ---- %
@@ -469,10 +480,6 @@ constraint isa read-evar read-refined of {
           print "align fail on" L1 "=" L1', halt)
         <=> (E2: (X = uvar K [], T = S)).
 }
-
-%mode (create_name_of_hyps i i o).
-%create_name_of_hyps [] [] [].
-%create_name_of_hyps [V|Vs] [vdecl W _|Ws] [name_of V StrW|Hyps] :- term_to_string W StrW, create_name_of_hyps Vs Ws Hyps.
 
 mode (create_copy_hyps i i o).
 create_copy_hyps [] [] [].

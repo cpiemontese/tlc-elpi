@@ -16,7 +16,7 @@ copy (elim_exist P T F) (elim_exist Q S G) :-
 
 % ---- FORALL ---- %
 copy (forall A B) (forall T S) :- copy A T, copy B S.
-copy (forall_lam A F) (forall B G) :-
+copy (forall_lam A F) (forall_lam B G) :-
     copy A B, pi x\ copy (F x) (G x).
 copy (forall_app L X) (forall_app J Y) :- copy L J, copy X Y.
 
@@ -29,7 +29,7 @@ copy (impl_app L X) (impl_app J Y) :- copy L J, copy X Y.
 % ---- OR ---- %
 copy (or A B) (or T S) :- copy A T, copy B S.
 copy (inr_or A B R) (inr_or T S R') :- copy A T, copy B S, copy R R'.
-copy (inl_or A B R) (inl_or T S R') :- copy A T, copy B S, copy R R'.
+copy (inl_or A B L) (inl_or T S L') :- copy A T, copy B S, copy L L'.
 copy (elim_or C W Cl Cr) (elim_or D W' Cl' Cr') :-
     copy C D, copy W W',
     (pi x\ copy (Cl x) (Cl' x)),
@@ -54,8 +54,8 @@ copy (p2 P) (p2 Q) :- copy P Q.
 copy (pair A B P Q) (pair T S M N) :-
     copy A T, (pi x\ copy (B x) (S x)), copy P M, copy Q N.
 copy (elim_setSigma P T F) (elim_setSigma Q S G) :-
-    (pi x\ copy (P x) (Q x)),
-    copy T S,
+    copy P Q,
+    (pi x\ copy (T x) (S x)),
     pi x y\ copy (F x y) (G x y).
 
 % ---- SETSUM ---- %

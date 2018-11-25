@@ -1,0 +1,84 @@
+% Internalization of substitution notion for closed terms of mtt
+
+% ---- AND ---- %
+copy (and A B) (and T S) :- copy A T, copy B S.
+copy (pair_and A B P Q) (pair_and T S M N) :-
+    copy A T, copy B S, copy P M, copy Q N.
+copy (p1_and P) (p1_and Q) :- copy P Q.
+copy (p2_and P) (p2_and Q) :- copy P Q.
+
+% ---- EXIST ---- %
+copy (exist A B) (exist T S) :- copy A T, copy B S.
+copy (pair_exist A B P Q) (pair_exist T S M N) :-
+    copy A T, copy B S, copy P M, copy Q N.
+copy (elim_exist P T F) (elim_exist Q S G) :-
+    copy P Q, copy T S, pi x y\ copy (F x y) (G x y).
+
+% ---- FORALL ---- %
+copy (forall A B) (forall T S) :- copy A T, copy B S.
+copy (forall_lam A F) (forall B G) :-
+    copy A B, pi x\ copy (F x) (G x).
+copy (forall_app L X) (forall_app J Y) :- copy L J, copy X Y.
+
+% ---- IMPLIES ---- %
+copy (implies A B) (implies T S) :- copy A T, copy B S.
+copy (impl_lam A F) (impl_lam B G) :-
+    copy A B, pi x\ copy (F x) (G x).
+copy (impl_app L X) (impl_app J Y) :- copy L J, copy X Y.
+
+% ---- OR ---- %
+copy (or A B) (or T S) :- copy A T, copy B S.
+copy (inr_or A B R) (inr_or T S R') :- copy A T, copy B S, copy R R'.
+copy (inl_or A B R) (inl_or T S R') :- copy A T, copy B S, copy R R'.
+copy (elim_or C W Cl Cr) (elim_or D W' Cl' Cr') :-
+    copy C D, copy W W',
+    (pi x\ copy (Cl x) (Cl' x)),
+    (pi y\ copy (Cr y) (Cr' y)).
+
+% ---- PROPEQ ---- %
+copy (propEq A M N) (propEq B P Q) :- copy A B, copy M P, copy N Q.
+copy (eq A X) (eq B Y) :- copy A B, copy X Y.
+
+% ---- SETPI ---- %
+copy (setPi A B) (setPi T S) :-
+    copy A T, pi x\ copy (B x) (S x).
+
+copy (lambda A F) (lambda B G) :- copy A B, pi x\ copy (F x) (G x).
+copy (app L X) (app J Y) :- copy L J, copy X Y.
+
+% ---- SETSIGMA ---- %
+copy (setSigma A B) (setSigma T S) :-
+    copy A T, pi x\ copy (B x) (S x).
+copy (p1 P) (p1 Q) :- copy P Q.
+copy (p2 P) (p2 Q) :- copy P Q.
+copy (pair A B P Q) (pair T S M N) :-
+    copy A T, (pi x\ copy (B x) (S x)), copy P M, copy Q N.
+copy (elim_setSigma P T F) (elim_setSigma Q S G) :-
+    (pi x\ copy (P x) (Q x)),
+    copy T S,
+    pi x y\ copy (F x y) (G x y).
+
+% ---- SETSUM ---- %
+copy (setSum A B) (setSum T S) :-
+    copy A T, pi x\ copy (B x) (S x).
+copy (inr A B R) (inr T S R') :-
+    copy A T, (pi x\ copy (B x) (S x)), copy R R'.    
+copy (inl A B L) (inl T S L') :-
+    copy A T, (pi x\ copy (B x) (S x)), copy L L'.    
+copy (elim_setSum C W Cl Cr) (elim_setSum D W' Cl' Cr') :-
+    (pi x\ copy (C x) (D x)),
+    copy W W',
+    (pi x\ copy (Cl x) (Cl' x)),
+    (pi y\ copy (Cr y) (Cr' y)).
+
+% ---- SINGLETON ---- %
+copy singleton singleton.
+copy star star.
+copy (elim_singleton T C X) (elim_singleton S D Y) :-
+    copy T S, (pi x\ copy (C x) (D x)), copy X Y.
+
+copy A A.
+
+%subst A B C :- print (subst A B C), fail.
+subst M [] S :- copy M S.
+subst M [T|TS] S :- pi x\ copy x T => subst (M x) TS S.

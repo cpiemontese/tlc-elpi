@@ -30,7 +30,7 @@ hstep (p2 Pair) Cc :- hnf Pair (pair _ _ _ Cc).
 
 of (pair B C BB CC) (setSigma B C) (pair B C BB' CC') IE 
     :- spy(isa BB B BB' IE)
-    ,  spy(isa CC (C_BB) CC' IE),
+    ,  spy(isa CC (C_BB) CC' IE)
     ,  (ofType B _ IE)
     ,  (ofType (C_BB) _ IE)
     ,  pi bb\ (locDecl bb B, copy bb BB') => conv (C bb) C_BB

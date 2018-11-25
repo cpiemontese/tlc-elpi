@@ -1,0 +1,46 @@
+
+%%-- disjoint sum: setSum
+
+type setSum mttType -> mttType -> mttType.
+type inl, inr mttType -> mttType -> mttTerm -> mttTerm.
+type elim_setSum (mttTerm -> mttType) -> mttTerm -> (mttTerm -> mttTerm) -> (mttTerm -> mttTerm) -> mttTerm.
+
+%%Disjoint Sum Type
+
+ofType (setSum A B) set IE :- ofType A KIND1 IE, ofType B KIND2 IE,
+    pts_fun KIND1 KIND2 set.
+
+of (inr A B Bb) (setSum A B) IE 
+    :- ofType B _ IE
+     , ofType A _ IE
+     , isa Bb B IE
+     .
+
+of (inl A B Aa) (setSum A B) IE  
+    :- ofType A _ IE
+     , ofType B _ IE
+     , isa Aa A IE
+     .
+
+of (elim_setSum C W Cl Cr) (C W) IE 
+    :- spy (of W (setSum A B) IE)
+     , spy (ofType (setSum A B) _ IE) 
+     , spy (pi z\ locDecl z (setSum A B) => ofType (C z) col IE)
+     , spy (pi x\ locDecl x A => spy(isa (Cl x) (C (inl A B x)) IE) ) 
+     , spy (pi y\ locDecl y B => isa (Cr y) (C (inr A B y)) IE) 
+     .
+
+hstep (elim_setSum _C W Cl _Cr) (Cl Wl) 
+    :- hnf W (inl _A _B Wl)
+    .
+hstep (elim_setSum _C W _Cl Cr) (Cr Wr) 
+    :- hnf W (inr _A _B Wr)
+    .
+
+dconv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr')
+    :- (conv W W')
+    ,  (of W AB IE_)
+    ,  (pi z \ locDecl z AB => (conv (C z) (C' z) ) )
+    ,  (pi z \ locDecl z AB => (conv (Cl z) (Cl' z) ) )
+    ,  (pi z \ locDecl z AB => (conv (Cr z) (Cr' z) ) )
+    .

@@ -1,0 +1,32 @@
+type nodebug, debug, debug_fails_only, checks prop.
+type indent int -> prop.
+
+announce G :- bracket "." ">>" G "\n", fail.
+
+% a possible use is to check that intermediate terms and tipes are wellformed.
+check P :- checks, !, P.
+check _.
+
+indent 0.
+spy G :- not nodebug, debug, !, indent X, Y is X + 1, ((indent Y :- !) => spy' G).
+spy G :- G, !.
+spy G :- debug_fails_only, bracket "+" "]Fail  \n" G "\n",  fail.
+
+spy' G :-  (bracket "_" "[Begin\n" G "\n", G, !, bracket "-" "]Success\n" G "\n"). 
+spy' G :-  bracket "+" "]Fail  \n" G "\n",  fail.
+
+bracket IndentChar Open G Close 
+	:- indent N
+	, indent_str N IndentChar IndentStr
+	, term_to_string G S
+	, term_to_string N Ns
+	, Output is (Ns ^ IndentStr ^ Open ^ S ^ Close)
+	, print Output.
+
+%indent_str 0 _ "" :- !.
+indent_str N _ "" :- (N - 1) < 0 , !.
+indent_str N C S1 :- N' is (N - 1), indent_str N' C S2, S1 is S2 ^ C. 
+
+
+makeline :- print "||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||".
+

@@ -1,0 +1,47 @@
+type exist mttType -> (mttTerm -> mttType) -> mttType.
+type pair_exist mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm.
+type elim_exist mttTerm -> mttType -> (mttTerm -> mttTerm -> mttTerm) -> mttTerm.
+
+
+ofType (exist B C) KIND IE
+    :- ofType B KIND1 IE
+    ,  (pi x\ locDecl x B  => ofType (C x) KIND2 IE)
+    ,  pts_for KIND1 KIND2 KIND
+    .
+
+of (pair_exist B C BB CC) (exist B C) IE 
+    :- spy(ofType (exist B C) _ IE)
+    ,  spy(isa BB B IE)
+    ,  spy(isa CC (C BB) IE)
+    .
+
+of (elim_exist Pair M MM) M IE 
+    :- spy(isa Pair (exist B C) IE)
+    ,  spy(isaType M propc IE)
+    ,  (pi x \ pi y \ locDecl x B => locDecl y (C x) =>  
+                spy(isa (MM x y) M IE))
+    .
+
+hstep (elim_exist W _M MM) (MM Bb Cc) 
+    :- hnf W (pair_exist _B _C Bb Cc)
+    .
+
+dconv (pair_exist B C Bb Cc) (pair_exist B' C' Bb' Cc')
+    :- (conv B B')
+    ,  (pi x\ locDecl x B => conv (C x) (C' x))
+    ,  (conv Bb Bb')
+    ,  (conv Cc Cc')
+    .
+
+dconv (elim_exist Pair M Mm) (elim_exist Pair' M' Mm') 
+    :- (conv Pair Pair')
+    ,  (isa Pair (exist B C) IE_)
+    ,  (pi x\ pi y\ locDecl x B => locDecl y (C x)
+        => conv (Mm x y) (Mm' x y))
+    ,  (conv M M')
+    .
+
+dconv (exist B C) (exist B' C') 
+    :- (conv B B')
+    ,  (pi x\ locDecl x B => conv (C x) (C' x))
+    .

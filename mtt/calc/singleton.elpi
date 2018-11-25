@@ -1,0 +1,159 @@
+%%-- singleton set/unit type: singleton
+
+type  singleton mttType.
+type  star mttTerm.
+type  elim_singleton mttTerm -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
+
+
+ofType singleton set IE_.
+
+of star singleton IE_.
+
+of (elim_singleton Star C Cc) (C Star) IE 
+    :- isa Star singleton IE
+    ,  (pi z\ locDecl z singleton => isaType (C z) col IE)
+    ,  isa Cc (C star) IE
+    .
+
+hstep (elim_singleton star C Cc) Cc 
+    :- spy(isa Cc (C star) IE_)
+    .
+
+
+dconv (elim_singleton T C CC) (elim_singleton T' C' CC') :- conv T T' , conv CC CC',
+    (pi z\ locDecl z singleton => conv (C z) (C' z)).
+
+proof_eq star star singleton H 
+    :- setoid_refl singleton K
+    ,  H = K star
+    .
+%
+%Sono abbastanza sicuro che il proseguire con il metodo naive richiederebbe circa n^2 casi
+%    :- spy(macro_tau singleton singleton
+%        (x\x'\h\xi\xi'\hi\ tau (C' S') (C S) (FC xi xi' hi))
+%        )
+%    ,  spy(interp S Si)
+%    ,  spy(interp S' Si')
+%    ,  spy(proof_eq S S' singleton HS)
+%    ,  spy(FC Si' Si HS (elim_singleton S' C CC') )
+%    ,  proof_eq CC CC' C HCC
+%    ,  setoid
+
+
+setoid_eq singleton (x\ y\ propId singleton x y).
+setoid_refl singleton (x\ id singleton x).
+setoid_symm singleton P
+    :- P = (x\ y\ h\ elim_id h (a\ b\ propId singleton b a) (a\ id singleton a) )
+    ,  spy( pi x\ pi y\ pi h\ locDecl x singleton 
+        => locDecl y singleton 
+            => locDecl h (propId singleton x y) 
+                => of (P x y h) _ int
+        ) % this structure should check that the handwritten proof term P is well typed
+    . 
+
+setoid_tran singleton P 
+    :- P = (a\b\c\h\k\ 
+            impl_app 
+            (elim_id h 
+                (x\ y\ implies (propId singleton y c) (propId singleton x c)) 
+                (u\ impl_lam (propId singleton u c) (y\y) )
+            )
+            k
+    )
+    ,  spy(pi a\ pi b\ pi c\ pi h\ pi k\ 
+        locDecl a singleton => locDecl b singleton => locDecl c singleton => 
+        locDecl h (propId singleton a b) =>
+        locDecl k (propId singleton b c) =>
+            spy(of (P a b c h k) 
+                (propId singleton a c) 
+                int
+            )
+    ).
+
+interp singleton singleton.
+interp star star.
+interp (elim_singleton T C CC) (elim_singleton Ti Ci CCi) 
+    :- spy(interp T Ti)
+    ,  spy(interp CC CCi)
+    ,  spy(pi x\ locDecl x singleton => spy(interp (C x) (Ci x)))
+    .
+/* SINGLETON NEW INTERPRETATION AND LIBRARY */
+new_interp_type singleton singleton_setoid.
+
+new_interp_dep_type B (x \ singleton) O :-
+   interp B Bi,
+   new_interp_type B Bs,
+   O = singleton_setoidDep Bi Bs.
+   
+% conv X Y :- isa X singleton IE, isa Y singleton IE.
+
+singletonLib L :-
+ L =
+ [
+   (locDefL singleton_setoid (setoid singleton)
+    (pair
+      (setPi singleton x \ setPi singleton y \ propS) 
+      (rel \ and  (and (forall singleton x \ decode (app (app rel x) x))
+      	     	       (forall singleton x\ forall singleton y\ forall singleton z\ implies (decode (app (app rel x) y))
+		       	       (implies (decode (app (app rel y) z)) (decode (app (app rel x) z)))))
+      	     	  (forall singleton x1\ forall singleton x2\ implies (decode (app (app rel x1) x2))
+		       	   	   	     	 		      	    (decode (app (app rel x2) x1))))
+      (lambda singleton x \ lambda singleton y \ encode (propId singleton x y))
+      (pair_and (and (forall singleton x \ decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) x))
+      		     (forall singleton x\ forall singleton y\ forall singleton z\
+		      	implies (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) y))
+		       	 (implies (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) y) z))
+			   (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) z)))))
+                (forall singleton x1\ forall singleton x2\
+	    	      	implies (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x1) x2))
+		       	   	 (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x2) x1)))
+            (pair_and (forall singleton x \ decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) x))
+		      (forall singleton x\ forall singleton y\ forall singleton z\
+		      	implies (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) y))
+		       	 (implies (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) y) z))
+			   (decode (app (app (lambda singleton x \ lambda singleton y \ encode (propId singleton x y)) x) z))))
+		      % reflexivity
+		      (forall_lam singleton x \ id singleton x)
+		      % transitivity
+		      (forall_lam singleton x\ forall_lam singleton y\ forall_lam singleton z\
+		      	      impl_lam (propId singleton x y) d1\
+		       	       (impl_lam (propId singleton y z) d2\
+			       (elim_singleton z (v1\ (propId singleton x v1))
+			       		       	 (elim_singleton x (v2\ (propId singleton v2 star)) (id singleton star))))))
+	    %% symmetry 
+	   (forall_lam singleton x1\ forall_lam singleton x2\
+	     impl_lam (propId singleton x1 x2) d\
+	     	(elim_id d (x\y\ (propId singleton y x)) (x\ id singleton x) ))
+	   )))
+ ,
+  (univPi Bi \
+    (univPiT (setoid Bi) bS\
+
+     (locDefL (singleton_setoidDep Bi bS) (setoidDep Bi (x \ singleton) bS)
+       (pair (setSigma (setPi Bi _\ setoid singleton) _\
+             	       (setPi Bi x \ setPi Bi x' \
+		       	      setPi (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
+	     (cc\ (setPi Bi x1\ setPi Bi x2\
+	     	setPi singleton y1\ setPi singleton y2\
+	          setPi (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) d1\
+	            setPi (decode (app (app (app (setoid_rel singleton)
+		    	  	       (app (elim_setSigma cc (_\ (setPi Bi _\ setoid singleton)) (x\y\x)) x1)) y1) y2)) d2\
+	              (decode (app (app (app (setoid_rel singleton)
+			      (app (elim_setSigma cc (_\ (setPi Bi _\ setoid singleton)) (x\y\x)) x2))
+			      (app (app (app (app (elim_setSigma cc
+			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (setoid_rel Bi) bS) x) x'))
+						    	       _ \ setPi singleton _ \ singleton)) (x\y\y)) x1) x2) d1) y1))
+			      (app (app (app (app (elim_setSigma cc
+			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (setoid_rel Bi) bS) x) x'))
+						    	       _ \ setPi singleton _ \ singleton)) (x\y\y)) x1) x2) d1) y2)))))
+      	     (pair (setPi Bi _\ setoid singleton)
+	     	   (_\ (setPi Bi x \ setPi Bi x' \
+		       	      setPi (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
+	           (lambda Bi x \ singleton_setoid)
+		   (lambda Bi x \ lambda Bi x' \ lambda (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ lambda singleton y \ y))
+	     (lambda Bi x1\ lambda Bi x2\ lambda singleton y1\ lambda singleton y2\
+	       lambda (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) d1\
+	        lambda (decode (app (app (app (setoid_rel singleton) (app (lambda Bi x \ singleton_setoid) x1)) y1) y2)) d2\
+		 d2))	 
+    )))
+ ].

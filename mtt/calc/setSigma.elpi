@@ -1,0 +1,1399 @@
+% for now this is only needed to interpret dependent products types, so no interpretation is needed.
+
+%%-- dependet sums: setSigma
+type setSigma mttType -> (mttTerm -> mttType) -> mttType.
+type pair mttType ->  (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm.
+type elim_setSigma mttTerm -> (mttTerm -> mttType) -> (mttTerm -> mttTerm -> mttTerm) -> mttTerm.
+
+
+ofType (setSigma B C) KIND IE 
+    :- spy(ofType B KIND1 IE)
+    ,  spy(pi b\ locDecl b B => ofType (C b) KIND2 IE)
+    ,  (pts_fun KIND1 KIND2 KIND)
+    .
+
+%%%% Begin of: extension to the calculus: primitive projections
+%% I do not make them convertible with their expansion.
+%% Adding them as parametric definitions to the library is a problem
+%% because of the way we look for proofs of (propEq _ A B) in the
+%% extensional calculus.
+type p1,p2 mttTerm -> mttTerm.
+
+of (p1 Pair) B IE :- isa Pair (setSigma B _) IE.
+of (p2 Pair) (C (p1 Pair)) IE :- isa Pair (setSigma B_ C) IE.
+
+hstep (p1 Pair) Bb :- hnf Pair (pair _ _ Bb _).
+hstep (p2 Pair) Cc :- hnf Pair (pair _ _ _ Cc).
+%%%% End of:   extension to the calculus: primitive projections
+
+of (pair B C BB CC) (setSigma B C) IE 
+    :- (ofType B _ IE)
+    ,  (ofType (C BB) _ IE)
+    ,  spy(isa BB B IE)
+    ,  spy(isa CC (C BB) IE)
+    .
+
+of (elim_setSigma Pair M MM) (M Pair) IE 
+    :- spy (isa Pair (setSigma B C) IE)
+    ,  pi z \ locDecl z (setSigma B C) => spy (ofType (M z) _ IE)
+    ,  pi x \ pi y \
+            locDecl x B => locDecl y (C x) =>  
+                spy (isa (MM x y) (M (pair B C x y)) IE)
+    .
+
+hstep (elim_setSigma Pair _M Mm) (Mm Bb Cc) 
+    :- hnf Pair (pair _B _C Bb Cc)
+    .
+
+
+dconv (setSigma B C) (setSigma B' C') :- (conv B B'), (pi x\ locDecl x B => conv (C x) (C' x)).
+
+dconv (pair B C BB CC) (pair B' C' BB' CC') 
+    :- !, % The cut is to avoid the eta rule below
+       (conv B B')
+    ,  (pi x\ locDecl x B => conv (C x) (C' x))
+    ,  (conv BB BB')
+    ,  (conv CC CC')
+    .
+
+dconv (elim_setSigma Pair M MM) (elim_setSigma Pair' M' MM') 
+    :- spy(conv Pair Pair')
+    ,  spy(isa Pair (setSigma B C) _)
+    ,  spy(pi z\ locDecl z (setSigma B C) => conv (M z) (M' z))
+    ,  spy(pi x\ pi y\  locDecl x B => locDecl y (C x) => conv (MM x y) (MM' x y))
+    .
+
+% Eta rule
+dconv X (pair B C BB CC)
+    :- spy (isa X (setSigma B C) IE_)
+     , spy(conv (p1 X) BB)
+     , spy (conv (p2 X) CC).
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                   TRADUZIONE                                   %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+interp (setSigma B C) T :-
+       spy ( interp B Bi ),
+       spy ( macro_interp B (x\xi\_\_\ interp (C x) (Ci xi)) ),
+       spy (T = (setSigma Bi Ci) )
+       .
+
+interp (pair B C BB CC) T :-
+       interp B Bi,
+       of BB B' ext,                                     %% B' is the extensional type of BB
+       	     						 %% convertible to the type B
+       macro_interp B' (x\xi\_\_\ interp (C x) (Ci xi)),  		 	      	  	   
+       interp_isa BB B' BBi,   
+       interp_isa CC (C BB) CCi,			 
+       T = (pair Bi Ci BBi CCi)                          %% Ci parametric on xi, which is the
+       	   	       	   				 %% interpretation of an x:B', just like BBi
+       .
+
+/* interp (elim_setSigma Pair M MM) T :-
+       print "ELIM_SETSIGMA INTERPRETATION",
+       spy (isa Pair (setSigma B C) ext),
+       spy (interp B Bi),
+       spy (pi x \ pi x' => locDecl x B => locDecl x' Bi => interp x x' => interp (C x) (Ci x')),
+       spy (interp_isa MM (setPi (setSigma B C) D) MMi),
+       spy (interp_isa Pair (setSigma B C) PairI),				%% needs isa? Possible problem with types of function
+       	      	   					%% MM being different intensionally
+       spy (pi x \ pi y \ pi xi \ pi yi \
+            locDecl x B => locDecl y (C x) => locDecl xi Bi =>
+	    (interp x xi) => locDecl yi (Ci xi) => (interp y yi) =>  
+                (interp (M (pair B C x y)) (Mi xi yi))),
+       spy (T = (elim_setSigma PairI                           %% PairI: (setSigma Bi' Ci')
+			  (p\ (Mi p))   		  %% function from setSigma Bi' Ci' to the range of MM
+			  (w1\w2\ app (elim_setSigma (app (elim_setSigma MMi (_\setPi Bi Type) (x\y\x)) w1) %% T is a setSigma setPi proof
+			  	      		     (_\ (setPi (Ci w1) (_\ (Mi  w1 w2))))	 %% not really needed 
+						     (x\y\x))
+				       w2)))
+       .
+*/
+
+type setSigma_setoid mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm.
+type setSigma_setoidDep mttType -> (mttTerm -> mttType) -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm -> mttTerm.
+type gamma_trasp mttType -> (mttTerm -> mttType) -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm -> mttTerm -> mttTerm -> mttType.
+type setSigma_trasp mttType -> (mttTerm -> mttType) -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm -> mttTerm -> mttType.
+type gamma_setoidDep mttType -> (mttTerm -> mttType) -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm -> mttTerm.
+type setSigma_setoidRel mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm.
+
+setoid_eq (setSigma B C) P :-
+       print "SETSIGMA SETOID_EQ\n",
+       interp B Bi,
+       setoid_eq B EquB,
+       macro_interp B (x\xi\_\_\ (interp (C x) (Ci xi) ,
+       		      		 setoid_eq (C x) (EquC xi))),			   %% Equality over Ci xi
+       macro_tau_cov_cov B B (x\x'\h\xi\xi'\hi\ tau (C x) (C x') (FCC xi xi' hi)), %% Cast from type (C x)i to (C x')i with
+       		     			       	     	      	     	     	   %% x,x':B
+       EquB' = (lambda Bi x \ lambda Bi y \ encode (EquB x y)),
+       EquC' = (lambda Bi x \ lambda (Ci x) a \ lambda (Ci x) b \ encode (EquC x a b)),
+       Cast = (lambda Bi x \ lambda Bi x' \ lambda (EquB x x') d \ lambda (Ci x) a \ FCC x x' d a),
+       P = (s\z\
+             decode (app (app (app (setoid_rel (setSigma Bi Ci)) (app (setSigma_setoid Bi Ci EquB' EquC') Cast)) s) z)).
+
+type setSigmaLib list libraryEntry -> prop.
+
+/**** an exercise in translating terms so that they depend on
+      just one telescopic context variable ****/
+type pp mttTerm -> mttTerm -> mttTerm.
+translate T T' :- transl (lambda singleton _ \ T) T'.
+transl (lambda Gamma _ \ star) (lambda Gamma _ \ star).
+transl (lambda Gamma gamma \ lambda (A gamma) x\ M gamma x) OUT :-
+ transl (lambda (setSigma Gamma A) gamma_x \ M (p1 gamma_x) (p2 gamma_x)) O,
+ O = (lambda (setSigma Gamma A) gamma_x \ M' gamma_x),
+ OUT = (lambda Gamma gamma \ lambda (A gamma) x \ M' (pair Gamma A gamma x)).
+transl (lambda Gamma gamma \ pp (X gamma) (Y gamma))
+       (lambda Gamma gamma \ pp (X gamma) (Y gamma)).
+
+testaaa A :-
+ debug =>
+  translate (lambda singleton x \ lambda singleton y \ pp x y) A.
+/**** end of the exercise ****/
+
+/**** abstract a type over the subterms ****/
+/* input: a type T containing subterms
+   output: Delta, S and Terms such that
+     Delta |- S is a type,
+     Delta is a telescope
+     all terms in T are projections of the variable
+       of type Delta
+     Terms is an inhabitant of Delta s.t. S Terms = T */
+type abstract mttType -> mttType -> (mttTerm -> mttType) -> mttTerm -> prop.
+
+abstract singleton singleton (_ \ singleton) star.
+abstract (propEq T T1 T2) Delta S Terms :-
+   spy(abstract T DeltaT ST TermsT),
+   Delta = (setSigma DeltaT x \ setSigma (ST x) _ \ ST x),
+   S = (delta \ propEq (ST (p1 delta)) (p1 (p2 delta)) (p2 (p2 delta))),
+   Terms =
+    (pair DeltaT (x \ setSigma (ST x) _ \ ST x) TermsT
+      (pair (ST TermsT) (_ \ ST TermsT) T1 T2)).
+abstract (setPi A B) Delta S Terms :-
+   spy(abstract A DeltaA SA TermsA),
+   (pi delta \ pi a \ locDecl delta DeltaA => locDecl a (SA delta) =>
+     spy(abstract (B a) (DeltaB delta a) (SB delta a) (TermsB delta a))),
+   Delta = (setSigma DeltaA delta \ setPi (SA delta) a \ DeltaB delta a),
+   S = (delta \ setPi (SA (p1 delta)) a \ SB (p1 delta) a (app (p2 delta) a)),
+   Terms =
+    (pair DeltaA (delta \ setPi (SA delta) a \ DeltaB delta a)
+      TermsA (lambda (SA TermsA) a \ TermsB TermsA a)).
+abstract (setSigma A B) Delta S Terms :-
+   spy(abstract A DeltaA SA TermsA),
+   (pi delta \ pi a \ locDecl delta DeltaA => locDecl a (SA delta) =>
+     spy(abstract (B a) (DeltaB delta a) (SB delta a) (TermsB delta a))),
+   Delta = (setSigma DeltaA delta \ setPi (SA delta) a \ DeltaB delta a),
+   S = (delta \ setSigma (SA (p1 delta)) a \ SB (p1 delta) a (app (p2 delta) a)),
+   Terms =
+    (pair DeltaA (delta \ setPi (SA delta) a \ DeltaB delta a)
+      TermsA (lambda (SA TermsA) a \ TermsB TermsA a)).
+
+
+abstract_and_test T Delta S Terms :-
+ ofType T _ ext,
+ abstract T Delta S Terms,
+ ofType Delta _ ext,
+ isa Terms Delta ext,
+ conv T (S Terms).
+
+atest1 T Delta S Terms :-
+ T = (propEq singleton star star),
+ abstract_and_test T Delta S Terms.
+
+atest125 T Delta S Terms :-
+ T = (setPi singleton x \ singleton),
+ abstract_and_test T Delta S Terms.
+
+atest15 T Delta S Terms :-
+ T = (setPi singleton x \ propEq singleton x x),
+ abstract_and_test T Delta S Terms.
+
+atest2 T Delta S Terms :-
+ T = (setPi (propEq singleton star star) x \ propEq (propEq singleton star star) x x),
+ abstract_and_test T Delta S Terms.
+
+atest3 T Delta S Terms :-
+ pi y \ pi z \ locDecl y singleton => locDecl z singleton => (
+  T y z = (setPi (propEq singleton y z) x \ propEq (propEq singleton y z) x x),
+  abstract_and_test (T y z) (Delta y z) (S y z) (Terms y z)).
+
+/* The next example (i.e. T) is well typed only extensionally: to type the
+     target of the setPi one needs the hypothesis in scope.
+   Therefore the generated Terms is not :-(  because the hypothesis is not in
+     scope there. */
+atest4 T Delta S Terms :-
+ pi y \ pi z \ locDecl y singleton => locDecl z singleton => (
+  T y z = (setPi (propEq singleton y z) x \ propEq (propEq singleton z y) x x),
+  abstract_and_test (T y z) (Delta y z) (S y z) (Terms y z)).
+
+atest5 T Delta S Terms :-
+ pi y \ pi z \ locDecl y singleton => locDecl z singleton => (
+  T y z = (setSigma (propEq singleton y z) x \ propEq (propEq singleton y z) x x),
+  abstract_and_test (T y z) (Delta y z) (S y z) (Terms y z)).
+
+
+/**** end of abstract a type over the subterms ****/
+
+type singleton_setoid mttTerm.
+type singleton_setoidDep mttType -> mttTerm -> mttTerm.
+
+new_interp_type (setSigma B C) O :-
+   spy (interp B Bi),
+   spy (macro_interp B (x\xi\_\_\ interp (C x) (Ci xi))),
+   spy (new_interp_type B Bs),
+   spy (new_interp_dep_type B C Cs),
+   O = setSigma_setoid Bi Ci Bs Cs.
+
+new_interp_dep_type A (x \ setSigma (B x) (C x)) O :-
+   spy (interp A Ai),
+   macro_interp A (x\xi\_\_\ interp (B x) (Bi xi)),
+   spy(macro_interp (setSigma A B) (x\xi\_\_\ interp (C (p1 x) (p2 x)) (Ci xi))),
+   new_interp_type A As,
+   new_interp_dep_type A B Bs,
+   new_interp_dep_type (setSigma A B) (x \ C (p1 x) (p2 x)) Cs,
+   O = setSigma_setoidDep Ai Bi Ci As Bs Cs.
+
+setSigmaLib L :-
+ L =
+ [
+% setSigma_setoidRel
+  (univPi Bi\
+    univDepPi Bi Ci\
+     univPiT (setoid Bi) bS \
+      univPiT (setoidDep Bi Ci bS) cS \
+     locDefL (setSigma_setoidRel Bi Ci bS cS) (setPi (setSigma Bi Ci) _ \ setPi (setSigma Bi Ci) _ \ propS)
+       (lambda (setSigma Bi Ci) s \
+          lambda (setSigma Bi Ci) z \
+            encode (exist (decode (app (app (app (setoid_rel Bi) bS) (p1 s)) (p1 z))) d\
+               decode (app (app (app (setoid_rel (Ci (p1 z)))
+	              	   (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 z)))
+                     	   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 s)) (p1 z)) d) (p2 s)))
+                           (p2 z))))),
+     
+% setSigma_setoid
+  (univPi Bi \
+    univDepPi Bi Ci \
+     univPiT (setoid Bi) bS \
+      univPiT (setoidDep Bi Ci bS) cS \
+      (hyp
+      (pi x1\ isa x1 Bi int => pi x2\ isa x2 Bi int => pi y2\ isa y2 (Ci x2) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) int =>
+       (conv y2
+       	     (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+	     y2))))
+      (pi x1\ locDecl x1 Bi => pi x2\ locDecl x2 Bi => pi y2\ locDecl y2 (Ci x2) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) =>
+       (conv y2
+       	     (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+	     y2))))
+      (hyp
+      (pi x1\ isa x1 Bi int => pi x2\ isa x2 Bi int => pi y1\ isa y1 (Ci x1) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) int =>
+	    (conv (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2)
+             		       p) y1))
+		  y1))
+      (pi x1\ locDecl x1 Bi => pi x2\ locDecl x2 Bi => pi y1\ locDecl y1 (Ci x1) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) =>
+	    (conv (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2)
+             		       p) y1))
+		  y1))
+      (hyp
+       (pi x1\ isa x1 Bi int => pi x2\ isa x2 Bi int => pi y1\ isa y1 (Ci x1) int => pi y2\ isa y2 (Ci x2) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) int =>
+          (conv y2 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2) p) y1)) =>
+	    (conv y1 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+	   	   	(impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+		     y2)))
+      (pi x1\ locDecl x1 Bi => pi x2\ locDecl x2 Bi => pi y1\ locDecl y1 (Ci x1) => pi y2\ locDecl y2 (Ci x2) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) =>
+	   (conv y2 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x1) x2) p) y1)) =>
+	    (conv y1 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x2) x1)
+	   	   	(impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) x1) x2) p))
+		     y2)))
+       (hyp
+        (pi x\ isa x Bi int => pi y \ isa y (Ci x) int =>
+          conv y (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x) x) (forall_app (app (setoid_reflL Bi) bS) x)) y))
+        (pi x\ locDecl x Bi => pi y \ locDecl y (Ci x) =>
+          spy (conv y (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) x) x) (forall_app (app (setoid_reflL Bi) bS) x)) y)))
+	  
+      % hyp for distributing cast over transitivity
+	(hyp
+	  (pi x\ isa x (setSigma Bi Ci) int => pi y\ isa y (setSigma Bi Ci) int => pi z\ isa z (setSigma Bi Ci) int =>
+	    pi u1\ isa u1 (decode (app (app (app (setoid_rel Bi) bS) (p1 x)) (p1 y))) int =>
+	     pi v1\ isa v1 (decode (app (app (app (setoid_rel Bi) bS) (p1 y)) (p1 z))) int =>
+	      conv (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) 
+       	      	   	(p1 y)) 
+	   		(p1 z))
+            		v1)
+           		(app (app (app (app (app (setoidDepCast Bi Ci bS) cS) 
+	   		     (p1 x)) 
+			     (p1 y))
+             		     u1) 
+			     (p2 x)))
+		   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) 
+       	    	   	(p1 x)) 
+	    		(p1 z))
+            		(impl_app (impl_app (forall_app (forall_app (forall_app (app (setoid_tranL Bi) bS) 
+	    	      		  (p1 x))
+                      		  (p1 y)) 
+		      		  (p1 z)) 
+		      		  u1) 
+		      		  v1)) 
+	    	        (p2 x)))
+	   /*(pi x\ locDecl x (setSigma Bi Ci) => pi y\ locDecl y (setSigma Bi Ci) => pi z\ locDecl z (setSigma Bi Ci) =>
+	    pi u1\ locDecl u1 (decode (app (app (app (setoid_rel Bi) bS) (p1 x)) (p1 y))) =>
+	     pi v1\ locDecl v1 (decode (app (app (app (setoid_rel Bi) bS) (p1 y)) (p1 z))) =>
+	      conv (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 y)) (p1 z)) v1)
+           		(app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 y)) u1) (p2 x)))
+		   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 z))
+            		(impl_app (impl_app (forall_app (forall_app (forall_app (app (setoid_tranL Bi) bS) 
+	    	      		  (p1 x)) (p1 y)) (p1 z)) u1) v1)) 
+	    	        (p2 x)))*/
+	   (true)
+        (locDefL (setSigma_setoid Bi Ci bS cS) (setoid (setSigma Bi Ci))
+         (pair
+            (setPi (setSigma Bi Ci) _ \ setPi (setSigma Bi Ci) _ \ propS)
+            (rel \ (and (and (forall (setSigma Bi Ci) x \ decode (app (app rel x) x))
+	    	   	     (forall (setSigma Bi Ci) x\ forall (setSigma Bi Ci) y\ forall (setSigma Bi Ci) z\
+			       implies (decode (app (app rel x) y)) (implies (decode (app (app rel y) z)) (decode (app (app rel x) z)))))
+	                (forall (setSigma Bi Ci) x1\ forall (setSigma Bi Ci) x2\ implies (decode (app (app rel x1) x2))
+	                                                                 (decode (app (app rel x2) x1)))))
+            % the setoid relation
+           (setSigma_setoidRel Bi Ci bS cS)
+	   (pair_and (and (forall (setSigma Bi Ci) x \ decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) x))
+	   	     	  (forall (setSigma Bi Ci) x\ forall (setSigma Bi Ci) y\ forall (setSigma Bi Ci) z\
+			    implies (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) y)) 
+			     (implies (decode (app (app (setSigma_setoidRel Bi Ci bS cS) y) z))
+			      (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) z)))))
+		     (forall (setSigma Bi Ci) x1\ forall (setSigma Bi Ci) x2\ implies
+		        (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x1) x2))
+		        (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x2) x1)))
+	            
+		     (pair_and (forall (setSigma Bi Ci) x \ decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) x))
+		     	       (forall (setSigma Bi Ci) x\ forall (setSigma Bi Ci) y\ forall (setSigma Bi Ci) z\
+			       	 implies (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) y)) 
+			          (implies (decode (app (app (setSigma_setoidRel Bi Ci bS cS) y) z))
+			           (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) z))))
+			       % proof of reflexivity
+                     	       (forall_lam (setSigma Bi Ci) x \
+             	     	         pair_exist (decode (app (app (app (setoid_rel Bi) bS) (p1 x)) (p1 x)))
+              	        	 	    (d \ decode (app (app 
+              	       		  	       (app (setoid_rel (Ci (p1 x))) (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 x)))
+				  	       (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 x)) d) (p2 x)))
+                        	  	       (p2 x)))
+                      		            (forall_app (app (setoid_reflL Bi) bS) (p1 x))
+                      			    (forall_app (app (setoid_reflL (Ci (p1 x)))
+		        	  	       (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 x))) (p2 x)))
+			       % proof of transitivity
+			        (forall_lam (setSigma Bi Ci) x\
+				  forall_lam (setSigma Bi Ci) y\
+				   forall_lam (setSigma Bi Ci) z\
+				    impl_lam (exist (decode (app (app (app (setoid_rel Bi) bS) (p1 x)) (p1 y))) d\
+               	     	    	    	     	    (decode (app (app (app (setoid_rel (Ci (p1 y)))
+	              	   	   		    	    	 (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 y)))
+                     	   	   				 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 y)) d)
+								      (p2 x)))
+                           	   				 (p2 y)))) u\
+				    impl_lam (exist (decode (app (app (app (setoid_rel Bi) bS) (p1 y)) (p1 z))) d\
+               	     	    	    	     	    (decode (app (app (app (setoid_rel (Ci (p1 z)))
+	              	   	   		    	    	 (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 z)))
+                     	   	   				 (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 y)) (p1 z)) d)
+								      (p2 y)))
+                           	   				 (p2 z)))) v\
+				    (elim_exist u (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) z))
+				     (u1\ u2\ elim_exist v (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x) z))
+				      (v1\ v2\
+				        (pair_exist (decode (app (app (app (setoid_rel Bi) bS) (p1 x)) (p1 z)))
+						   (d\ (decode (app (app (app (setoid_rel (Ci (p1 z)))
+				 	   	       	       	    (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 z)))
+		    		       				    (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 z))
+				        			    	 d) (p2 x)))
+							            (p2 z))))
+						   (impl_app (impl_app (forall_app (forall_app (forall_app
+						     (app (setoid_tranL Bi) bS) (p1 x)) (p1 y)) (p1 z)) u1) v1)
+                                                    (impl_app (impl_app (forall_app (forall_app (forall_app
+						     (app (setoid_tranL (Ci (p1 z))) (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 z)))
+                                                      (app (app (app (app (app (setoidDepCast Bi Ci bS) cS)
+						      	   (p1 x))
+							   (p1 z))
+						      	   (impl_app (impl_app (forall_app (forall_app (forall_app
+						     	   	     (app (setoid_tranL Bi) bS) (p1 x)) (p1 y)) (p1 z)) u1) v1))
+							   (p2 x)))
+                                                      (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 y)) (p1 z)) v1) (p2 y)))
+                                                      (p2 z))
+                                                      (app (app (app (app (app (app (app (proof_trasp Bi Ci bS) cS)
+						      	   (p1 y))
+							   (p1 z))
+							   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x)) (p1 y)) u1) (p2 x)))
+							   (p2 y))
+							   v1)
+							   u2))
+                                                      v2)
+                                                    )))))
+
+)
+		    % proof of symmetry
+		    (forall_lam (setSigma Bi Ci) x1\ forall_lam (setSigma Bi Ci) x2\
+		     impl_lam (exist (decode (app (app (app (setoid_rel Bi) bS) (p1 x1)) (p1 x2))) d\
+               	     	    	   (decode (app (app (app (setoid_rel (Ci (p1 x2)))
+	              	   	   (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 x2)))
+                     	   	   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x1)) (p1 x2)) d) (p2 x1)))
+                           	   (p2 x2)))) h\
+                      elim_exist h (decode (app (app (setSigma_setoidRel Bi Ci bS cS) x2) x1))
+                       (h1 \ h2 \
+		         pair_exist (decode (app (app (app (setoid_rel Bi) bS) (p1 x2)) (p1 x1)))
+		      		 (d\ (decode (app
+				       (app
+				     	 (app (setoid_rel (Ci (p1 x1)))
+				 	   (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 x1)))
+		    		       (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x2)) (p1 x1))
+				        d)
+				        (p2 x2)))
+					(p2 x1))))
+				 (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) (p1 x1)) (p1 x2)) h1)
+				 (impl_app (forall_app (forall_app (app (setoid_symmL (Ci (p1 x1)))
+				     (app (app (setoidDepCarrier Bi Ci bS) cS) (p1 x1)))
+				     (p2 x1))
+				     (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x2)) (p1 x1))
+				     	  (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) (p1 x1)) (p1 x2))
+				  	  h1))
+				       (p2 x2)))
+				     (app (app (app (app (app (app (app (proof_trasp Bi Ci bS)
+				     	   cS) (p1 x2)) (p1 x1))
+					   (app (app (app (app (app (setoidDepCast Bi Ci bS) cS) (p1 x1)) (p1 x2)) h1)
+					    (p2 x1)))
+					   (p2 x2))
+					   (impl_app (forall_app (forall_app (app (setoid_symmL Bi) bS) (p1 x1)) (p1 x2)) h1))
+					   h2))))))))))))),
+
+ % gamma_trasp
+ (univPi Ai\
+   univDepPi Ai Bi\
+    univDepPi (setSigma Ai Bi) Ci\
+     univPiT (setoid Ai) aS\
+      univPiT (setoidDep Ai Bi aS) bS\
+       univPiT (setoidDep (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS\
+       univPiT Ai a\
+        univPiT (setSigma (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b)))  
+             	       (_ \
+              	       	  setPi (Bi a) b \ setPi (Bi a) b' \
+               		   setPi (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	    setPi (Ci (pair Ai Bi a b)) _ \
+                 	     (Ci (pair Ai Bi a b')))) cc\         % the first projection of setoidDep
+	hyp
+        (pi x\ isa x Ai int => pi y \ isa y (Bi x) int =>
+          conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y))
+        (pi x\ locDecl x Ai => pi y \ locDecl y (Bi x) =>
+          spy (conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y)))
+	 (locTypeDefL (gamma_trasp Ai Bi Ci aS bS cS a cc) col
+	 	  (setPi (Bi a) x1\ setPi (Bi a) x2\
+		   setPi (Ci (pair Ai Bi a x1)) y1\ setPi (Ci (pair Ai Bi a x1)) y2\
+	    	   setPi (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) x1) x2)) d1\
+		    setPi (decode (app (app (app (setoid_rel (Ci (pair Ai Bi a x1)))
+		    	  	       (app (elim_setSigma cc (_\ (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b)))) (x\y\x)) x1)) y1) y2)) d2\
+		    (decode (app (app (app (setoid_rel (Ci (pair Ai Bi a x2)))
+		       	       	    	 (app (elim_setSigma cc (_\ (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b)))) (x\y\x)) x2))
+					 (app (app (app (app
+					      (elim_setSigma cc (_ \
+              	       	 		      		      setPi (Bi a) b \ setPi (Bi a) b' \
+               		   				      setPi (decode (app (app (app (setoid_rel (Bi a))
+							      	    	    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	    				      setPi (Ci (pair Ai Bi a b)) _ \ Ci (pair Ai Bi a b')) (x\y\y))
+					      x1) x2) d1) y1))
+					 (app (app (app (app
+					      (elim_setSigma cc (_ \
+              	       	 		      		      setPi (Bi a) b \ setPi (Bi a) b' \
+               		   				      setPi (decode (app (app (app (setoid_rel (Bi a))
+							      	    	    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	    				      setPi (Ci (pair Ai Bi a b)) _ \ Ci (pair Ai Bi a b')) (x\y\y))
+					      x1) x2) d1) y2)))))),
+ % gamma_setoidDep
+(univPi Ai \
+   univDepPi Ai Bi \
+    univDepPi (setSigma Ai Bi) Ci \
+     univPiT (setoid Ai) aS \
+      univPiT (setoidDep Ai Bi aS) bS \
+       univPiT (setoidDep (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS \
+       (hyp
+       (pi x1\ isa x1 Ai int => pi x2\ isa x2 Ai int => pi y1\ isa y1 (Bi x1) int => pi y2\ isa y2 (Bi x2) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) int =>
+          (conv y2 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p) y1)) =>
+	    (conv y1 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+	   	   	(impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+		     y2)))
+      (pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y1\ locDecl y1 (Bi x1) => pi y2\ locDecl y2 (Bi x2) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) =>
+          (conv y2 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p) y1)) =>
+	    (conv y1 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+	   	   	(impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+		     y2)))
+      (hyp
+      (pi x1\ isa x1 Ai int => pi x2\ isa x2 Ai int => pi y1\ isa y1 (Bi x1) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) int =>
+	    (conv (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2)
+             		       p) y1))
+		  y1))
+       (pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y1\ locDecl y1 (Bi x1) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) =>
+	    (conv (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2)
+             		       p) y1))
+		  y1))
+       (hyp
+       (pi x1\ isa x1 Ai int => pi x2\ isa x2 Ai int => pi y2\ isa y2 (Bi x2) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) int =>
+        (conv y2
+       	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+	     y2))))
+       (pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y2\ locDecl y2 (Bi x2)  =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) =>
+        (conv y2
+       	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+	     y2))))
+       (hyp
+        (pi x\ isa x Ai int => pi y \ isa y (Bi x) int =>
+          conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y))
+        (pi x\ locDecl x Ai => pi y \ locDecl y (Bi x) =>
+          spy (conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y)))
+        (locDefL (gamma_setoidDep Ai Bi Ci aS bS cS)
+         (setPi Ai a \
+           setoidDep (Bi a) (b \ Ci (pair Ai Bi a b))
+            (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+        (lambda Ai a \ 
+           (pair
+	     (setSigma (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b))) 
+             	       (_ \
+              	       	  setPi (Bi a) b \ setPi (Bi a) b' \
+               		   setPi (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	    setPi (Ci (pair Ai Bi a b)) _ \
+                 	     (Ci (pair Ai Bi a b'))))
+	     (cc\ (gamma_trasp Ai Bi Ci aS bS cS a cc)) 		
+	     (pair (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b)))
+             	   (_ \ setPi (Bi a) b \ setPi (Bi a) b' \
+               	      	 setPi (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	  setPi (Ci (pair Ai Bi a b)) _ \
+                 	   (Ci (pair Ai Bi a b')))
+                   (lambda (Bi a) b\ app (app (setoidDepCarrier (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) (pair Ai Bi a b))
+            	   (lambda (Bi a) b\ lambda (Bi a) b'\
+              	     lambda (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) p \
+               	      app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) (pair Ai Bi a b))
+		      	       (pair Ai Bi a b'))
+                	  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+                  	  	      (d \ decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+				      	   	       (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b)) b'))
+                  		      (forall_app (app (setoid_reflL Ai) aS) a)
+                  		      p)))
+	    (fixMe "setoidDepGamma proof_trasp"
+	    (gamma_trasp Ai Bi Ci aS bS cS a
+	       (pair (setPi (Bi a) b\ setoid (Ci (pair Ai Bi a b)))
+             	   (_ \ setPi (Bi a) b \ setPi (Bi a) b' \
+               	      	 setPi (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) _ \
+                	  setPi (Ci (pair Ai Bi a b)) _ \
+                 	   (Ci (pair Ai Bi a b')))
+                   (lambda (Bi a) b\ app (app (setoidDepCarrier (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) (pair Ai Bi a b))
+            	   (lambda (Bi a) b\ lambda (Bi a) b'\
+              	     lambda (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b) b')) p \
+               	      app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) (pair Ai Bi a b))
+		      	       (pair Ai Bi a b'))
+                	  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+                  	  	      (d \ decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+				      	   	       (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b)) b'))
+                  		      (forall_app (app (setoid_reflL Ai) aS) a)
+                  		      p))))))))))))),
+% setSigma_trasp
+(univPi Ai \
+   univDepPi Ai Bi \
+    univDepPi (setSigma Ai Bi) Ci \
+     univPiT (setoid Ai) aS \
+      univPiT (setoidDep Ai Bi aS) bS \
+       univPiT (setoidDep (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS \
+	 univPiT (setSigma (setPi Ai a\ setoid (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))))
+               		 (_ \
+               	    	  setPi Ai a \ setPi Ai a' \
+             	  	   setPi (decode (app (app (app (setoid_rel Ai) aS) a) a')) _ \
+              	     	    setPi (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))) _ \
+                     	     setSigma (Bi a') (b \ Ci (pair Ai Bi a' b)))) cc\
+        (locTypeDefL (setSigma_trasp Ai Bi Ci aS bS cS cc) col
+		     (setPi Ai x1\ setPi Ai x2\
+		    setPi (setSigma (Bi x1) (b \ Ci (pair Ai Bi x1 b))) y1\ setPi (setSigma (Bi x1) (b \ Ci (pair Ai Bi x1 b))) y2\
+		     setPi (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) d1\
+		      setPi (decode (app (app (app (setoid_rel (setSigma (Bi x1) (b \ Ci (pair Ai Bi x1 b))))
+		      	    	    (app (elim_setSigma cc  (_\ (setPi Ai x\ setoid (setSigma (Bi x) (b \ Ci (pair Ai Bi x b))))) (x\y\x))
+				    	 x1))
+				    y1) y2)) d2\
+		       (decode (app (app (app (setoid_rel (setSigma (Bi x2) (b \ Ci (pair Ai Bi x2 b))))
+		       	       	    	(app (elim_setSigma cc (_\ (setPi Ai x\ setoid (setSigma (Bi x) (b \ Ci (pair Ai Bi x b))))) (x\y\x))
+					     x2))
+					(app (app (app (app (elim_setSigma cc
+					      	   	     		    (_\ (setPi Ai x1\ setPi Ai x2\
+	            	      						    	setPi (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) _\
+		     	    							setPi (setSigma (Bi x1) (b \ Ci (pair Ai Bi x1 b))) _\
+										  (setSigma (Bi x2) (b \ Ci (pair Ai Bi x2 b)))))
+									    (x\y\y)) x1) x2) d1) y1))
+					 (app (app (app (app (elim_setSigma cc
+					      	   	     		    (_\ (setPi Ai x1\ setPi Ai x2\
+	            	      						    	setPi (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) _\
+		     	    							setPi (setSigma (Bi x1) (b \ Ci (pair Ai Bi x1 b))) _\
+										  (setSigma (Bi x2) (b \ Ci (pair Ai Bi x2 b)))))
+									    (x\y\y)) x1) x2) d1) y2)))))),
+
+% setSigma_setoidDep
+ (univPi Ai \
+   univDepPi Ai Bi \
+    univDepPi (setSigma Ai Bi) Ci \
+     univPiT (setoid Ai) aS \
+      univPiT (setoidDep Ai Bi aS) bS \
+       univPiT (setoidDep (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS \
+        %% hyp on setoid_symmL
+        (hyp
+      	(pi x1\ isa x1 Ai int => pi x2\ isa x2 Ai int => pi y1\ isa y1 (Bi x1) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) int =>
+	    (conv (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2)
+             		       p) y1))
+		  y1))
+	(pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y1\ locDecl y1 (Bi x1) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2))  =>
+	    (conv (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+            	     	  (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+         		  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2)
+             		       p) y1))
+		  y1))
+        (hyp
+        (pi x1\ isa x1 Ai int => pi x2\ isa x2 Ai int => pi y2\ isa y2 (Bi x2) int =>
+         pi p\ isa p (decode (app (app (app (setoid_rel Ai) aS) x1) x2)) int =>
+        (conv y2
+       	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+	     y2))))
+	(pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y2\ locDecl y2 (Bi x2) =>
+         pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2))  =>
+        (conv y2
+       	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p)
+   	     	  (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+       		       (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+	     y2))))
+	% cut substituting third hyp
+        (cut
+	  (pi x1\ locDecl x1 Ai => pi x2\ locDecl x2 Ai => pi y1\ locDecl y1 (Bi x1) => pi y2\ locDecl y2 (Bi x2) =>
+            pi p\ locDecl p (decode (app (app (app (setoid_rel Ai) aS) x1) x2))  =>
+	     conv y2 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p) y1) =>
+	      conv_trans_symm
+			% base term
+			(app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+	      		      (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p)) y2)
+			% middle term, conv with base because of dconv rule for app
+			(app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x2) x1)
+	      		     (impl_app (forall_app (forall_app (app (setoid_symmL Ai) aS) x1) x2) p))
+			     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x1) x2) p)
+			    y1))
+			% target term, conv with middle thanks  hyp
+			y1)
+	(hyp
+	 (pi a\ isa a Ai int => pi b1\ isa b1 (Bi a) int => pi b2 \ isa b2 (Bi a) int => pi y2\ isa y2 (Ci (pair Ai Bi a b2)) int =>
+	     pi p\ isa p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2)) int =>
+	 (conv y2
+       	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b1))
+		  (pair Ai Bi a b2))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		   	       (d \ decode
+      			       (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+          		       	    (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d)
+           			    	  b1)) b2))
+			       (forall_app (app (setoid_reflL Ai) aS) a)
+			       p))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       cS)
+		       (pair Ai Bi a b2))
+		       (pair Ai Bi a b1))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   (forall_app (app (setoid_reflL Ai) aS) a)
+				   (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		       y2))))
+	(pi a\ locDecl a Ai  => pi b1\ locDecl b1 (Bi a)  => pi b2 \ locDecl b2 (Bi a)  => pi y2\ locDecl y2 (Ci (pair Ai Bi a b2))  =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2)) =>
+	 (conv y2
+       	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b1))
+		  (pair Ai Bi a b2))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		   	       (d \ decode
+      			       (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+          		       	    (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d)
+           			    	  b1)) b2))
+			       (forall_app (app (setoid_reflL Ai) aS) a)
+			       p))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       cS)
+		       (pair Ai Bi a b2))
+		       (pair Ai Bi a b1))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   (forall_app (app (setoid_reflL Ai) aS) a)
+				   (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		       y2))))
+	(hyp
+	  (pi a\ isa a Ai int => pi b1\ isa b1 (Bi a) int => pi b2 \ isa b2 (Bi a) int => pi y1\ isa y1 (Ci (pair Ai Bi a b1)) int =>
+	    pi p\ isa p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2)) int =>
+	  conv y1
+	       (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b2))
+		  (pair Ai Bi a b1))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	 (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					 b1))
+			      (forall_app (app (setoid_reflL Ai) aS) a)
+			      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1)))
+          (pi a\ locDecl a Ai  => pi b1\ locDecl b1 (Bi a)  => pi b2 \ locDecl b2 (Bi a)  => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1))  =>
+	    pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	  conv y1
+	       (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b2))
+		  (pair Ai Bi a b1))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	 (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					 b1))
+			      (forall_app (app (setoid_reflL Ai) aS) a)
+			      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1)))
+	%% hyp on setoid_reflL
+        (hyp
+         (pi x\ isa x Ai int => pi y \ isa y (Bi x) int =>
+           conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y))
+         (pi x\ locDecl x Ai => pi y \ locDecl y (Bi x) =>
+           spy (conv y (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) x) x) (forall_app (app (setoid_reflL Ai) aS) x)) y)))
+        (hyp
+         (pi x\ isa x (setSigma Ai Bi) int => pi y \ isa y (Ci x) int =>
+           conv y (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) x) x) (forall_app (app (setoid_reflL (setSigma Ai Bi)) (setSigma_setoid Ai Bi aS bS)) x)) y))
+         (pi x\ locDecl x (setSigma Ai Bi) => pi y \ locDecl y (Ci x) =>
+           spy (conv y (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) x) x) (forall_app (app (setoid_reflL (setSigma Ai Bi)) (setSigma_setoid Ai Bi aS bS)) x)) y)))
+	(cut
+	  (pi a\ locDecl a Ai  => pi b1\ locDecl b1 (Bi a)  => pi b2 \ locDecl b2 (Bi a)  =>
+	    pi y1\ locDecl y1 (Ci (pair Ai Bi a b1))  =>
+	    pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	  conv_symm y1
+	       (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b2))
+		  (pair Ai Bi a b1))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	 (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					 b1))
+			      (forall_app (app (setoid_reflL Ai) aS) a)
+			      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1)))
+        (cut
+          (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	 (conv_symm y2
+       	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b1))
+		  (pair Ai Bi a b2))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		   	       (d \ decode
+      			       (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+          		       	    (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d)
+           			    	  b1)) b2))
+			       (forall_app (app (setoid_reflL Ai) aS) a)
+			       p))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       cS)
+		       (pair Ai Bi a b2))
+		       (pair Ai Bi a b1))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   (forall_app (app (setoid_reflL Ai) aS) a)
+				   (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		       y2))))
+	% cuts for setoid_symmL
+	(cut
+	   (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	   conv_trans y2
+	     % middle term
+	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b1))
+		  (pair Ai Bi a b2))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		   	       (d \ decode
+      			       (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+          		       	    (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d)
+           			    	  b1)) b2))
+			       (forall_app (app (setoid_reflL Ai) aS) a)
+			       p))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       cS)
+		       (pair Ai Bi a b2))
+		       (pair Ai Bi a b1))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   (forall_app (app (setoid_reflL Ai) aS) a)
+				   (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		       y2))
+	      %target term
+	      (app (app (app (app (app (setoidDepCast (Bi a) (b\ Ci (pair Ai Bi a b))
+	      	   	     	       		      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+		   (app (gamma_setoidDep Ai Bi Ci aS bS cS) a))
+		    b1)
+		    b2)
+		    p)
+		  (app (app (app (app (app (setoidDepCast (Bi a) (b\ Ci (pair Ai Bi a b))
+		       	    	      	     (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+		       (app (gamma_setoidDep Ai Bi Ci aS bS cS) a))
+		        b2)
+		        b1)
+		        (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+		       	    (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+			    b1)
+			    b2)
+			    p))
+		       y2)))
+        (cut (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	  conv_trans y1
+	     %middle term
+	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b2))
+		  (pair Ai Bi a b1))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	 (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					 b1))
+			      (forall_app (app (setoid_reflL Ai) aS) a)
+			      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1))
+		  %target term
+             (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+             	  (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+           	  (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b2) b1)
+     		  (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+             	  	    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p))
+  	          (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+               	       (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+             	       (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b1) b2) p)
+		          y1)))
+        %% this is just the symmetric of the previous cut, should be written more concisely
+        (cut (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	  conv_trans_symm y1
+	     %middle term
+	     (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  cS)
+		  (pair Ai Bi a b2))
+		  (pair Ai Bi a b1))
+		  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	 (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					 b1))
+			      (forall_app (app (setoid_reflL Ai) aS) a)
+			      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		(app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					b1)
+					b2)
+					p)))
+		  (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1))
+	     %target term
+             (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+             	  (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+           	  (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b2) b1)
+     		  (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+             	  	    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p))
+  	          (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+               	       (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+             	       (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b1) b2) p)
+		          y1)))
+	%cut substituting third hyp for Ci
+	(cut
+	  (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	     
+	     conv y2 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1) =>
+	     conv_trans
+			% starting term
+			(app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       	     	  cS)
+		       	     	  (pair Ai Bi a b2))
+		       	     	  (pair Ai Bi a b1))
+		       	     	  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   	      (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   	      (forall_app (app (setoid_reflL Ai) aS) a)
+				   	      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	      		(app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p)))
+		       	           y2)
+			 % middle term
+			 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  	      cS)
+		  	      (pair Ai Bi a b2))
+		  	      (pair Ai Bi a b1))
+		  	      (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      		  (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					       b1))
+			      		  (forall_app (app (setoid_reflL Ai) aS) a)
+			      		  (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p)))
+		  	      (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       	      	   cS)
+		       		   (pair Ai Bi a b1))
+		       		   (pair Ai Bi a b2))
+		       		   (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	               (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	       	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      	   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      	   b2))
+			      	               (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    	       p))
+		       		   y1))
+			% target term
+			y1)
+	% this is just the symmetric of the previous cut, should be written more concisely
+	(cut
+	   (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	     conv y2 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1) =>
+	     conv_trans_symm
+			% starting term
+			(app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       	     	  cS)
+		       	     	  (pair Ai Bi a b2))
+		       	     	  (pair Ai Bi a b1))
+		       	     	  (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   	      (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   	      (forall_app (app (setoid_reflL Ai) aS) a)
+				   	      (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	      		(app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p)))
+		       	           y2)
+			 % middle term
+			 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	  	      cS)
+		  	      (pair Ai Bi a b2))
+		  	      (pair Ai Bi a b1))
+		  	      (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      		  (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+					       b1))
+			      		  (forall_app (app (setoid_reflL Ai) aS) a)
+			      		  (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+			      		    (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p)))
+		  	      (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       	      	   cS)
+		       		   (pair Ai Bi a b1))
+		       		   (pair Ai Bi a b2))
+		       		   (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	               (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	       	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      	   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      	   b2))
+			      	               (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    	       p))
+		       		   y1))
+			% target term
+			y1)
+	% this cut expands the hypothesis to be used in the following one
+        (cut
+	   (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	     conv y2 (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+                             (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+                             (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b1) b2) p) y1) =>
+	     conv_trans y2
+	     		% middle term
+               		(app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+                             (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+                             (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b1) b2) p) y1)
+	     		% target
+	     		(app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       	     cS)
+		       	     (pair Ai Bi a b1))
+		       	     (pair Ai Bi a b2))
+		       	     (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       		    y1))
+	(cut
+	   (pi a\ locDecl a Ai => pi b1\ locDecl b1 (Bi a) => pi b2 \ locDecl b2 (Bi a) => pi y1\ locDecl y1 (Ci (pair Ai Bi a b1)) =>
+	     pi y2\ locDecl y2 (Ci (pair Ai Bi a b2)) =>
+	     pi p\ locDecl p (decode (app (app (app (setoid_rel (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2))  =>
+	     conv y2 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+	     	       cS)
+		       (pair Ai Bi a b1))
+		       (pair Ai Bi a b2))
+		       (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		  	      	   (d\ decode (app (app (app (setoid_rel (Bi a))
+			      	  	      (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+					      (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b1))
+					      b2))
+			      	   (forall_app (app (setoid_reflL Ai) aS) a)
+			      	    p))
+		       y1) =>
+	     conv_trans y1
+	     		% middle term
+			(app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS))
+		       	     cS)
+		       	     (pair Ai Bi a b2))
+		       	     (pair Ai Bi a b1))
+		       	     (pair_exist (decode (app (app (app (setoid_rel Ai) aS) a) a))
+		       		   (d\ decode (app (app (app (setoid_rel (Bi a))
+				       	      	   (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+						   (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a) d) b2))
+						   b1))
+				   (forall_app (app (setoid_reflL Ai) aS) a)
+				   (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+				   	(app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1) b2) p)))
+		       	   y2)
+	     		% target term
+	     		(app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b))
+                  	     (app (app (setoidDepCarrier Ai Bi aS) bS) a))
+                  	     (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b2) b1)
+                  	     (impl_app (forall_app (forall_app (app (setoid_symmL (Bi a))
+                             	       (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b1)
+           		    	       b2) p))
+	          	      y2))
+        % cuts for setoid_reflL
+        (cut
+          (pi a \ locDecl a Ai => pi b \ locDecl b (Bi a) => pi c \ locDecl c (Ci (pair Ai Bi a b)) => conv_trans c (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS) (pair Ai Bi a b)) (pair Ai Bi a b)) (forall_app (app (setoid_reflL (setSigma Ai Bi)) (setSigma_setoid Ai Bi aS bS)) (pair Ai Bi a b))) c) (app (app (app (app (app (setoidDepCast (Bi a) (b \ Ci (pair Ai Bi a b)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) (app (gamma_setoidDep Ai Bi Ci aS bS cS) a)) b) b) (forall_app (app (setoid_reflL (Bi a)) (app (app (setoidDepCarrier Ai Bi aS) bS) a)) b)) c))
+         (locDefL (setSigma_setoidDep Ai Bi Ci aS bS cS) (setoidDep Ai (a \ setSigma (Bi a) (b \ Ci (pair Ai Bi a b))) aS)
+         (pair (setSigma (setPi Ai a\ setoid (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))))
+               		 (_ \
+               	    	  setPi Ai a \ setPi Ai a' \
+             	  	   setPi (decode (app (app (app (setoid_rel Ai) aS) a) a')) _ \
+              	     	    setPi (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))) _ \
+                     	     setSigma (Bi a') (b \ Ci (pair Ai Bi a' b))))
+	       (cc \ (setSigma_trasp Ai Bi Ci aS bS cS cc))
+	       (pair (setPi Ai a\ setoid (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))))
+	       	     (_ \
+               	    	  setPi Ai a \ setPi Ai a' \
+             	  	   setPi (decode (app (app (app (setoid_rel Ai) aS) a) a')) _ \
+              	     	    setPi (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))) _ \
+                     	     setSigma (Bi a') (b \ Ci (pair Ai Bi a' b)))
+           	     (lambda Ai a \ setSigma_setoid (Bi a) (b \ Ci (pair Ai Bi a b))
+             	      (app (app (setoidDepCarrier Ai Bi aS) bS) a)
+             	       (app (gamma_setoidDep Ai Bi Ci aS bS cS) a))
+           	     (lambda Ai a \ lambda Ai a' \
+             	       lambda (decode (app (app (app (setoid_rel Ai) aS) a) a')) p \
+             	        lambda (setSigma (Bi a) b \ Ci (pair Ai Bi a b)) bc \
+               		 (pair (Bi a') (b \ Ci (pair Ai Bi a' b))
+                	 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p)
+                 	 (p1 bc))
+                	 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS)
+                  	   (pair Ai Bi a (p1 bc)))
+                  	   (pair Ai Bi a' (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc))))
+                  	   (pair_exist
+                    	    (decode (app (app (app (setoid_rel Ai) aS) a) a'))
+                    	     (p' \ decode (app (app (app (setoid_rel (Bi a'))
+                      	     (app (app (setoidDepCarrier Ai Bi aS) bS) a'))
+                      	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p') (p1 bc)))
+                      	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc))))
+                    	   p
+                    	   (forall_app (app (setoid_reflL (Bi a')) (app (app (setoidDepCarrier Ai Bi aS) bS) a'))
+			   	       (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc)))))
+                        (p2 bc)))))
+		(fixMe "setSigma_proof_trasp"
+		  (setSigma_trasp Ai Bi Ci aS bS cS
+		   (pair (setPi Ai a\ setoid (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))))
+	       	     	 (_ \
+               	    	  setPi Ai a \ setPi Ai a' \
+             	  	   setPi (decode (app (app (app (setoid_rel Ai) aS) a) a')) _ \
+              	     	    setPi (setSigma (Bi a) (b \ Ci (pair Ai Bi a b))) _ \
+                     	     setSigma (Bi a') (b \ Ci (pair Ai Bi a' b)))
+           	     (lambda Ai a \ setSigma_setoid (Bi a) (b \ Ci (pair Ai Bi a b))
+             	      (app (app (setoidDepCarrier Ai Bi aS) bS) a)
+             	       (app (gamma_setoidDep Ai Bi Ci aS bS cS) a))
+           	     (lambda Ai a \ lambda Ai a' \
+             	       lambda (decode (app (app (app (setoid_rel Ai) aS) a) a')) p \
+             	        lambda (setSigma (Bi a) b \ Ci (pair Ai Bi a b)) bc \
+               		 (pair (Bi a') (b \ Ci (pair Ai Bi a' b))
+                	 (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p)
+                 	 (p1 bc))
+                	 (app (app (app (app (app (setoidDepCast (setSigma Ai Bi) Ci (setSigma_setoid Ai Bi aS bS)) cS)
+                  	   (pair Ai Bi a (p1 bc)))
+                  	   (pair Ai Bi a' (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc))))
+                  	   (pair_exist
+                    	    (decode (app (app (app (setoid_rel Ai) aS) a) a'))
+                    	     (p' \ decode (app (app (app (setoid_rel (Bi a'))
+                      	     (app (app (setoidDepCarrier Ai Bi aS) bS) a'))
+                      	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p') (p1 bc)))
+                      	     (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc))))
+                    	   p
+                    	   (forall_app (app (setoid_reflL (Bi a')) (app (app (setoidDepCarrier Ai Bi aS) bS) a'))
+			   	       (app (app (app (app (app (setoidDepCast Ai Bi aS) bS) a) a') p) (p1 bc)))))
+                        (p2 bc)))))))))))))))))))))))))))
+].
+
+tau (setSigma B C) (setSigma B' C') P :-
+    print "SETSIGMA TAU FUNCTION\n",
+    interp (setSigma B' C') (setSigma Bi' Ci'),
+    spy (tau B B' FB),
+    spy (macro_tau_cov_cov B B' (x\x'\h\xi\xi'\hi\tau (C x) (C' x') (FC xi xi' hi))),
+    	      	   			       %% given xi: Bi and xi':Bi' and hi intensional proof of their equality
+					       %% return function from terms in (C x)int to terms in (C' x')int
+					       
+    setoid_refl B' Hi,
+    %%(interp B' Bi', pi w1 \ print ["CSC: ", B', Bi', Hi, w1, (FB w1), (Hi w1)]),   %% debug
+
+    P = w\ elim_setSigma w (_\ setSigma Bi' Ci')	%% w: (setSigma Bi Ci)
+      	   		   (w1\ w2\ pair Bi' Ci'
+			   	    	 (FB w1)
+					 ( (FC w1 (FB w1) (Hi w1)) w2))    %% Uso di setoid_refl simile a quello in setPi.tau
+    .
+
+
+tau_eq (setSigma B C) (setSigma B' C') P :-
+       print "SETSIGMA TAU_EQ FUNCTION\n",
+       %interp (setSigma B C) (setSigma Bi_ Ci_),
+       tau B B' TB,
+       tau_eq B B' TeqB,
+       setoid_eq B EquB,
+       setoid_eq B' EquB',
+       setoid_refl B' Hi,
+       macro_tau_cov_cov B B' (x\x'\h\xi\xi'\hi\ ((tau (C x) (C' x') (TC xi xi' hi)),
+       			      		    	  (tau_eq (C x) (C' x') (TeqC xi xi' hi)),
+       			 		    	  (setoid_eq (C x) (EquC xi)),
+       			 		    	  (setoid_eq (C' x') (EquC' xi')))),
+						  
+       macro_tau_cov_cov B B (x1\x2\h\x1i\x2i\hi\ tau (C x1) (C x2) (FCC x1i x2i hi)), %% Cast from type (C x1)i to (C x2)i with
+       		     			       	     	      	     	     	       %% both x1 and x2 terms of type B
+       P = s\z\d\
+		pair_exist (EquB'(TB (p1 s)) (TB (p1 z)))			       %% type of equality on Bi'
+			   (_\ (EquC' (TB (p1 z))) 		     	    	       %% type of equality on (C' x')i
+			       	 ((TC (p1 z) (FB (p1 z)) (Hi (p1 z)))
+				   ((FCC (p1 s) (p1 z) (elim_exist d (EquB (p1 s) (p1 z))(x\y\ x)))
+				      (p2 s)))
+			    	 ((TC (p1 z) (FB (p1 z)) (Hi (p1 z)))
+				   (p2 z))      
+			       )
+			   (TeqB (p1 s)							%% Equality over Bi'...
+				 (p1 z)
+				 (elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+			   ((TeqC (p1 s)						%% Equality over (C' TB(p1z))i...
+			   	  (TB (p1 z))
+				  (TeqB (p1 s)  
+				  	(p1 z)
+				 	(elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x))))
+			      ((FCC (p1 s) (p1 z) (elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+			         (p2 s))       
+			      (p2 z) 	       
+			      ( elim_exist d ((EquC (p1 z))
+			      		       	    ((FCC (p1 s) (p1 z) (elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+						       (p2 s))       
+			    		            (p2 z))
+			    		     (x\y\ y)))       
+       .
+
+setoid_refl (setSigma B C) H :-
+     print "SETSIGMA SETOID_REFL FUNCTION\n",
+     %interp (setSigma B C) (setSigma Bi Ci),
+     setoid_eq B EquB,
+     setoid_refl B HB,
+     macro_interp B (x\xi\_\_\ ( (setoid_eq (C x) (EquC xi)),
+     		    	       	 (setoid_refl (C x) (HC xi)) )),
+     H = z\ pair_exist (EquB (p1 z) (p1 z) )
+       	    	       (_\ (EquC (p1 z)) (p2 z) (p2 z))
+		       (HB (p1 z))
+		       ((HC (p1 z)) (p2 z))
+    	%% checks?
+     .
+
+setoid_symm (setSigma B C) H :-
+      print "SETSIGMA SETOID_SYMM FUNCTION",
+      %interp (setSigma B C) (setSigma Bi Ci),
+      setoid_eq B EquB,
+      setoid_symm B SB,
+      macro_interp B (x\xi\_\_\ ( (setoid_eq (C x) (EquC xi)),
+      		     		  (setoid_symm (C x) (SC xi)) )),
+      macro_tau_cov_cov B B (x1\x2\h\x1i\x2i\hi\ tau (C x1) (C x2) (FCC x1i x2i hi)),
+      H = s\z\d\
+      	  pair_exist (EquB (p1 z) (p1 s))					            %% Type of equality over Bi of p1z p1s
+      	  	     ( _\ (EquC (p1 z))                         			    %% Type of equality over (C p1z)i between 
+		       	     (p2 z)  				   			    %% p2z and the cast to (C p1z)i of p2s
+		       	     ((FCC (p1 s) (p1 z) (elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+			     	 (p2 s)))
+		     (SB (p1 s)							%% First element, obtained by induction on B 
+		     	 (p1 z)
+		     	 (elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+		     ((SC (p1 z))      	     	    				%% Second element, obtained by induction on (C p1z)
+		     	  ((FCC (p1 s)						%% because of this, H will produce an equality over 
+			  	(p1 z)						%% (C p1z)i between z and s, possibly causing problems?
+			  	(elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+			      (p2 s))
+			  (p2 z)
+			  (( elim_exist d ((EquC (p1 z))
+			      		       	 ((FCC (p1 s) (p1 z)
+			    	  		      	(elim_exist d (EquB (p1 s) (p1 z)) (x\y\ x)))
+						    (p2 s))       
+			    			 (p2 z))
+					  (x\y\ y))))
+	%% checks?
+      .

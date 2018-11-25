@@ -1,0 +1,690 @@
+accumulate calc/all, debug.
+
+/*
+- hnf -> steps
+- hstep -> step
+- conv -> conv
+- mettere delay di of e isa su uvar
+- regole interessanti:
+    - ofType di default cerca locTypeDef
+        ofType A KIND _IE :- locTypeDef A KIND _.
+
+    - isaType e isa sono definite come ci si aspetta
+        isaType Type Kind IE 
+            :- spy(ofType Type Kind' IE)
+            ,  spy(pts_leq  Kind' Kind)
+            .
+
+        isa Term TY IE 
+            :- spy(of Term TY' IE)
+            ,  spy(conv TY' TY)
+            .
+    - of X Y e' definito in base a locDecl
+        of X Y _ :-  locDecl X Y .
+    - locDecl dipenden da definizione
+        locDecl X Y :- locDef X Y _.
+    - hstep dipende da definizione (nel pa io aggiungevo uno step cosi che si
+      poteva trasformare un nome nel suo termine, ma con questa regola basta
+      lasciare la locDef/locTypeDef)
+        hstep X Y :- locDef X _ Y.
+        hstep X Y :- locTypeDef X _ Y.
+- aggiungere definizioni con solo tipo/solo termine -> le prime vengono
+  processate in uno script che dimostra la definizione, le seconde semplicemente
+  inferiscono il tipo
+- aggiungere process_term di uno script che a detta di Coen dovrebbe servire a
+  dimostrare una qualche definizione, quindi forse bisogna prendere in input
+  script E definizione? Invstigare
+- dconv e' usato al posto di conv per definire la roba ma poi la definizione si
+  rifa sempre a conv e conv si rifa' a dconv dopo hstep, non capisco il perche'
+  di questo giro dell'oca
+- per dimstrare che qualcosa vale per ogni qualcosa si fa precedere una locDef
+  da una serie di univRoba che praticamente vengono processati correttamente
+*/
+
+
+type fixMe A -> B -> C.
+type k_propId mttType -> mttTerm.
+
+%%-- local definitions: letIn
+%this may soon change as it is still to be decided how this should look like
+type letIn mttType -> mttTerm -> (mttTerm -> mttTerm) -> mttTerm.
+
+
+
+/* UNITYPED COMPUTATIONAL PREDICATES */
+type hstep, dconv, hnf,  conv, interp A -> A -> prop.
+
+/* NEW INTERPRETATION PREDICATES */
+type new_interp_type mttType -> mttTerm -> prop.
+type new_interp_dep_type mttType -> (mttTerm -> mttType) -> mttTerm -> prop.
+
+ 
+/*MTT PREDICATES*/
+kind mttTerm,               mttType, mttKind, mttLevel type.
+type ext, int               mttLevel.				%% intensional and extensional predicates
+type col, set, propc, props mttKind.				%% types can be collections, sets, propositions
+     	       	      	    					%% or small propositions   
+
+%% encoding/decoding propositions
+type encode mttType -> mttTerm.
+type decode mttTerm -> mttType.
+type propS  mttType.
+
+%% adds a typed term to the context
+type locDecl            mttTerm -> mttType -> prop.
+
+%% given a type, returns its specific kind
+type ofType             mttType -> mttKind -> mttLevel -> prop.
+
+%% "of" computes the type of a term
+%% "isa" checks if a term has type T, that is, if it is of some type T' such that T converts to T' (via conv)
+type of, isa            mttTerm -> mttType -> mttLevel -> prop.
+
+%% local definitions and type definitions
+type locDef         mttTerm -> mttType -> mttTerm -> prop.
+type locTypeDef     mttType -> mttKind -> mttType -> prop.
+
+%% conversion to (weak) head-normal form WHNF
+hnf A B :- (hstep A C), !, (hnf C B).
+hnf A A.
+
+%dstep A B :- spy(hstep A B).
+%nf A B :- spy (dstep A C), !, spy(nf C B). %con le regole di eq dstep è diventata riflessiva, 
+%nf A A.                         % ho aggiunto il not in eq.elpi per evitare che ciò accada
+
+%% Expresses (extensional) equality between two types. Checks if they have the same WHNF, in which case
+%% it calls itself recursively (via dconv) on all the subterms of the WHNF
+conv A A :- ! .
+conv A B :- (locDecl _ (propEq _ A B) ), !.
+conv A B :- (locDecl _ (propEq _ B A) ), !.
+conv A B :- (hnf A A'), ( hnf B B'), spy( dconv A' B').
+
+%conv A B :- spy(hnf A A'), spy( hnf B B'), spy(locDecl _ (propEq _ A1 B1)), spy(hnf A1 A2), spy(hnf B1 B2), spy((A' = A2, B' = B2) ; (A' = B2 , B' = A2)). 
+
+dconv A A :- !.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% <Experimental Sigma lookup> %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%conv A B :- spy(locDecl X (setSigma T1 T2)), spy(deeplook T1 (p1 X) A B ; deeplook (T2 X) (p2 X) A B).
+%conv A B :- spy(isa A (setSigma T1 T2)), spy(deeplook T1 (p1 A) A B ; deeplook (T2 A) (p2 A) A B).
+%conv B A :- spy(isa A (setSigma T1 T2)), spy(deeplook T1 (p1 A) A B ; deeplook (T2 A) (p2 A) A B).
+%
+%deeplook (setSigma T1 T2) X A B:- deeplook T1 (p1 X) A B ; deeplook (T2 X) (p2 X) A B.
+%deeplook (propEq _ A B) _ A B.
+%deeplook (propEq _ A B) _ B A.
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% </Experimental Sigma lookup> %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% rules summarizing all different embeddings between the four kinds of types
+pts_leq A A.
+pts_leq props set.
+pts_leq props col.
+pts_leq props propc.
+pts_leq set col.
+pts_leq propc col.
+
+%% determines kind of a equality type
+pts_eq K props :- spy(pts_leq K set), !.
+pts_eq _ propc.
+
+%% determines kind of a proposition type
+pts_prop props props props :- !.
+pts_prop A B propc :- pts_leq A propc, pts_leq B propc.
+
+%% determines kind of a function type
+pts_fun A B set :- pts_leq A set, pts_leq B set, !.
+pts_fun _ _ col.
+
+%% determines kind of a universal quantifier
+pts_for A props props :- pts_leq A set, !.
+pts_for _ B propc :- pts_leq B propc.
+
+mode (of i o o).
+mode (ofType i o o).
+mode (isa i i o).
+mode (isaType i o o).
+
+% XXX: modificare aggiungendo delay + ref
+of uvar _ _ :- print "ERROR: Flexible of!", fail.
+ofType uvar _ _ :- print "ERROR: Flexible ofType!", fail.
+isa uvar _ _, isa _ uvar _ :- print "ERROR: Flexible isa!", fail.
+isaType uvar _ _, isaType _ uvar _ :- print "ERROR: Flexible isaType!", fail.
+
+ofType A KIND _IE :- locTypeDef A KIND _.
+
+%% !!!DEBUG mock typing of term M, returns chosen type T
+of (fixMe M T ) T int 
+    :- !
+    %,  print "|||||||||||||||||||||||||||||||||||||||||\n|||||||||||||||||||||||||||||||||||||||||\n"
+    ,  print M
+    ,  term_to_string T S, print S
+    %,  print "|||||||||||||||||||||||||||||||||||||||||\n|||||||||||||||||||||||||||||||||||||||||\n"
+    .
+
+%%% !!!DEBUG mock type-checking of term M as a term of type T
+isa (fixMe M T) T int 
+    :- !
+    %,  print "|||||||||||||||||||||||||||||||||||||||||\n|||||||||||||||||||||||||||||||||||||||||\n"
+    ,  print M
+    ,  term_to_string T S, print S
+    %,  print "|||||||||||||||||||||||||||||||||||||||||\n|||||||||||||||||||||||||||||||||||||||||\n"
+    .
+
+%%% !!!DEBUG a fixMe is convertible with everything
+dconv (fixMe _ _) _.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% <For debugging purposes> %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+type debugga mttTerm -> mttTerm.
+
+isa (debugga T) TY IE :-
+ print "<@@@@@@@@@@" (isa T TY IE),
+ (debug => spy(isa T TY IE)),
+ print ">@@@@@@@@@@" (isa T TY IE).
+
+of (debugga T) TY IE :-
+ print "<@@@@@@@@@@" (of T TY IE),
+ (debug => spy(of T TY IE)),
+ print ">@@@@@@@@@@" (of T TY IE).
+
+hstep (debugga T) T.
+
+type printa mttTerm -> mttTerm.
+
+isa (printa T) TY IE :-
+ print "=@@@@@@@@@@" (isa T TY IE),
+ isa T TY IE.
+
+hstep (printa T) T.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%% </For debugging purposes> %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+isaType Type Kind IE 
+    :- spy(ofType Type Kind' IE)
+    ,  spy(pts_leq  Kind' Kind)
+    .
+
+% XXX: modificare aggiungendo refinement
+isa Term TY IE 
+    :- spy(of Term TY' IE)
+    ,  spy(conv TY' TY)
+    .
+
+
+of X Y _ :-  locDecl X Y .
+
+% XXX: modificare aggiungendo il refinement
+%% the universe of small propositions
+ofType propS col _IE.
+of (encode T) propS IE :- spy (ofType T props IE).
+ofType (decode T) props IE :- spy (of T propS IE).
+hstep (encode T) S :- hnf T (decode S).
+hstep (decode T) S :- hnf T (encode S).
+dconv (encode S1) (encode S2) :- conv S1 S2.
+dconv (decode S1) (decode S2) :- conv S1 S2.
+
+%% Functions used in interpretation of extensionally equivalent (conv) types. These cover general/
+%% degenerate cases, while the specific rules (for specific types) appear in their respective modules
+
+%% returns method to generate a proof for the equality of a term to itself
+proof_eq A A T H'
+    :- spy(interp_isa A T Ai)
+    ,  spy(setoid_refl T H)		% H is a proof of reflexivity for the translation of type T
+    ,  spy(H' = H Ai)                % then applying H to the translation of A proves it equal to itself
+    .
+
+%%  returns method to generate proof for the intensional equality, given a proof of the propositional one
+proof_eq A B T Hi
+    :- spy(locDecl H (propEq T_ A B))       %% given a proof of the propositional equality between A and B
+    , !
+    ,  spy(interp_isa H (propEq T A B) Hi)       %% the intensional one is its translation
+    .
+    
+%% case with A and B inverted (using symetry in the translation of propEq over the translated of type T)
+proof_eq A B T Hi
+    :- spy(locDecl H (propEq _T' B A))
+    ,  !
+    ,  spy(interp_isa H (propEq T B A) Hi')
+    ,  spy (setoid_symm T Q)
+    ,  spy (interp_isa A T Ai)
+    ,  spy (interp_isa B T Bi)
+    ,  spy(Hi = Q Bi Ai Hi')
+    .
+
+%% tau A1 A2 F construct a function of one argument from the interpretation of A1 to the interpretation of A2, 
+%%   the patter with the various predicated for the interpretation is that the input are 
+%%   exstensional and the outputs are extensional.
+
+%% constructing a function that, given int_terms of an int_type, returns int_terms of the same int_type (Identity!)
+tau A A (x \ x) :- !.
+
+tau_eq A A (x\y\h\ h) :- !.
+
+tau_eq P1 P2 F
+    :- ofType P1 K1 ext
+    ,  ofType P2 K2 ext
+    ,  pts_leq K1 propc
+    ,  pts_leq K2 propc
+    ,  conv P1 P2
+    ,  F = (_\_\_\ id singleton star)
+    .
+
+proof_eq A1 A2 T H
+    :- isa A1 T ext
+    ,  isa A2 T ext
+    ,  ofType T K ext
+    ,  pts_leq K propc
+    ,  H = id singleton star
+    .
+
+%interpret X:_ext T in un Xi di tipo Ti
+interp_isa X T Xi 
+        :- spy(of X T_inf ext)
+        ,  spy(interp X Xi')
+        ,  spy(tau T_inf T F)
+        ,  spy(Xi = F Xi')
+        .
+
+%% implementare usando simmetria e transitività
+locDecl (k_propId Te) (forall T t1\ forall T t1'\ 
+        implies (E t1 t1') (forall T t2\ forall T t2'\ 
+                implies (E t2 t2') (implies (E t1 t2) (E t1' t2'))) )
+                :- interp Te T
+                ,  setoid_eq Te E
+                .
+
+
+setoid_refl Prop (_\id singleton star) 
+    :- spy(ofType Prop K ext), pts_leq K propc.
+setoid_symm Prop (_\_\_\ id singleton star) 
+    :- spy(ofType Prop K ext), pts_leq K propc.
+setoid_tran Prop (_\_\_\_\_\ id singleton star) 
+    :- spy(ofType Prop K ext), pts_leq K propc.
+setoid_eq   Prop (_\_\ (propId singleton star star)) 
+    :- spy(ofType Prop K ext), pts_leq K propc.
+
+%setoid_refl T (x\ fixMe "prova di riflessivita'" (EquT x x) )
+%    :- spy(setoid_eq T EquT)
+%    .
+%setoid_symm T (x\ y\ h\ fixMe "prova di symmetria" (EquT y x) )
+%    :- spy(setoid_eq T EquT)
+%    .
+
+%TODO: this macro requires the predicate "tau" to be explicitly written as an argument, 
+macro_tau B B' Q 
+    :- spy(setoid_eq B EquB)
+    ,  spy(interp B Bi)
+    ,  spy(interp B' Bi')
+    ,  spy(tau B' B FB) % This is needed to transport xi' in the domain of EquB
+    ,  spy(pi x\ pi xi\ pi x'\ pi xi'\ pi h\ pi hi\ 
+        locDecl x B 
+        => locDecl x' B'
+        => locDecl xi Bi
+        => locDecl xi' Bi'
+        => interp x xi
+        => interp x' xi'
+        => (locDecl h (propEq B x x')) 
+        => (locDecl hi (EquB xi (FB xi')))
+        => interp h hi
+        => spy(Q x x' h xi xi' hi)
+        ) 
+    . 
+
+%% macro_tau function for type constructors covariant in the argument B
+macro_tau_cov_cov B B' Q 
+    :- spy(setoid_eq B' EquB')
+    ,  spy(interp B Bi)
+    ,  spy(interp B' Bi')
+    ,  spy(tau B B' FB)
+    ,  spy(pi x\ pi xi\ pi x'\ pi xi'\ pi h\ pi hi\ 
+        locDecl x B 
+        => locDecl x' B'
+        => locDecl xi Bi
+        => locDecl xi' Bi'
+        => interp x xi
+        => interp x' xi'
+        => (locDecl h (propEq B x x')) 
+        => (locDecl hi (EquB' (FB xi) xi'))
+        => interp h hi
+        => spy(Q x x' h xi xi' hi)
+        ) 
+    . 
+macro_Pi T Q :- interp T Ti, setoid_eq T EquT, spy(
+    pi x1\ pi x2\ pi h\ pi x1i\ pi x2i\ pi hi\
+        locDecl x1 T => locDecl x2 T => locDecl x1i Ti => locDecl x2i Ti =>
+        interp x1 x1i => interp x2 x2i => 
+        locDecl h (propEq T x1 x2) => locDecl hi (EquT x1i x2i) => interp h hi =>
+        Q x1 x2 h x1i x2i hi
+).
+
+macro_interp B Q 
+    :- spy(interp B Bi)
+    ,  spy(pi x\ pi xi\ locDecl x B => locDecl xi Bi => interp x xi => (Q x xi B Bi)) 
+    .
+
+
+%%%%% Library Attempt %%%%%
+
+locDecl X Y :- locDef X Y _.
+hstep X Y :- locDef X _ Y.
+hstep X Y :- locTypeDef X _ Y.
+
+%type process_library list libraryEntry -> prop -> prop.
+
+pred process_library i:list libraryEntry, i:prop.
+process_library [] (uvar as K) :- declare_constraint (process_library [] K) [K].
+process_library [] K :- K.
+process_library [Entry|TL] K :-
+    spy(process_entry Entry Hyp),
+    spy(Hyp => process_library TL K).
+
+type in_library prop -> prop.
+
+type setoid mttType -> mttType.
+type setoid_rel mttType -> mttTerm.
+type setoid_reflL mttType -> mttTerm.
+type setoid_symmL mttType -> mttTerm.
+type setoid_tranL mttType -> mttTerm.
+type setoidDep mttType -> (mttTerm -> mttType) -> mttTerm -> mttType.
+type setoidDepCarrier mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
+type setoidDepCast mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
+type proof_trasp  mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
+translateLib L1 :-
+ L1 = [
+   (univCol X \ locTypeDefL (setoid X) col
+     (setSigma
+       % setoid_rel
+       (setPi X _ \ setPi X _ \ propS)
+       (rel \ and  (and % setoid_reflL
+              	   	(forall X x \ decode (app (app rel x) x))
+		   	% setoid_tranL
+		   	(forall X x\ forall X y\ forall X z\ implies (decode (app (app rel x) y)) (implies (decode (app (app rel y) z)) 
+				(decode (app (app rel x) z)))))
+              % setoid_symmL
+	      (forall X x1\ forall X x2\ implies (decode (app (app rel x1) x2))  (decode (app (app rel x2) x1))))))
+ , (univPi X \ locDefL (setoid_rel X) (setPi (setoid X) _ \ setPi X _ \ setPi X _ \ propS)
+     (lambda (setoid X) R \
+       elim_setSigma R (_ \ setPi X _ \ setPi X _ \ propS) (x\y\x)))
+ ,
+  (univPi X \ locDefL (setoid_reflL X) (setPi (setoid X) R \ forall X x \ decode (app (app (app (setoid_rel X) R) x) x))
+     (lambda (setoid X) R \ 
+       (elim_setSigma R (c \ forall X x \ decode (app (app (app (setoid_rel X) c) x) x))
+		      (w1\w2\ p1_and (p1_and w2)))))
+					   
+ , (univPi X\ locDefL (setoid_symmL X) (setPi (setoid X) R\ forall X x1\ forall X x2\
+                                               implies (decode (app (app (app (setoid_rel X) R) x1) x2))
+					        (decode (app (app (app (setoid_rel X) R) x2) x1)))
+     (lambda (setoid X) R\
+       (elim_setSigma R (c\ forall X x1\ forall X x2\ implies (decode (app (app (app (setoid_rel X) c) x1) x2))
+                                                            (decode (app (app (app (setoid_rel X) c) x2) x1)))
+	 (w1\w2\ p2_and w2 ))))
+, (univPi X\ locDefL (setoid_tranL X) (setPi (setoid X) R\ forall X x\ forall X y\ forall X z\
+  	     	      implies (decode (app (app (app (setoid_rel X) R) x) y))
+		       (implies (decode (app (app (app (setoid_rel X) R) y) z)) (decode (app (app (app (setoid_rel X) R) x) z))))
+		     (lambda (setoid X) R\
+		      (elim_setSigma R (c\ forall X x\ forall X y\ forall X z\ implies (decode (app (app (app (setoid_rel X) c) x) y))
+		       		  (implies (decode (app (app (app (setoid_rel X) c) y) z)) (decode (app (app (app (setoid_rel X) c) x) z))))
+				     (w1\w2\ p2_and (p1_and w2)))))
+
+ , (univPi B\
+    (univDepPi B C\
+     (univPiT (setoid B) bS\
+       locTypeDefL (setoidDep B C bS) col
+        (setSigma (setSigma (setPi B x\ setoid (C x)) _\
+		  	    (setPi B x1\ setPi B x2\
+	            	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    	setPi (C x1) _\ C x2)) cc\
+		  (setPi B x1\ setPi B x2\
+		    setPi (C x1) y1\ setPi (C x1) y2\
+		     setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+		      setPi (decode (app (app (app (setoid_rel (C x1))
+		      	    	    (app (elim_setSigma cc (_\ (setPi B x\ setoid (C x))) (x\y\x)) x1)) y1) y2)) d2\
+		       (decode (app (app (app (setoid_rel (C x2))
+		       	       	    	 (app (elim_setSigma cc (_\ (setPi B x\ setoid (C x))) (x\y\x)) x2))
+					 (app (app (app (app (elim_setSigma cc
+					      	   	     		    (_\ (setPi B x1\ setPi B x2\
+	            	      						    	setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    							setPi (C x1) _\ C x2))
+									    (x\y\y)) x1) x2) d1) y1))
+					 (app (app (app (app (elim_setSigma cc
+					      	   	     		    (_\ (setPi B x1\ setPi B x2\
+	            	      						    	setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    							setPi (C x1) _\ C x2))
+									    (x\y\y)) x1) x2) d1) y2))))))))
+	  
+, (univPi B\
+   (univDepPi B C\
+    (univPiT (setoid B) bS\
+     (locDefL (setoidDepCarrier B C bS)
+       (setPi (setoidDep B C bS) s\ setPi B x\ setoid (C x))
+       (lambda (setoidDep B C bS) s\
+         elim_setSigma s (_\ (setPi B x\ setoid (C x)))
+	   	       (w1\w2\ elim_setSigma w1 (_\ (setPi B x\ setoid (C x))) (x\y\x)))))))
+	  
+
+, (univPi B\
+   (univDepPi B C\
+    (univPiT (setoid B) bS\
+     locDefL (setoidDepCast B C bS)
+      (setPi (setoidDep B C bS) s\
+       (setPi B x1\ setPi B x2\
+         setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+	  setPi (C x1) _\ C x2))
+     (lambda (setoidDep B C bS) s\
+       elim_setSigma s (_\ setPi B x1\ setPi B x2\ setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\ setPi (C x1) _\ C x2)
+       		     (w1\w2\
+			elim_setSigma w1 (_\ setPi B x1\ setPi B x2\
+				      	     setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\ setPi (C x1) _\ C x2) (x\y\y))))))
+,
+   (univPi B\
+   (univDepPi B C\
+    (univPiT (setoid B) bS\
+     locDefL (proof_trasp B C bS)
+      (setPi (setoidDep B C bS) s\
+       (setPi B x1\ setPi B x2\
+	     setPi (C x1) y1\ setPi (C x1) y2\
+	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+	       setPi (decode (app (app (app (setoid_rel (C x1)) (app (app (setoidDepCarrier B C bS) s) x1)) y1) y2)) d2\
+	        (decode (app (app (app (setoid_rel (C x2))
+			     (app (app (setoidDepCarrier B C bS) s) x2))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y1))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y2)))))
+      (lambda (setoidDep B C bS) s\
+        (elim_setSigma s
+	  (s\ (setPi B x1\ setPi B x2\
+	     setPi (C x1) y1\ setPi (C x1) y2\
+	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+	       setPi (decode (app (app (app (setoid_rel (C x1)) (app (app (setoidDepCarrier B C bS) s) x1)) y1) y2)) d2\
+	        (decode (app (app (app (setoid_rel (C x2))
+			     (app (app (setoidDepCarrier B C bS) s) x2))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y1))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y2)))))
+	 (x\y\y))))))
+ ].
+
+type trueT mttType.
+type mk_trueT mttTerm.
+
+trueLib L :-
+ L =
+ [
+% true
+  (locTypeDefL trueT props (propId singleton star star)),
+% mk_trueT
+  (locDefL mk_trueT trueT (id singleton star))
+ ].
+
+% Library for abbreviations common to all propositions
+type prop_setoid mttType -> mttTerm.
+propLib L :-
+ L =
+ [
+% prop_setoid (to be used for all propositions, i.e. and, implies, or, ...)
+  (univProp Xi \
+    locDefL (prop_setoid Xi) (setoid Xi)
+     (pair
+       (setPi Xi _ \ setPi Xi _ \ propS)
+       (rel \ (and (and (forall Xi x \ decode (app (app rel x) x))
+       	      	   	(forall Xi x\ forall Xi y\ forall Xi z\ implies (decode (app (app rel x) y))
+		         (implies (decode (app (app rel y) z)) (decode (app (app rel x) z)))))
+                   (forall Xi x1\ forall Xi x2\ implies (decode (app (app rel x1) x2)) (decode (app (app rel x2) x1)))))
+       % the setoid relation
+       (lambda Xi _ \ lambda Xi _ \ encode trueT)
+       (pair_and
+	 (and (forall Xi _ \ trueT)
+       	      (forall Xi _\ forall Xi _\ forall Xi _\ implies trueT (implies trueT trueT)))
+         (forall Xi _ \ forall Xi _ \ implies trueT trueT)
+	 (pair_and (forall Xi _ \ trueT)
+	 	   (forall Xi _\ forall Xi _\ forall Xi _\ implies trueT (implies trueT trueT))
+		   (forall_lam Xi _ \ mk_trueT)
+		   (forall_lam Xi _\ forall_lam Xi _\ forall_lam Xi _\ impl_lam trueT _\ impl_lam trueT _\ mk_trueT))
+         (forall_lam Xi _ \ forall_lam Xi _ \ impl_lam trueT _ \ mk_trueT))))
+ ].
+
+type append list A -> list A -> list A -> prop.
+
+append [] L L.
+append [H|TL] L1 [H|TL2] :- append TL L1 TL2.
+
+type concat list (list A) -> list A -> prop.
+
+concat [] [].
+concat [H|TL] R :- concat TL L, append H L R.
+
+mode (in_library i).
+in_library P :-
+    translateLib L1,
+    trueLib L2,
+    propLib L3,
+    /*
+    singletonLib L4,
+    setSigmaLib L5,
+    print "here",
+    setPiLib L6,
+    impliesLib Limpl,
+    forallLib Lforall,
+    propEqLib LpropEq,
+    concat [L1,L2,L3,L4 ,L5, L6, Lforall, Limpl, LpropEq] L,
+    */
+    concat [L1, L2, L3] L,
+    process_library L P.
+
+kind libraryEntry type.
+type process_entry libraryEntry -> prop -> prop.
+type locTypeDefL mttType -> mttKind -> mttType -> libraryEntry.
+type locDefL   mttTerm -> mttType -> mttTerm -> libraryEntry.
+type univPi    (mttType -> libraryEntry) -> libraryEntry.
+type univCol    (mttType -> libraryEntry) -> libraryEntry.
+type univProp    (mttType -> libraryEntry) -> libraryEntry.
+type univDepPi mttType -> ((mttTerm -> mttType) -> libraryEntry) -> libraryEntry.
+type univDepProp mttType -> ((mttTerm -> mttType) -> libraryEntry) -> libraryEntry.
+type univDepCol mttType -> ((mttTerm -> mttType) -> libraryEntry) -> libraryEntry.
+type univPiT   mttType -> (mttTerm -> libraryEntry) -> libraryEntry.
+type univDepPiT mttType -> (mttTerm -> mttType) -> ((mttTerm -> mttTerm) -> libraryEntry) -> libraryEntry.
+
+type hyp       prop -> prop -> libraryEntry -> libraryEntry.
+% Note: the first argument of cut must be made of only
+% pi, => and conv_trans. We could make the typing more precise
+type cut       prop -> libraryEntry -> libraryEntry.
+type conv_trans mttTerm -> mttTerm -> mttTerm -> prop.
+type conv_trans_symm mttTerm -> mttTerm -> mttTerm -> prop.
+type conv_symm mttTerm -> mttTerm -> prop.
+
+/* XXX: mancano
+    - definizioni con solo tipo -> dimostrazione
+    - definizioni con solo termine -> inferenza
+*/
+process_entry (locTypeDefL N KIND TY) Hyp :-
+   spy(ofType TY KIND int),
+   Hyp = locTypeDef N KIND TY,
+   print "## New type definition: " N.
+process_entry (locDefL N TY TE) Hyp :-
+   spy(isaType TY _ int),
+   spy(isa TE TY int),
+   Hyp = locDef N TY TE,
+   print "## New definition: " N.
+   
+process_entry (univPi F) Hyp2 :-
+   spy (pi Bi \ ofType Bi set int => spy (process_entry (F Bi) (Hyp Bi))),
+   Hyp2 = (pi Bi \ Hyp Bi :- spy (isaType Bi set int)).
+   
+process_entry (univCol F) Hyp2 :-
+   spy (pi Bi \ ofType Bi col int => spy (process_entry (F Bi) (Hyp Bi))),
+   Hyp2 = (pi Bi \ Hyp Bi :- spy (isaType Bi col int)).
+   
+process_entry (univProp F) Hyp2 :-
+   spy (pi Bi \ ofType Bi props int => spy (process_entry (F Bi) (Hyp Bi))),
+   Hyp2 = (pi Bi \ Hyp Bi :- spy (isaType Bi props int)).
+
+process_entry (univDepPi Bi F) Hyp2 :-
+   spy (pi Ci \ (pi x \ ofType (Ci x) set int :- of x Bi int) =>
+                (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
+                spy (process_entry (F Ci) (Hyp Ci))),
+   Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) set int :- of x Bi int))
+                % , spy(pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y)  % This should not be needed, right?
+          ).
+process_entry (univDepProp Bi F) Hyp2 :-
+   spy (pi Ci \ (pi x \ ofType (Ci x) props int :- of x Bi int) =>
+                (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
+                spy (process_entry (F Ci) (Hyp Ci))),
+   Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) props int :- of x Bi int))
+                %, spy(pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y)  % This should not be needed, right?
+          ).
+	  
+process_entry (univDepCol Bi F) Hyp2 :-
+   spy (pi Ci \ (pi x \ ofType (Ci x) col int :- of x Bi int) =>
+                (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
+                spy (process_entry (F Ci) (Hyp Ci))),
+   Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) col int :- of x Bi int))
+                %, spy(pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y)  % This should not be needed, right?
+          ). 
+
+
+process_entry (univPiT T F) Hyp2 :-
+   spy (pi x \ of x T int => spy (process_entry (F x) (Hyp x))),
+   Hyp2 = (pi x \ Hyp x :- spy(isa x T int)).
+
+process_entry (univDepPiT Ai Bi F) Hyp2 :-
+   spy (pi t\   (pi x \ ofType (Bi x) set int :- of x Ai int) =>
+                (pi x \ pi y \ dconv (Bi x) (Bi y) :- conv x y) =>
+                (pi x\ of (t x) (Bi x) int :- of x Ai int) =>
+		spy(process_entry (F t) (Hyp t))),
+   Hyp2 = (pi t\ Hyp t :-   spy (pi x\ (isaType (Bi x) set int :- of x Ai int)),  %this should hold already?
+   	      	     	    spy(pi x\ isa (t x) (Bi x) int  :- of x Ai int)).
+
+process_entry (hyp H1 H2 E) Hyp2 :-
+   spy (H1 => process_entry E Hyp),
+   Hyp2 = (Hyp :- spy(H2)).
+process_entry (cut H E) Hyp2 :-
+   spy(process_cut H Hyp),
+   spy (Hyp => process_entry E Hyp2).
+
+process_cut (pi a \ C a) (pi a \ H a) :-
+   pi a \ spy(process_cut (C a) (H a)).
+process_cut (H1 => C) (H1 => H2) :-
+   spy(H1 => spy(process_cut C H2)).
+process_cut (conv_trans X Y Z) AA /*CSC: MAYBE AN ELPI BUG HERE? (conv X Z)*/ :-
+   spy(of X T int),
+   spy(isa Y T int),
+   spy(isa Z T int),
+   spy(conv X Y), spy(conv Y Z),
+   AA = conv X Z.
+
+process_cut (conv_trans_symm X Y Z) AA /*CSC: MAYBE AN ELPI BUG HERE? (conv X Z)*/ :-
+   spy(of X T int),
+   spy(isa Y T int),
+   spy(isa Z T int),
+   spy(conv X Y), spy(conv Y Z),
+   AA = conv Z X.
+
+process_cut (conv_symm X Y) AA :-
+   spy(of X T int),
+   spy(isa Y T int),
+   spy(conv X Y),
+   AA = conv Y X.

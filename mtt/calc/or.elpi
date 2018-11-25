@@ -1,0 +1,44 @@
+%%-- propositional disjunction: or
+
+type or mttType -> mttType -> mttType.
+type inl_or, inr_or mttType -> mttType -> mttTerm -> mttTerm.
+type elim_or mttType -> mttTerm -> (mttTerm -> mttTerm) -> (mttTerm -> mttTerm) -> mttTerm.
+
+ofType (or A B) KIND IE 
+    :- ofType A KIND1 IE
+    ,  ofType B KIND2 IE
+    ,  (pts_prop KIND1 KIND2 KIND).
+
+of (inr_or A B Bb) (or A B) IE 
+    :- ofType (or A B) _ IE
+     , (isa Bb B IE)
+     .
+
+of (inl_or A B Aa) (or A B) IE  
+    :- ofType (or A B) _ IE
+     , (isa Aa A IE)
+     .
+
+of (elim_or C W Cl Cr) C IE 
+    :- spy (of W (or A B) IE)
+     , spy (pi z\ locDecl z (or A B) => ofType C KIND IE)
+     , spy (pts_leq KIND propc)
+     , spy (pi x\ locDecl x A => spy(isa (Cl x) C IE) ) 
+     , spy (pi y\ locDecl y B => isa (Cr y) C IE) 
+     .
+
+hstep (elim_or _C W Cl _Cr) (Cl Wl) 
+    :- (hnf W (inl_or _A _B Wl))
+    .
+
+hstep (elim_or _C W _Cl Cr) (Cr Wr)
+    :- (hnf W (inr_or _A _B Wr))
+    .
+
+dconv (elim_or C W Cl Cr) (elim_or C' W' Cl' Cr')
+    :- (conv W W')
+    ,  (of W AB IE_)
+    ,  (pi z \ conv C C')
+    ,  (pi z \ locDecl z AB => (conv (Cl z) (Cl' z) ) )
+    ,  (pi z \ locDecl z AB => (conv (Cr z) (Cr' z) ) )
+    .

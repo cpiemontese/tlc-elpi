@@ -13,8 +13,8 @@ ofType (propEq A AA1 AA2) KIND ext
     .
 
 
-of (eq C Cc) (propEq C Cc Cc) ext
-    :-  spy(of Cc C ext)
+of (eq C Cc) (propEq C Cc Cc) (eq C Cc') ext
+    :-  spy(of Cc C Cc' ext)
     .
 
 

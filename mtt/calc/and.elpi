@@ -2,42 +2,32 @@ type and mttType -> mttType -> mttType.
 type pair_and mttType -> mttType -> mttTerm -> mttTerm -> mttTerm.
 type p1_and, p2_and mttTerm -> mttTerm.
 
-ofType (and B C) KIND IE
-    :- ofType B KIND1 IE
-    ,  (ofType C KIND2 IE)
-    ,  (pts_prop KIND1 KIND2 KIND)
-    .
+% ---- TYPING ---- %
+
+ofType (and B C) Kind IE :-
+    ofType B Kind1 IE,
+    ofType C Kind2 IE,
+    pts_prop Kind1 Kind2 Kind.
     
-of (pair_and B C BB CC) (and B C) IE 
-    :- ofType (and B C) _ IE
-    ,  (isa BB B IE)
-    ,  (isa CC C IE)
-    .
+of (pair_and B C P Q) (and B C) (pair_and B C P' Q') IE :-
+    ofType (and B C) _ IE,
+    isa P B P' IE,
+    isa Q C Q' IE.
 
-of (p1_and Pair) B IE 
-    :- of Pair (and B C_) IE
-    .
+of (p1_and Pair) B (p1_and Pair') IE :- of Pair (and B C_) Pair' IE.
+of (p2_and Pair) C (p2_and Pair') IE :- of Pair (and B_ C) Pair' IE.
 
-of (p2_and Pair) C IE 
-    :- of Pair (and B_ C) IE
-    .
+% ---- REDUCTION ---- %
 
-hstep (p1_and Pair) (Bb) :- hnf Pair (pair_and B_ C_ Bb Cc_).
+hstep (p1_and Pair) P :- hnf Pair (pair_and B_ C_ P Q_).
+hstep (p2_and Pair) Q :- hnf Pair (pair_and B_ C_ P_ Q).
 
-hstep (p2_and Pair) (Cc) :- hnf Pair (pair_and B_ C_ Bb_ Cc).
+% ---- CONVERSION ---- %
 
-dconv (pair_and B C Bb Cc) (pair_and B' C' Bb' Cc')
-    :- (conv B B')
-    ,  (conv C C')
-    ,  (conv Bb Bb')
-    ,  (conv Cc Cc')
-    .
+dconv (and B C) (and B' C') :- conv B B', conv C C'.
 
-dconv (p1_and Pair) (p1_and Pair') 
-    :- (conv Pair Pair')
-    .
+dconv (pair_and B C P Q) (pair_and B' C' P' Q') :-
+    conv B B', conv C C', conv P P', conv Q Q'.
 
-dconv (and B C) (and B' C') 
-    :- (conv B B')
-    ,  (conv C C')
-    .
+dconv (p1_and Pair) (p1_and Pair') :- conv Pair Pair'.
+dconv (p2_and Pair) (p2_and Pair') :- conv Pair Pair'.

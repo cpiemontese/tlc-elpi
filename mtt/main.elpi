@@ -1,10 +1,9 @@
 accumulate calc/all, debug.
 
-/*
+/* Osservazioni
 - hnf -> steps
 - hstep -> step
 - conv -> conv
-- mettere delay di of e isa su uvar
 - regole interessanti:
     - ofType di default cerca locTypeDef
         ofType A KIND _IE :- locTypeDef A KIND _.
@@ -28,16 +27,10 @@ accumulate calc/all, debug.
       lasciare la locDef/locTypeDef)
         hstep X Y :- locDef X _ Y.
         hstep X Y :- locTypeDef X _ Y.
-- aggiungere definizioni con solo tipo/solo termine -> le prime vengono
-  processate in uno script che dimostra la definizione, le seconde semplicemente
-  inferiscono il tipo
-- aggiungere process_term di uno script che a detta di Coen dovrebbe servire a
-  dimostrare una qualche definizione, quindi forse bisogna prendere in input
-  script E definizione? Invstigare
 - dconv e' usato al posto di conv per definire la roba ma poi la definizione si
   rifa sempre a conv e conv si rifa' a dconv dopo hstep, non capisco il perche'
   di questo giro dell'oca
-- per dimstrare che qualcosa vale per ogni qualcosa si fa precedere una locDef
+- per dimostrare che qualcosa vale per ogni qualcosa si fa precedere una locDef
   da una serie di univRoba che praticamente vengono processati correttamente
 */
 

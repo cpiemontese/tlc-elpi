@@ -19,30 +19,37 @@ ofType (setSigma B C) KIND IE
 %% extensional calculus.
 type p1,p2 mttTerm -> mttTerm.
 
-of (p1 Pair) B IE :- isa Pair (setSigma B _) IE.
-of (p2 Pair) (C (p1 Pair)) IE :- isa Pair (setSigma B_ C) IE.
+of (p1 Pair) B (p1 Pair') IE :- isa Pair (setSigma B _) Pair' IE.
+of (p2 Pair) C_fst (p2 Pair') IE :-
+    isa Pair (setSigma B_ C) Pair' IE,
+    pi p\ (locDecl p (setSigma B_ C), copy p (p1 Pair')) => conv (C p) C_fst.
 
 hstep (p1 Pair) Bb :- hnf Pair (pair _ _ Bb _).
 hstep (p2 Pair) Cc :- hnf Pair (pair _ _ _ Cc).
 %%%% End of:   extension to the calculus: primitive projections
 
-of (pair B C BB CC) (setSigma B C) IE 
-    :- (ofType B _ IE)
-    ,  (ofType (C BB) _ IE)
-    ,  spy(isa BB B IE)
-    ,  spy(isa CC (C BB) IE)
+of (pair B C BB CC) (setSigma B C) (pair B C BB' CC') IE 
+    :- spy(isa BB B BB' IE)
+    ,  spy(isa CC (C_BB) CC' IE),
+    ,  (ofType B _ IE)
+    ,  (ofType (C_BB) _ IE)
+    ,  pi bb\ (locDecl bb B, copy bb BB') => conv (C bb) C_BB
     .
 
-of (elim_setSigma Pair M MM) (M Pair) IE 
-    :- spy (isa Pair (setSigma B C) IE)
+of (elim_setSigma Pair M MM) M_Pair (elim_setSigma Pair' M MM') IE 
+    :- spy (isa Pair (setSigma B C) Pair' IE)
     ,  pi z \ locDecl z (setSigma B C) => spy (ofType (M z) _ IE)
-    ,  pi x \ pi y \
-            locDecl x B => locDecl y (C x) =>  
-                spy (isa (MM x y) (M (pair B C x y)) IE)
+    ,  pi x y\ ((locDecl x B, locDecl y (C x)) =>  
+        spy (isa (MM x y) M_lpair (MM' x y) IE),
+        pi p\ (locDecl p (setSigma B C), copy p (pair B C x y)) =>
+            conv (M p) M_lpair
+       )
+    ,  pi p\ (locDecl p (setSigma B C), copy p Pair') => conv (M p) M_Pair
     .
 
-hstep (elim_setSigma Pair _M Mm) (Mm Bb Cc) 
+hstep (elim_setSigma Pair _M Mm) Res
     :- hnf Pair (pair _B _C Bb Cc)
+    ,  subst Mm [Bb, Cc] Res
     .
 
 

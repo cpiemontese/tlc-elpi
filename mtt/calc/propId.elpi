@@ -18,19 +18,24 @@ ofType (propId A AA1 AA2) KIND _IE
     ,  isa AA2 A int
     .
 
-of (id A AA) (propId A AA AA) int 
+of (id A AA) (propId A AA' AA') (id A AA') int 
     :- spy(ofType A _ int)
-    ,  spy(isa AA A int)
+    ,  spy(isa AA A AA' int)
     .
 
-of (elim_id P C CC) (C AA1 AA2) int
-    :- spy(of P (propId A AA1 AA2) int)
+of (elim_id P C CC) (C_AA1_AA2) (elim_id P' C CC') int
+    :- spy(of P (propId A AA1 AA2) P' int)
     ,  spy(pi x\ pi y\ locDecl x A => locDecl y A => isaType (C x y) propc int)
-    ,  spy(pi x\ locDecl x A => of (CC x) (C x x) int)
+    ,  spy(pi x\ locDecl x A => of (CC x) (C x x) (CC' x) int)
+    ,  spy(pi x y\ (
+        locDecl x A, locDecl y A, copy x AA1, copy y AA2) =>
+            conv (C x y) (C_AA1_AA2))
     .
 
-hstep (elim_id (id _A AA) _C CC) (CC AA).
+% XXX: forse hnf mancante?
+hstep (elim_id (id _A AA) _C CC) Res :- subst CC [AA] Res.
 
-dconv (id A AA) (id A' AA') :- (conv A A'),(conv AA AA').
+dconv (id A AA) (id A' AA') :- (conv A A'), (conv AA AA').
 
-dconv (propId A AA1 AA2) (propId A' AA1' AA2') :- spy (conv A A'), spy (conv AA1 AA1'), spy(conv AA2 AA2').
+dconv (propId A AA1 AA2) (propId A' AA1' AA2') :-
+    spy (conv A A'), spy (conv AA1 AA1'), spy(conv AA2 AA2').

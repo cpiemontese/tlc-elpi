@@ -9,30 +9,32 @@ ofType (or A B) KIND IE
     ,  ofType B KIND2 IE
     ,  (pts_prop KIND1 KIND2 KIND).
 
-of (inr_or A B Bb) (or A B) IE 
+of (inr_or A B Bb) (or A B) (inr_or A B Bb') IE 
     :- ofType (or A B) _ IE
-     , (isa Bb B IE)
+     , (isa Bb B Bb' IE)
      .
 
-of (inl_or A B Aa) (or A B) IE  
+of (inl_or A B Aa) (or A B) (inl_or A B Aa') IE  
     :- ofType (or A B) _ IE
-     , (isa Aa A IE)
+     , (isa Aa A Aa' IE)
      .
 
-of (elim_or C W Cl Cr) C IE 
-    :- spy (of W (or A B) IE)
+of (elim_or C W Cl Cr) C (elim_or C W' Cl' Cr') IE 
+    :- spy (of W (or A B) W' IE)
      , spy (pi z\ locDecl z (or A B) => ofType C KIND IE)
      , spy (pts_leq KIND propc)
-     , spy (pi x\ locDecl x A => spy(isa (Cl x) C IE) ) 
-     , spy (pi y\ locDecl y B => isa (Cr y) C IE) 
+     , spy (pi x\ locDecl x A => spy(isa (Cl x) C (Cl' x) IE) ) 
+     , spy (pi y\ locDecl y B => isa (Cr y) C (Cr' y) IE) 
      .
 
-hstep (elim_or _C W Cl _Cr) (Cl Wl) 
+hstep (elim_or _C W Cl _Cr) Res
     :- (hnf W (inl_or _A _B Wl))
+    ,  subst Cl [Wl] Res
     .
 
-hstep (elim_or _C W _Cl Cr) (Cr Wr)
+hstep (elim_or _C W _Cl Cr) Res
     :- (hnf W (inr_or _A _B Wr))
+    ,  subst Cr [Wr] Res
     .
 
 dconv (elim_or C W Cl Cr) (elim_or C' W' Cl' Cr')

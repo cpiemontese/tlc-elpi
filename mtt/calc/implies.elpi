@@ -9,18 +9,19 @@ ofType (implies B C) KIND IE
     ,  (pts_prop KIND1 KIND2 KIND)
     .
 
-of (impl_lam B F) (implies B C) IE
-    :- spy(pi x\ locDecl x B => of (F x) C IE)
+of (impl_lam B F) (implies B C) (impl_lam B F') IE
+    :- spy(pi x\ locDecl x B => of (F x) C (F' x) IE)
     ,  spy(ofType (implies B C) _ IE)
     .
 
-of (impl_app Lam X) C IE
-    :- spy(isa Lam (implies B C) IE)
-    ,  spy(isa X B IE)
+of (impl_app Lam X) C (impl_app Lam' X') IE
+    :- spy(isa Lam (implies B C) Lam' IE)
+    ,  spy(isa X B X' IE)
     .
 
-hstep (impl_app LAM Bb) (F Bb)
+hstep (impl_app LAM Bb) Res
     :- hnf LAM (impl_lam _B F)
+    ,  subst F [Bb] Res
     .
 
         

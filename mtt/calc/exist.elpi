@@ -2,29 +2,36 @@ type exist mttType -> (mttTerm -> mttType) -> mttType.
 type pair_exist mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm -> mttTerm.
 type elim_exist mttTerm -> mttType -> (mttTerm -> mttTerm -> mttTerm) -> mttTerm.
 
+% ---- TYPING ---- %
 
 ofType (exist B C) KIND IE
     :- ofType B KIND1 IE
-    ,  (pi x\ locDecl x B  => ofType (C x) KIND2 IE)
+    ,  (pi x\ locDecl x B => ofType (C x) KIND2 IE)
     ,  pts_for KIND1 KIND2 KIND
     .
 
-of (pair_exist B C BB CC) (exist B C) IE 
+of (pair_exist B C BB CC) (exist B C) (pair_exist B C BB' CC') IE 
     :- spy(ofType (exist B C) _ IE)
-    ,  spy(isa BB B IE)
-    ,  spy(isa CC (C BB) IE)
+    ,  spy(isa BB B BB' IE)
+    ,  spy (isa CC C_BB CC' IE)
+    ,  pi bb\ (locDecl bb B, copy bb BB) => spy (conv (C bb) C_BB)
     .
 
-of (elim_exist Pair M MM) M IE 
-    :- spy(isa Pair (exist B C) IE)
+of (elim_exist Pair M MM) M (elim_exist Pair' M MM') IE 
+    :- spy(isa Pair (exist B C) Pair' IE)
     ,  spy(isaType M propc IE)
     ,  (pi x \ pi y \ locDecl x B => locDecl y (C x) =>  
-                spy(isa (MM x y) M IE))
+                spy(isa (MM x y) M (MM' x y) IE))
     .
 
-hstep (elim_exist W _M MM) (MM Bb Cc) 
+% ---- REDUCTION ---- %
+
+hstep (elim_exist W _M MM) Res
     :- hnf W (pair_exist _B _C Bb Cc)
+    ,  subst MM [Bb, Cc] Res
     .
+
+% ---- CONVERSION ---- %
 
 dconv (pair_exist B C Bb Cc) (pair_exist B' C' Bb' Cc')
     :- (conv B B')

@@ -22,16 +22,16 @@ of (list_cons C Head Tail) (list C) (list_cons C Head' Tail') IE
     ,  isa Tail (list C) Tail' IE
     .
 
-of (elim_list L List LA LL) (L List) (elim_list L List' LA' LL') IE 
+of (elim_list L List LA LL) (L_List) (elim_list L List' LA' LL') IE 
     :- spy(of List (list C) List' IE) 
     ,  spy(pi z\ locDecl z (list C) => ofType (L z) _ IE)
-    %,  spy(isa LA (L (list_empty C)) LA' IE)
     ,  spy(isa LA L_empty LA' IE)
     ,  spy(pi e\ (locDecl e (list C), copy e (list_empty C)) => conv (L e) L_empty)
     ,  spy(pi y x z\ (locDecl y C, locDecl x (list C), locDecl z (L x)) =>
         isa (LL y x z) L_cons (LL' x y z) IE,
         pi cs\ (locDecl cs (list C), copy cs (cons y x)) => conv (L cs) L_cons
        )
+    ,  spy(pi l\ (locDecl l (list C), copy l List) => conv (L l) L_List)
     .
 
 

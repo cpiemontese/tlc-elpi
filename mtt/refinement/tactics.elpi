@@ -39,6 +39,20 @@ tactic (implI N) (goal _ (impl _ _) _ _) _ (impl_lam N A F).
 
 tactic (implE N) _ FVars (app I dots) :- get_named N FVars I.
 
+% --- LIST ---- %
+
+tactic listIEmpty _ _ (list_empty C).
+tactic listICons _ _ (list_cons C H T).
+tactic (listE N) (goal _ _ _ V) FVars (elim_list N1 N2 N3 L List LA LL) :-
+    get_named N FVars List,
+    get_fresh_name list_v1 V N1,
+    get_fresh_name list_v2 V N2,
+    get_fresh_name list_v3 V N3.
+tactic (listE N N1 N2 N3) _ FVars (elim_list N1 N2 N3 L List LA LL) :-
+    get_named N FVars List.
+    
+tactic (elim_list N) 
+
 % ---- OR ---- %
 
 tactic orIL _ _ (inl_or A B L).

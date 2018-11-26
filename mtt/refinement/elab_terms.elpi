@@ -2,12 +2,11 @@
 
 % ---- TYPING ---- %
 
-% XXX: in teoria ci sono tante applicazioni (forall, impl, ...?), si potrebbe
-%      estendere il controllo dell'isa della Lam ad accettare anche altri tipi
-%      magari chiedere a Coen
 isa (app Lam dots) T O IE :- isa Lam T O IE.
 isa (app Lam dots) T O IE :- !,
-    isa Lam (setPi _ _) _ _,
+    (isa Lam (forall _ _) _ _, !; 
+    isa Lam (implies _ _) _ _, !; 
+    isa Lam (setPi _ _) _ _),
     isa (app (app Lam Arg) dots) T O IE.
 
 of (elim_exist N1 N2 P T F) T (elim_exist N1 N2 P' T F') IE :-
@@ -16,6 +15,8 @@ of (forall_lam N A F) T (forall_lam N A F') IE :-
     of (forall_lam A F) T (forall_lam A F') IE.
 of (impl_lam N A F) T (impl_lam N A F') IE :-
     of (impl_lam A F) T (impl_lam A F') IE.
+of (elim_list N1 N2 N3 L List LA LL) T (elim_list N1 N2 N3 L List' LA' LL') IE :-
+    of (elim_list L List LA LL) T (elim_list L List' LA' LL') IE.
 of (elim_or N1 N2 T W Cl Cr) T (elim_or N1 N2 T W' Cl' Cr') IE :-
     of (elim_or T W Cl Cr) T (elim_or T W' Cl' Cr') IE.
 of (elim_id N P C F) T (elim_id N P' C F') IE :- 
@@ -35,6 +36,8 @@ dconv (forall_lam _ A F) (forall_lam _ A' F') :- !,
     dconv (forall_lam A F) (forall_lam A' F').
 dconv (impl_lam _ A F) (impl_lam _ A' F') :- !,
     dconv (impl_lam A F) (impl_lam A' F').
+dconv (elim_list N1 N2 N3 L List LA LL) (elim_list N1 N2 N3 L' List' LA' LL') :- !,
+    dconv (elim_list L List LA LL) (elim_list L' List' LA' LL').
 dconv (elim_or _ _ T W Cl Cr) (elim_or _ _ T' W' Cl' Cr') :- !,
     dconv (elim_or T W Cl Cr) (elim_or T' W' Cl' Cr').
 dconv (elim_id _ P C F) (elim_id _ P' C' F') :- !,

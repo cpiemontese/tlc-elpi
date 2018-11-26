@@ -1,0 +1,104 @@
+% ----------------- %
+% ---- TACTICS ---- %
+% ----------------- %
+
+mode (tactic i i i o).
+
+% ---- AND ---- %
+
+tactic andI (goal _ (and _ _) _ _) FVars (pair_and A B P Q).
+
+tactic andEL _ _ (p1_and P).
+tactic andEL _ _ (p2_and P).
+
+tactic (andEL N) _ FVars (p1_and P) :- get_named N FVars P.
+tactic (andER N) _ FVars (p2_and P) :- get_named N FVars P.
+
+% ---- EXIST ---- %
+
+tactic existI (goal _ (exist _ _) _ _) _ (pair_exist A B P Q).
+
+tactic (existE N) (goal _ _ _ V) FVars (elim_exist N1 N2 P T F) :-
+    get_named N FVars P,
+    get_fresh_name exist_v1 V N1, get_fresh_name exist_v2 V N2.
+tactic (existE N N1 N2) _ FVars (elim_exist N1 N2 P T F) :- get_named N FVars P.
+
+% ---- FORALL ---- %
+
+tactic forallI (goal _ (forall _ _) _ V) _ (forall_lam N A F) :-
+    get_fresh_name forall_v V N.
+tactic (forallI N) (goal _ (forall _ _) _ _) _ (forall_lam N A F).
+
+tactic (forallE N) _ FVars (app F dots) :- get_named N FVars F.
+
+% ---- IMPLIES ---- %
+
+tactic implI (goal _ (impl _ _) _ V) _ (impl_lam N A F) :-
+    get_fresh_name impl_v V N.
+tactic (implI N) (goal _ (impl _ _) _ _) _ (impl_lam N A F).
+
+tactic (implE N) _ FVars (app I dots) :- get_named N FVars I.
+
+% ---- OR ---- %
+
+tactic orIL _ _ (inl_or A B L).
+tactic orIR _ _ (inr_or A B R).
+
+tactic (orE N) (goal _ _ _ V) FVars (elim_or N1 N2 T W Cl Cr) :-
+    get_named N FVars W,
+    get_fresh_name or_vl V N1, get_fresh_name or_vr V N2.
+tactic (orE N N1 N2) _ FVars (elim_or N1 N2 T W Cl Cr) :- get_named N FVars W.
+
+% ---- PROPEQ ---- %
+
+tactic eqI (goal _ (propEq _ _ _) _ _) _ (eq T X).
+
+% ---- PROPID ---- %
+
+tactic idI (goal _ (propId _ _ _) _ _) _ (id T X).
+
+tactic (idE N) (goal _ _ _ V) FVars (elim_id NP P T F) :-
+    get_named N FVars P, get_fresh_name id_v V NP.
+tactic (idE N NP) _ FVars (elim_id NP P T F) :- get_named N FVars P.
+
+% ---- SETPI ---- %
+
+tactic intro (goal _ (setPi _ _) _ V) _ (lambda N A F) :-
+    get_fresh_name lambda_v V N.
+tactic (intro N) (goal _ (setPi _ _) _ _) _ (lambda N A F).
+
+tactic (app N) _ FVars (app Lam dots) :- get_named N FVars Lam.
+
+% ---- SETSIGMA ---- %
+
+tactic sigI (goal _ (setSigma _ _) _ _) _ (pair A B P Q).
+
+tactic sigEL _ _ (p1 P).
+tactic sigER _ _ (p2 P).
+
+tactic (sigEL N) _ FVars (p1 P) :- get_named N FVars P.
+tactic (sigER N) _ FVars (p2 P) :- get_named N FVars P.
+
+tactic (sigE N) (goal _ _ _ V) FVars (elim_setSigma N1 N2 P T F) :-
+    get_named N FVars P,
+    get_fresh_name sig_v1 V N1,
+    get_fresh_name sig_v2 V N2.
+tactic (sigE N N1 N2) _ FVars (elim_setSigma N1 N2 P T F) :-
+    get_named N FVars P.
+
+% ---- SETSUM ---- %
+
+tactic sumIL _ _ (inl A B L).
+tactic sumIR _ _ (inr A B R).
+
+tactic (sumE N) (goal _ _ _ V) FVars (elim_setSum N1 N2 T W Cl Cr) :-
+    get_named N FVars W,
+    get_fresh_name or_vl V N1, get_fresh_name or_vr V N2.
+tactic (orE N N1 N2) _ FVars (elim_or N1 N2 T W Cl Cr) :- get_named N FVars W.
+
+% ---- SINGLETON ---- %
+
+tactic singlI (goal _ singleton _ _) _ star.
+tactic (singlE N) (goal _ _ _ V) FVars (elim_singleton NS T S) :-
+    get_named N FVars S, get_fresh_name singl_v V NS.
+tactic (singlE N NS) _ FVars (elim_singleton NS T S) :- get_named N FVars S.

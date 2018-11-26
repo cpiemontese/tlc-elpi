@@ -30,7 +30,7 @@ build_newgoals (elim_exist P T F) VDecls NewGoals :-
     build_newgoals P VDecls NewGoals',
     of P (exist A B) _,
     copy_from_type A A', copy_from_type B B',
-    get_fresh_name eev1 VDecls N1, get_fresh_name eev2 VDecls N2,
+    get_fresh_name exist_v1 VDecls N1, get_fresh_name exist_v2 VDecls N2,
     append VDecls [vdecl N1 A', vdecl N2 B'] VDecls',
     (pi x y\ build_newgoals (F x y) VDecls' NewGoals''),
     append NewGoals' NewGoals'' NewGoals.
@@ -67,7 +67,7 @@ build_newgoals (forall_app M N) VDecls NewGoals :-
 
 build_newgoals (impl_lam A F) VDecls NewGoals :-
     copy_from_type A A',
-    create_name forall_v VDecls N,
+    create_name impl_v VDecls N,
     append VDecls [vdecl N A'] VDecls',
     pi x\ build_newgoals (F x) VDecls' NewGoals.
 
@@ -93,7 +93,7 @@ build_newgoals (elim_or T W Cl Cr) :-
     build_newgoals W VDecls NGW,
     of W (or A B) _,
     copy_from_type A A', copy_from_type B B',
-    get_fresh_name eor_vl VDecls N1, get_fresh_name eor_vr VDecls N2,
+    get_fresh_name or_vl VDecls N1, get_fresh_name or_vr VDecls N2,
     append VDecls [vdecl N1 A'] VDL, append VDecls [vdecl N2 B'] VDR,
     (pi x\ build_newgoals (Cl x) VDL NGL),
     (pi y\ build_newgoals (Cr y) VDR NGR),
@@ -121,7 +121,7 @@ build_newgoals (elim_id P _ F) VDecls NewGoals :-
     build_newgoals P VDecls NG',
     of P (propId A _ _) _,
     copy_from_type A A',
-    get_fresh_name eid_v VDecls N,
+    get_fresh_name id_v VDecls N,
     append VDecls [vdecl N A'] VDecls',
     (pi x\ build_newgoals (F x) VDecls' NG''),
     append NG' NG'' NewGoals.

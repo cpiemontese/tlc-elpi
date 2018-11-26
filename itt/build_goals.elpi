@@ -79,6 +79,11 @@ meta_in_term X (refl _ Y) :- meta_in_term X Y.
 % Code needed to go from `of` thread to `itp` thread and vv i.e. to properly
 % copy a type which could contain bindings or fresh variabiles and so on.
 
+% copy_from_type creates a type where eigenvars have been substituted by atoms
+% that are names in a vdecl
+% copy_to_type create a type where names from vdecls have been substituted by
+% eigenvars
+
 mode (copy_from_type i o).
 %copy_from_type A B :- print (copy_from_type A B), fail.
 

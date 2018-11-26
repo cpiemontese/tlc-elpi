@@ -325,7 +325,7 @@ exec_tac_aux Tac (goal X T Y D as G) [] FVars NG :-
     tactic Tac G FVars Term, X = Term, build_newgoals Y D NG.
 exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
     pi x\ copy_var x N => (
-        copy_to_type TN TN',% print "copied to" TN TN',
+        copy_to_type TN TN',
         of x TN' x =>
             exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG
     ).

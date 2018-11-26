@@ -1,0 +1,231 @@
+% Code needed to extend copy so that we can go from `of` thread to `itp` thread
+% and vv i.e. to properly copy a type which could contain bindings or fresh
+% variabiles and so on.
+
+% During itp we add `copyvar ci atom` clauses that are used here. If we are
+% copying from a type then we'll copy X to Y where X is an eigenvariable, if we
+% are copying to a type then we'll copy X to Y where Y is and eigenvariable
+
+mode (copy_to_type i o).
+
+copy_to_type X Y :- copy X Y.
+
+% ---- AND ---- %
+copy_to_type (and A B) (and T S) :- copy_to_type A T, copy_to_type B S.
+copy_to_type (pair_and A B P Q) (pair_and T S M N) :-
+    copy_to_type A T, copy_to_type B S,
+    copy_to_type P M, copy_to_type Q N.
+copy_to_type (p1_and P) (p1_and Q) :- copy_to_type P Q.
+copy_to_type (p2_and P) (p2_and Q) :- copy_to_type P Q.
+
+% ---- EXIST ---- %
+copy_to_type (exist A B) (exist T S) :-
+    copy_to_type A T, copy_to_type B S.
+copy_to_type (pair_exist A B P Q) (pair_exist T S M N) :-
+    copy_to_type A T, copy_to_type B S,
+    copy_to_type P M, copy_to_type Q N.
+
+% Named case
+copy_to_type (elim_exist N1 N2 P T F) (elim_exist N1 N2 Q S G) :-
+    copy_to_type (elim_exist P T F) (elim_exist Q S G).
+% Prevent adding fvars to uvars
+copy_to_type (elim_exist P T (uvar as F)) (elim_exist Q S G) :-
+    copy_to_type P Q, copy_to_type T S, copy_to_type F G.
+% Base case
+copy_to_type (elim_exist P T F) (elim_exist Q S G) :-
+    copy_to_type P Q, copy_to_type T S,
+    pi x y\ copy_to_type (F x y) (G x y).
+
+% ---- FORALL ---- %
+copy_to_type (forall A B) (forall T S) :-
+    copy_to_type A T, copy_to_type B S.
+
+% Named case
+copy_to_type (forall_lam N A F) (forall_lam N B G) :-
+    copy_to_type (forall_lam A F) (forall_lam B G).
+% Prevent adding fvars to uvars
+copy_to_type (forall_lam A (uvar as F)) (forall_lam B G) :-
+    copy A B, copy F G.
+% Base case
+copy_to_type (forall_lam A F) (forall_lam B G) :-
+    copy_to_type A B, pi x\ copy_to_type (F x) (G x).
+
+copy_to_type (forall_app L X) (forall_app J Y) :-
+    copy_to_type L J, copy_to_type X Y.
+
+% ---- IMPLIES ---- %
+copy_to_type (implies A B) (implies T S) :-
+    copy_to_type A T, copy_to_type B S.
+
+% Named case
+copy_to_type (impl_lam N A F) (impl_lam N B G) :-
+    copy_to_type (impl_lam A F) (impl_lam B G).
+% Prevent adding fvars to uvars
+copy_to_type (impl_lam A (uvar as F)) (impl_lam B G) :-
+    copy A B, copy F G.
+% Base case
+copy_to_type (impl_lam A F) (impl_lam B G) :-
+    copy_to_type A B, pi x\ copy_to_type (F x) (G x).
+
+copy_to_type (impl_app L X) (impl_app J Y) :-
+    copy_to_type L J, copy_to_type X Y.
+
+% ---- LIST ---- %
+copy_to_type (list C) (list D) :- copy_to_type C D.
+copy_to_type (list_empty C) (list_empty D) :- copy_to_type C D.
+copy_to_type (list_cons C H T) (list_cons D I U) :-
+    copy_to_type C D, copy_to_type H I, copy_to_type T U.
+
+% Named case
+copy_to_type (elim_list N1 N2 N3 T L LA LL) (elim_list N1 N2 N3 T' L' LA' LL') :-
+    copy_to_type (elim_list T L LA LL) (elim_list T' L' LA' LL').
+% Prevent adding fvars to uvars
+copy_to_type (elim_list (uvar as T) L LA (uvar as LL)) (elim_list T' L' LA' LL') :-
+    copy_to_type T T', copy_to_type L L',
+    copy_to_type LA LA', copy_to_type LL LL'.
+copy_to_type (elim_list T L LA (uvar as LL)) (elim_list T' L' LA' LL') :-
+    (pi x\ copy_to_type (T x) (T' x)),
+    copy_to_type L L', copy_to_type LA LA', copy_to_type LL LL'.
+copy_to_type (elim_list (uvar as T) L LA LL) (elim_list T' L' LA' LL') :-
+    copy_to_type T T', copy_to_type L L', copy_to_type LA LA',
+    pi x y z\ copy_to_type (LL x y z) (LL' x y z).
+% Base case
+copy_to_type (elim_list T L LA LL) (elim_list T' L' LA' LL') :-
+    (pi x\ copy_to_type (T x) (T' x)),
+    copy_to_type L L',
+    copy_to_type LA LA',
+    pi x y z\ copy_to_type (LL x y z) (LL' x y z).
+
+% ---- OR ---- %
+copy_to_type (or A B) (or T S) :- copy_to_type A T, copy_to_type B S.
+
+copy_to_type (inl_or A B L) (inl_or T S L') :-
+    copy_to_type A T, copy_to_type B S, copy_to_type L L'.
+copy_to_type (inr_or A B R) (inr_or T S R') :-
+    copy_to_type A T, copy_to_type B S, copy_to_type R R'.
+
+% Named case
+copy_to_type (elim_or N1 N2 C W Cl Cr) (elim_or N1 N2 D W' Cl' Cr') :-
+    copy_to_type (elim_or C W Cl Cr) (elim_or D W' Cl' Cr').
+% Prevent adding fvars to uvars
+copy_to_type (elim_or C W (uvar as Cl) (uvar as Cr)) (elim_or D W' Cl' Cr') :-
+    copy_to_type C D, copy_to_type W W',
+    copy_to_type Cl Cl', copy_to_type Cr Cr'.
+copy_to_type (elim_or C W (uvar as Cl) Cr) (elim_or D W' Cl' Cr') :-
+    copy_to_type C D, copy_to_type W W', copy_to_type Cl Cl',
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+copy_to_type (elim_or C W Cl (uvar as Cr)) (elim_or D W' Cl' Cr') :-
+    copy_to_type C D, copy_to_type W W', copy_to_type Cr Cr',
+    (pi x\ copy_to_type (Cl x) (Cl' x)).
+% Base case
+copy_to_type (elim_or C W Cl Cr) (elim_or D W' Cl' Cr') :-
+    copy_to_type C D, copy_to_type W W',
+    (pi x\ copy_to_type (Cl x) (Cl' x)),
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+
+% ---- PROPEQ ---- %
+copy_to_type (propEq A M N) (propEq B P Q) :-
+    copy_to_type A B, copy_to_type M P, copy_to_type N Q.
+copy_to_type (eq A X) (eq B Y) :- copy_to_type A B, copy_to_type X Y.
+
+% ---- SETPI ---- %
+copy_to_type (setPi A B) (setPi T S) :-
+    copy_to_type A T, pi x\ copy_to_type (B x) (S x).
+
+% Named case
+copy_to_type (lambda N A F) (lambda N B G) :-
+    copy_to_type (lambda A F) (lambda B G).
+copy_to_type (lambda A (uvar as F)) (lambda B G) :-
+    copy_to_type A B, copy_to_type F G.
+% Base case
+copy_to_type (lambda A F) (lambda B G) :-
+    copy_to_type A B, pi x\ copy_to_type (F x) (G x).
+
+copy_to_type (app L X) (app J Y) :-
+    copy_to_type L J, copy_to_type X Y.
+
+% ---- SETSIGMA ---- %
+copy_to_type (setSigma A B) (setSigma T S) :-
+    copy_to_type A T, pi x\ copy_to_type (B x) (S x).
+copy_to_type (p1 P) (p1 Q) :- copy_to_type P Q.
+copy_to_type (p2 P) (p2 Q) :- copy_to_type P Q.
+copy_to_type (pair A B P Q) (pair T S M N) :-
+    copy_to_type A T, (pi x\ copy_to_type (B x) (S x)),
+    copy_to_type P M, copy_to_type Q N.
+
+% Named case
+copy_to_type (elim_setSigma N1 N2 P T F) (elim_setSigma N1 N2 Q S G) :-
+    copy_to_type (elim_setSigma P T F) (elim_setSigma Q S G).
+% Prevent
+copy_to_type (elim_setSigma P (uvar as T) (uvar as F)) (elim_setSigma Q S G) :-
+    copy_to_type P Q, copy_to_type T S, copy_to_type F G.
+copy_to_type (elim_setSigma P T (uvar as F)) (elim_setSigma Q S G) :-
+    copy_to_type P Q,
+    (pi x\ copy_to_type (T x) (S x)),
+    copy_to_type F G.
+copy_to_type (elim_setSigma P (uvar as T) F) (elim_setSigma Q S G) :-
+    copy_to_type P Q, copy_to_type T S,
+    pi x y\ copy_to_type (F x y) (G x y).
+% Base case
+copy_to_type (elim_setSigma P T F) (elim_setSigma Q S G) :-
+    copy_to_type P Q,
+    (pi x\ copy_to_type (T x) (S x)),
+    pi x y\ copy_to_type (F x y) (G x y).
+
+% ---- SETSUM ---- %
+copy_to_type (setSum A B) (setSum T S) :-
+    copy_to_type A T, pi x\ copy_to_type (B x) (S x).
+copy_to_type (inr A B R) (inr T S R') :-
+    copy_to_type A T, (pi x\ copy_to_type (B x) (S x)), copy_to_type R R'.    
+copy_to_type (inl A B L) (inl T S L') :-
+    copy_to_type A T, (pi x\ copy_to_type (B x) (S x)), copy_to_type L L'.    
+
+% Named case
+copy_to_type (elim_setSum N1 N2 C W Cl Cr) (elim_setSum N1 N2 D W' Cl' Cr') :-
+    copy_to_type (elim_setSum C W Cl Cr) (elim_setSum D W' Cl' Cr').
+    
+% Prevent
+copy_to_type (elim_setSum (uvar as C) W (uvar as Cl) (uvar as Cr)) (elim_setSum D W' Cl' Cr') :-
+    copy C D, copy W W', copy Cl Cl', copy Cr Cr'.
+copy_to_type (elim_setSum C W (uvar as Cl) (uvar as Cr)) (elim_setSum D W' Cl' Cr') :-
+    (pi x\ copy_to_type (C x) (D x)),
+    copy W W', copy Cl Cl', copy Cr Cr'.
+copy_to_type (elim_setSum (uvar as C) W (uvar as Cl) Cr) (elim_setSum D W' Cl' Cr') :-
+    copy C D, copy W W', copy Cl Cl',
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+copy_to_type (elim_setSum (uvar as C) W Cl (uvar as Cr)) (elim_setSum D W' Cl' Cr') :-
+    copy C D, copy W W',
+    (pi x\ copy_to_type (Cl x) (Cl' x)),
+    copy Cr Cr'.
+copy_to_type (elim_setSum (uvar as C) W Cl Cr) (elim_setSum D W' Cl' Cr') :-
+    copy C D, copy W W',
+    (pi x\ copy_to_type (Cl x) (Cl' x)),
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+copy_to_type (elim_setSum C W (uvar as Cl) Cr) (elim_setSum D W' Cl' Cr') :-
+    (pi x\ copy_to_type (C x) (D x)),
+    copy W W',
+    copy Cl Cl',
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+copy_to_type (elim_setSum C W Cl (uvar as Cr)) (elim_setSum D W' Cl' Cr') :-
+    (pi x\ copy_to_type (C x) (D x)),
+    copy W W',
+    (pi x\ copy_to_type (Cl x) (Cl' x)),
+    copy Cr Cr'.
+% Base case
+copy_to_type (elim_setSum C W Cl Cr) (elim_setSum D W' Cl' Cr') :-
+    (pi x\ copy_to_type (C x) (D x)),
+    copy_to_type W W',
+    (pi x\ copy_to_type (Cl x) (Cl' x)),
+    (pi y\ copy_to_type (Cr y) (Cr' y)).
+
+% ---- SINGLETON ---- %
+copy_to_type singleton singleton.
+copy_to_type star star.
+
+copy_to_type (elim_singleton T (uvar as C) X) (elim_singleton S D Y) :-
+    copy_to_type T S, copy_to_type C D, copy_to_type X Y.
+copy_to_type (elim_singleton T C X) (elim_singleton S D Y) :-
+    copy_to_type T S, (pi x\ copy_to_type (C x) (D x)), copy_to_type X Y.
+
+% Invariant: here X is a term with atoms to convert to fresh variabiles
+copy_to_type X Y :- copy_var Y X, name Y, !.

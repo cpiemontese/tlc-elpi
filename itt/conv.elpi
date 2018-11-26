@@ -31,7 +31,8 @@ mode (conv i i).
 conv (prod A B) (prod A' B') :- !, conv A A', pi x\ of x A x => conv (B x) (B' x).
 
 conv (app Lam Arg)    (app Lam' Arg')      :- !, conv Lam Lam', conv Arg Arg'.
-conv (lam A Bd)       (lam _A' Bd')        :- !, pi x\ of x A x => conv (Bd x) (Bd' x).
+conv (lam A Bd)       (lam _A' Bd')        :- !,
+    conv A A', pi x\ of x A x => conv (Bd x) (Bd' x).
 conv (lam _Name A Bd) (lam _Name' _A' Bd') :- !, conv (lam A Bd) (lam _A' Bd').
 
 % BETA
@@ -116,7 +117,8 @@ step (natrec N ZE _ _ RF) R :- step (natrec N ZE RF) R.
 conv (list A) (list A') :- conv A A'.
 
 conv (cns L Ls) (cns L' Ls') :- !, conv L L', conv Ls Ls'.
-conv (listrec T C D E) (listrec _T' C' D' E') :-
+conv (listrec T C D E) (listrec T' C' D' E') :-
+    conv T T',
     of C (list A) _,
     conv C C', conv D D',
     pi x y z\ (of x A x, of y (list A) y, of z (T y) z) => conv (E x y z) (E' x y z).

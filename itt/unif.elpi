@@ -52,8 +52,8 @@ mode (unify i i i i).
 unify A B C D :- print (unify A B C D), fail.
 
 % delay flex-flex
-%unify (uvar as X) L (uvar as Y) L' :- !, declare_constraint (unify X L Y L') [X, Y].
-unify (uvar as X) [] (uvar as Y) [] :- !, declare_constraint (unify X [] Y []) [X, Y].
+unify (uvar as X) [] (uvar as Y) [] :- !,
+    declare_constraint (unify X [] Y []) [X, Y].
 
 % catch β-redex
 unify (app (lam A F) X) L T L' :- !,
@@ -159,6 +159,8 @@ unify (uvar as X) [] (sum M N)  [] :- !,
     X = sum P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
 unify (uvar as X) [] (id A M N) [] :- !,
     X = id A M' N', unify M' [] M [], unify N' [] N [].
+unify (uvar as X) [] (list A) [] :- !, X = list A.
+
 
 % ---- TERM UNIFICATION ---- %
 
@@ -168,7 +170,7 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    declare_constraint (read-copies) [], print_constraints, print, print X,
+    %declare_constraint (read-copies) [], print_constraints, print, print X,
     (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn); try_projection X Vs App.
 
 mode (get_copy i o).

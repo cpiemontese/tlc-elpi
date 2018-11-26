@@ -89,6 +89,7 @@ build_newgoals (list_cons C H T) VDecls NewGoals :-
     build_newgoals H VDecls NGH,
     build_newgoals T VDecls NGT,
     append NGH NGT NewGoals.
+
 build_newgoals (elim_list L List LA LL) VDecls NewGoals :-
     get_fresh_name list_v1 VDecls N1,
     get_fresh_name list_v2 VDecls N2,
@@ -102,6 +103,7 @@ build_newgoals (elim_list L List LA LL) VDecls NewGoals :-
     append VDecls [vdecl N1 C', vdecl N2 (list C'), vdecl N3 L_N1] VDecls',
     (pi x y z\ build_newgoals (LL x y z) VDecls' NGLL),
     append NGL NGLA Tmp, append Tmp NGLL NewGoals.
+
 build_newgoals (elim_list N1 N2 N3 L List LA LL) VDecls NewGoals :-
     not_a_dup N1 VDecls, not_a_dup N2 VDecls, not_a_dup N3 VDecls,
     build_newgoals List VDecls NGL,
@@ -152,7 +154,7 @@ build_newgoals (id A X) VDecls NewGoals :- build_newgoals X VDecls NewGoals.
 
 build_newgoals (elim_id P _ F) VDecls NewGoals :-
     build_newgoals P VDecls NG',
-    of P (propId A _ _) _,
+    of P (propId A _ _) _ _,
     copy_from_type A A',
     get_fresh_name id_v VDecls N,
     append VDecls [vdecl N A'] VDecls',
@@ -162,7 +164,7 @@ build_newgoals (elim_id P _ F) VDecls NewGoals :-
 build_newgoals (elim_id N P _ F) VDecls NewGoals :-
     not_a_dup N VDecls,
     build_newgoals P VDecls NG',
-    of P (propId A _ _) _,
+    of P (propId A _ _) _ _,
     copy_from_type A A',
     append VDecls [vdecl N A'] VDecls',
     (pi x\ build_newgoals (F x) VDecls' NG''),

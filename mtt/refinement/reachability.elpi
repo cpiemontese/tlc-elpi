@@ -3,20 +3,25 @@
 % Invariant: X isn't applied to any fresh variables
 mode (meta_in_term i i).
 meta_in_term (uvar X _) (uvar Y _) :- same_var X Y, !.
+
 meta_in_term X (pair_and _ _ P Q) :- meta_in_term X P, !; meta_in_term X Q.
 meta_in_term X (p1_and P) :- meta_in_term X P.
 meta_in_term X (p2_and P) :- meta_in_term X P.
+
 meta_in_term X (pair_exist _ _ P Q) :- meta_in_term X P, !; meta_in_term X Q.
 meta_in_term X (elim_exist P _ F) :-
     meta_in_term X P, !; pi x y\ meta_in_term X (F x y).
 meta_in_term X (elim_exist _ _ P _ F) :-
     meta_in_term X P, !; pi x y\ meta_in_term X (F x y).
+
 meta_in_term X (forall_lam _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (forall_lam _ _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (forall_app L Y) :- meta_in_term X L, !; meta_in_term X Y.
+
 meta_in_term X (impl_lam _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (impl_lam _ _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (impl_app L Y) :- meta_in_term X L, !; meta_in_term X Y.
+
 meta_in_term X (list_cons _ H T) :- meta_in_term X H, !; meta_in_term X T.
 meta_in_term X (elim_list _ List LA LL) :-
     meta_in_term X List, !;
@@ -26,6 +31,7 @@ meta_in_term X (elim_list _ _ _ _ List LA LL) :-
     meta_in_term X List, !;
     meta_in_term X LA, !;
     pi x y z\ meta_in_term X (LL x y z).
+
 meta_in_term X (inr_or _ _ R) :- meta_in_term X R.
 meta_in_term X (inl_or _ _ L) :- meta_in_term X L.
 meta_in_term X (elim_or _ W Cl Cr) :-
@@ -36,15 +42,18 @@ meta_in_term X (elim_or _ _ _ W Cl Cr) :-
     meta_in_term X W, !;
     (pi x\ meta_in_term X (Cl x)), !;
     (pi y\ meta_in_term X (Cr y)).
+
 meta_in_term X (eq _ Y) :- meta_in_term X Y.
 meta_in_term X (id _ Y) :- meta_in_term X Y.
 meta_in_term X (elim_id P _ F) :-
     meta_in_term X P, !; pi x\ meta_in_term X (F x).
 meta_in_term X (elim_id _ P _ F) :-
     meta_in_term X P, !; pi x\ meta_in_term X (F x).
+
 meta_in_term X (lambda _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (lambda _ _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (app L Y) :- meta_in_term X L, !; meta_in_term X Y.
+
 meta_in_term X (p1 P) :- meta_in_term X P.
 meta_in_term X (p2 P) :- meta_in_term X P.
 meta_in_term X (pair _ _ P Q) :- meta_in_term X P, !; meta_in_term X Q.
@@ -52,6 +61,7 @@ meta_in_term X (elim_setSigma P _ F) :-
     meta_in_term X P, !; pi x y\ meta_in_term X (F x y).
 meta_in_term X (elim_setSigma _ _ P _ F) :-
     meta_in_term X P, !; pi x y\ meta_in_term X (F x y).
+
 meta_in_term X (inr _ _ R) :- meta_in_term X R.
 meta_in_term X (inl _ _ L) :- meta_in_term X L.
 meta_in_term X (elim_setSum _ W Cl Cr) :-

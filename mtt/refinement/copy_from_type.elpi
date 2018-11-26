@@ -135,6 +135,7 @@ copy_from_type (setPi A B) (setPi T S) :-
 % Named case
 copy_from_type (lambda N A F) (lambda N B G) :-
     copy_from_type (lambda A F) (lambda B G).
+% Prevent
 copy_from_type (lambda A (uvar as F)) (lambda B G) :-
     copy_from_type A B, copy_from_type F G.
 % Base case

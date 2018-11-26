@@ -10,6 +10,8 @@ of (impl_lam N A F) T (impl_lam N A F') IE :-
     of (impl_lam A F) T (impl_lam A F') IE.
 of (elim_or N1 N2 T W Cl Cr) T (elim_or N1 N2 T W' Cl' Cr') IE :-
     of (elim_or T W Cl Cr) T (elim_or T W' Cl' Cr') IE.
+of (elim_id N P C F) T (elim_id N P' C F') IE :- 
+    of (elim_id P C F) T (elim_id P' C F') IE.
 of (lambda N A F) T (lambda N A F') IE :-
     of (lambda A F) T (lambda A F') IE.
 of (elim_setSigma N1 N2 P C F) T (elim_setSigma N1 N2 P' C F') IE :-
@@ -27,6 +29,8 @@ dconv (impl_lam _ A F) (impl_lam _ A' F') :- !,
     dconv (impl_lam A F) (impl_lam A' F').
 dconv (elim_or _ _ T W Cl Cr) (elim_or _ _ T' W' Cl' Cr') :- !,
     dconv (elim_or T W Cl Cr) (elim_or T' W' Cl' Cr').
+dconv (elim_id _ P C F) (elim_id _ P' C' F') :- !,
+    dconv (elim_id P C F) (elim_id P' C' F').
 dconv (lambda _ A F) (lambda _ A' F') :- !,
     dconv (lambda A F) (lambda A' F').
 dconv (elim_setSigma _ _ P C F) (elim_setSigma _ _ P' C' F') :- !,

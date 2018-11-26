@@ -19,7 +19,10 @@ meta_in_term X (elim_or _ W Cl Cr) :-
     meta_in_term X W, !;
     (pi x\ meta_in_term X (Cl x)), !;
     (pi y\ meta_in_term X (Cr y)).
-meta_in_term X (eq _ Y) :- meta_in_term Y.
+meta_in_term X (eq _ Y) :- meta_in_term X Y.
+meta_in_term X (id _ Y) :- meta_in_term X Y.
+meta_in_term X (elim_id P _ F) :-
+    meta_in_term X P, !; pi x\ meta_in_term X (F x).
 meta_in_term X (lambda _ F) :- pi x\ meta_in_term X (F x).
 meta_in_term X (app L Y) :- meta_in_term X L, !; meta_in_term X Y.
 meta_in_term X (p1 P) :- meta_in_term X P.

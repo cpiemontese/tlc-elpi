@@ -14,8 +14,8 @@ type elim_id    mttTerm
 ofType (propId A AA1 AA2) KIND _IE
     :- ofType A KIND' int
     ,  pts_eq KIND' KIND
-    ,  isa AA1 A int
-    ,  isa AA2 A int
+    ,  isa AA1 A _ int
+    ,  isa AA2 A _ int
     .
 
 of (id A AA) (propId A AA' AA') (id A AA') int 
@@ -32,10 +32,25 @@ of (elim_id P C CC) (C_AA1_AA2) (elim_id P' C CC') int
             conv (C x y) (C_AA1_AA2))
     .
 
-% XXX: forse hnf mancante?
-hstep (elim_id (id _A AA) _C CC) Res :- subst CC [AA] Res.
+hstep (elim_id Id _C CC) Res :-
+    hnf Id (id _A AA),
+    subst CC [AA] Res',
+    hnf Res' Res.
 
-dconv (id A AA) (id A' AA') :- (conv A A'), (conv AA AA').
+dconv (propId A AA1 AA2) (propId A' AA1' AA2')
+    :- spy (conv A A')
+    ,  spy (conv AA1 AA1')
+    ,  spy(conv AA2 AA2')
+    .
 
-dconv (propId A AA1 AA2) (propId A' AA1' AA2') :-
-    spy (conv A A'), spy (conv AA1 AA1'), spy(conv AA2 AA2').
+dconv (id A AA) (id A' AA')
+    :- (conv A A')
+    ,  (conv AA AA')
+    .
+
+dconv (elim_id P C CC) (elim_id P' C' CC')
+    :- conv P P'
+    ,  isa P (propId A _ _) _ int
+    ,  pi x\ pi y\ locDecl x A => locDecl y A => conv (C x y) (C' x y)
+    ,  pi x\ locDecl x A => conv (CC x) (CC' x)
+    .

@@ -49,7 +49,8 @@ of (elim_setSigma Pair M MM) M_Pair (elim_setSigma Pair' M MM') IE
 
 hstep (elim_setSigma Pair _M Mm) Res
     :- hnf Pair (pair _B _C Bb Cc)
-    ,  subst Mm [Bb, Cc] Res
+    ,  subst Mm [Bb, Cc] Res'
+    ,  hnf Res' Res
     .
 
 
@@ -65,14 +66,14 @@ dconv (pair B C BB CC) (pair B' C' BB' CC')
 
 dconv (elim_setSigma Pair M MM) (elim_setSigma Pair' M' MM') 
     :- spy(conv Pair Pair')
-    ,  spy(isa Pair (setSigma B C) _)
+    ,  spy(isa Pair (setSigma B C) _ _)
     ,  spy(pi z\ locDecl z (setSigma B C) => conv (M z) (M' z))
     ,  spy(pi x\ pi y\  locDecl x B => locDecl y (C x) => conv (MM x y) (MM' x y))
     .
 
 % Eta rule
 dconv X (pair B C BB CC)
-    :- spy (isa X (setSigma B C) IE_)
+    :- spy (isa X (setSigma B C) _ IE_)
      , spy(conv (p1 X) BB)
      , spy (conv (p2 X) CC).
 

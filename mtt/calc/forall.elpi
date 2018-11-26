@@ -21,13 +21,20 @@ of (forall_app Lam X) (CX) (forall_app Lam' X') IE
 
 hstep (forall_app LAM Bb) Res 
     :- hnf LAM (forall_lam _B F)
-    ,  subst F [Bb] Res
+    ,  subst F [Bb] Res'
+    ,  hnf Res' Res
     .
 
 dconv (forall B C) (forall B' C') 
     :- (conv B B')
     ,  (pi x\ locDecl x B => conv (C x) (C' x))
     .
+
+dconv (forall_lam B F) (forall_lam B' F')
+    :- (conv B B')
+    ,  (pi x\ locDecl x B => dconv (F x) (F' x))
+    .
+
 dconv (forall_app F X) (forall_app F' X') :- (conv F F'), (conv X X').
 
 interp (forall B C) (forall B' C') :-

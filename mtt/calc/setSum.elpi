@@ -39,17 +39,36 @@ of (elim_setSum C W Cl Cr) C_W (elim_setSum C W' Cl' Cr') IE
 
 hstep (elim_setSum _C W Cl _Cr) Res
     :- hnf W (inl _A _B Wl)
-    ,  subst Cl [Wl] Res
+    ,  subst Cl [Wl] Res'
+    ,  hnf Res' Res
     .
 hstep (elim_setSum _C W _Cl Cr) Res
     :- hnf W (inr _A _B Wr)
-    ,  subst Cr [Wr] Res
+    ,  subst Cr [Wr] Res'
+    ,  hnf Res' Res
     .
 
-dconv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr')
-    :- (conv W W')
-    ,  (of W AB IE_)
-    ,  (pi z \ locDecl z AB => (conv (C z) (C' z) ) )
-    ,  (pi z \ locDecl z AB => (conv (Cl z) (Cl' z) ) )
-    ,  (pi z \ locDecl z AB => (conv (Cr z) (Cr' z) ) )
+dconv (setSum A B) (setSum A' B')
+    :- conv A A'
+    ,  conv B B'
+    .
+
+dconv (inr A B BB) (inr A' B' BB') 
+    :- conv A A'
+    ,  conv B B'
+    ,  conv BB BB'
+    .
+
+dconv (inl A B AA) (inl A' B' AA')  
+    :- conv A A'
+    ,  conv B B'
+    ,  conv AA AA'
+    .
+
+dconv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr') 
+    :- conv W W'
+    ,  isa W (setSum A B) _ _
+    ,  pi z\ locDecl z (setSum A B) => conv (C z) (C' z)
+    ,  pi x\ locDecl x A => conv (Cl x) (Cl' x)
+    ,  pi y\ locDecl y B => conv (Cr y) (Cr' y)
     .

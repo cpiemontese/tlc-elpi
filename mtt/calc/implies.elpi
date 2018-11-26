@@ -21,7 +21,8 @@ of (impl_app Lam X) C (impl_app Lam' X') IE
 
 hstep (impl_app LAM Bb) Res
     :- hnf LAM (impl_lam _B F)
-    ,  subst F [Bb] Res
+    ,  subst F [Bb] Res'
+    ,  hnf Res' Res
     .
 
         

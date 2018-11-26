@@ -28,7 +28,8 @@ of (elim_exist Pair M MM) M (elim_exist Pair' M MM') IE
 
 hstep (elim_exist W _M MM) Res
     :- hnf W (pair_exist _B _C Bb Cc)
-    ,  subst MM [Bb, Cc] Res
+    ,  subst MM [Bb, Cc] Res'
+    ,  hnf Res' Res
     .
 
 % ---- CONVERSION ---- %
@@ -42,7 +43,7 @@ dconv (pair_exist B C Bb Cc) (pair_exist B' C' Bb' Cc')
 
 dconv (elim_exist Pair M Mm) (elim_exist Pair' M' Mm') 
     :- (conv Pair Pair')
-    ,  (isa Pair (exist B C) IE_)
+    ,  (isa Pair (exist B C) _ IE_)
     ,  (pi x\ pi y\ locDecl x B => locDecl y (C x)
         => conv (Mm x y) (Mm' x y))
     ,  (conv M M')

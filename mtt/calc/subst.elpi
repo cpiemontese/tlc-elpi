@@ -26,6 +26,17 @@ copy (impl_lam A F) (impl_lam B G) :-
     copy A B, pi x\ copy (F x) (G x).
 copy (impl_app L X) (impl_app J Y) :- copy L J, copy X Y.
 
+% ---- LIST ---- %
+copy (list C) (list D) :- copy C D.
+copy (list_empty C) (list_empty D) :- copy C D.
+copy (list_cons C H T) (list_cons D I U) :-
+    copy C D, copy H I, copy T U.
+copy (elim_list T L LA LL) (elim_list T' L' LA' LL') :-
+    (pi x\ copy (T x) (T' x)),
+    copy L L',
+    copy LA LA',
+    pi x y z\ copy (LL x y z) (LL' x y z).
+
 % ---- OR ---- %
 copy (or A B) (or T S) :- copy A T, copy B S.
 copy (inr_or A B R) (inr_or T S R') :- copy A T, copy B S, copy R R'.

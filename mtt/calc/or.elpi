@@ -29,18 +29,37 @@ of (elim_or C W Cl Cr) C (elim_or C W' Cl' Cr') IE
 
 hstep (elim_or _C W Cl _Cr) Res
     :- (hnf W (inl_or _A _B Wl))
-    ,  subst Cl [Wl] Res
+    ,  subst Cl [Wl] Res'
+    ,  hnf Res' Res
     .
 
 hstep (elim_or _C W _Cl Cr) Res
     :- (hnf W (inr_or _A _B Wr))
-    ,  subst Cr [Wr] Res
+    ,  subst Cr [Wr] Res'
+    ,  hnf Res' Res
+    .
+
+dconv (or A B) (or A' B') 
+    :- conv A A'
+    ,  conv B B'
+    .
+
+dconv (inr_or A B Bb) (inr_or A' B' Bb')
+    :- conv A A'
+    ,  conv B B'
+    ,  conv Bb Bb'
+    .
+
+dconv (inl_or A B Aa) (inl_or A' B' Aa')
+    :- conv A A'
+    ,  conv B B'
+    ,  conv Aa Aa'
     .
 
 dconv (elim_or C W Cl Cr) (elim_or C' W' Cl' Cr')
-    :- (conv W W')
-    ,  (of W AB IE_)
-    ,  (pi z \ conv C C')
-    ,  (pi z \ locDecl z AB => (conv (Cl z) (Cl' z) ) )
-    ,  (pi z \ locDecl z AB => (conv (Cr z) (Cr' z) ) )
+    :- conv W W'
+    ,  isa W (or A B) _ _
+    ,  (pi z\ locDecl z (or A B) => conv C C')
+    ,  (pi x\ locDecl x A => conv (Cl z) (Cl' z)) 
+    ,  (pi y\ locDecl y B => conv (Cr z) (Cr' z))
     .

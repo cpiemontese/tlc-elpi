@@ -1,0 +1,242 @@
+% ------------------------------------------- %
+% ---- LANGUAGE DEPENDENT ITP PREDICATES ---- %
+% ------------------------------------------- %
+
+mode (build_newgoals i i o).
+%build_newgoals A B C :- print (build_newgoals A B C), fail.
+
+build_newgoals (uvar K L as Y) VDecls NewGoals :- !,
+    lookdown Y VDecls X T,
+    NewGoals = [goal X T K VDecls].
+
+% ---- AND ---- %
+
+build_newgoals (pair_and _ _ P Q) VDecls NewGoals :-
+    build_newgoals P VDecls NewGoals',
+    build_newgoals Q VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+
+build_newgoals (p1_and P) VDecls NewGoals :- build_newgoals P VDecls NewGoals.
+build_newgoals (p2_and P) VDecls NewGoals :- build_newgoals P VDecls NewGoals.
+
+% ---- EXIST ---- %
+
+build_newgoals (pair_exist _ _ P Q) VDecls NewGoals :-
+    build_newgoals P VDecls NewGoals',
+    build_newgoals Q VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+
+build_newgoals (elim_exist P T F) VDecls NewGoals :-
+    build_newgoals P VDecls NewGoals',
+    of P (exist A B) _,
+    copy_from_type A A', copy_from_type B B',
+    get_fresh_name eev1 VDecls N1, get_fresh_name eev2 VDecls N2,
+    append VDecls [vdecl N1 A', vdecl N2 B'] VDecls',
+    (pi x y\ build_newgoals (F x y) VDecls' NewGoals''),
+    append NewGoals' NewGoals'' NewGoals.
+
+build_newgoals (elim_exist N1 N2 P T F) VDecls NewGoals :-
+    build_newgoals P VDecls NewGoals',
+    of P (exist A B) _,
+    copy_from_type A A', copy_from_type B B',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
+    append VDecls [vdecl N1 A', vdecl N2 B'] VDecls',
+    (pi x y\ build_newgoals (F x y) VDecls' NewGoals''),
+    append NewGoals' NewGoals'' NewGoals.
+
+% ---- FORALL ---- %
+
+build_newgoals (forall_lam A F) VDecls NewGoals :-
+    copy_from_type A A',
+    create_name forall_v VDecls N,
+    append VDecls [vdecl N A'] VDecls',
+    pi x\ build_newgoals (F x) VDecls' NewGoals.
+
+build_newgoals (forall_lam N A F) VDecls NewGoals :-
+    copy_from_type A A',
+    not_a_dup N VDecls,
+    append VDecls [vdecl N A'] VDecls',
+    pi x\ build_newgoals (F x) VDecls' NewGoals.
+
+build_newgoals (forall_app M N) VDecls NewGoals :-
+    build_newgoals M VDecls NewGoals',
+    build_newgoals N VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+    
+% ---- IMPLIES ---- %
+
+build_newgoals (impl_lam A F) VDecls NewGoals :-
+    copy_from_type A A',
+    create_name forall_v VDecls N,
+    append VDecls [vdecl N A'] VDecls',
+    pi x\ build_newgoals (F x) VDecls' NewGoals.
+
+build_newgoals (impl_lam N A F) VDecls NewGoals :-
+    copy_from_type A A',
+    not_a_dup N VDecls,
+    append VDecls [vdecl N A'] VDecls',
+    pi x\ build_newgoals (F x) VDecls' NewGoals.
+
+build_newgoals (impl_app M N) VDecls NewGoals :-
+    build_newgoals M VDecls NewGoals',
+    build_newgoals N VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+
+% ---- OR ---- %
+
+build_newgoals (inl_or A B L) VDecls NewGoals :-
+    build_newgoals L VDecls NewGoals.
+build_newgoals (inr_or A B R) VDecls NewGoals :-
+    build_newgoals R VDecls NewGoals.
+
+build_newgoals (elim_or T W Cl Cr) :-
+    build_newgoals W VDecls NGW,
+    of W (or A B) _,
+    copy_from_type A A', copy_from_type B B',
+    get_fresh_name eor_vl VDecls N1, get_fresh_name eor_vr VDecls N2,
+    append VDecls [vdecl N1 A'] VDL, append VDecls [vdecl N2 B'] VDR,
+    (pi x\ build_newgoals (Cl x) VDL NGL),
+    (pi y\ build_newgoals (Cr y) VDR NGR),
+    append NGW NGL Tmp, append Tmp NGR NewGoals.
+
+build_newgoals (elim_or N1 N2 T W Cl Cr) :-
+    build_newgoals W VDecls NGW,
+    of W (or A B) _,
+    copy_from_type A A', copy_from_type B B',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
+    append VDecls [vdecl N1 A'] VDL, append VDecls [vdecl N2 B'] VDR,
+    (pi x\ build_newgoals (Cl x) VDL NGL),
+    (pi y\ build_newgoals (Cr y) VDR NGR),
+    append NGW NGL Tmp, append Tmp NGR NewGoals.
+
+% ---- PROPEQ --- %
+
+build_newgoals (eq T X) VDecls NewGoals :- build_newgoals X VDecls NewGoals.
+
+% ---- PROPID ---- %
+
+build_newgoals (id A X) VDecls NewGoals :- build_newgoals X VDecls NewGoals.
+
+build_newgoals (elim_id P _ F) VDecls NewGoals :-
+    build_newgoals P VDecls NG',
+    of P (propId A _ _) _,
+    copy_from_type A A',
+    get_fresh_name eid_v VDecls N,
+    append VDecls [vdecl N A'] VDecls',
+    (pi x\ build_newgoals (F x) VDecls' NG''),
+    append NG' NG'' NewGoals.
+
+build_newgoals (elim_id N P _ F) VDecls NewGoals :-
+    build_newgoals P VDecls NG',
+    of P (propId A _ _) _,
+    copy_from_type A A',
+    not_a_dup N VDecls,
+    append VDecls [vdecl N A'] VDecls',
+    (pi x\ build_newgoals (F x) VDecls' NG''),
+    append NG' NG'' NewGoals.
+
+% ---- SETPI ---- %
+
+build_newgoals (lambda T F) VDecls NewGoals :-
+    copy_from_type T T',
+    get_fresh_name lambda_v N VDecls,
+    append VDecls [vdecl N T'] L,
+    pi x\ build_newgoals (F x) L NewGoals.
+build_newgoals (lambda N T F) VDecls NewGoals :-
+    copy_from_type T T',
+    not_a_dup N VDecls,
+    append VDecls [vdecl N T'] L,
+    pi x\ build_newgoals (F x) L NewGoals.
+build_newgoals (app M N) VDecls NewGoals :-
+    build_newgoals M VDecls NewGoals',
+    build_newgoals N VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+    
+
+% ---- SETSIGMA ---- %
+
+build_newgoals (pair _ _ M N) VDecls NewGoals :-
+    build_newgoals M VDecls NewGoals',
+    build_newgoals N VDecls NewGoals'',
+    append NewGoals' NewGoals'' NewGoals.
+build_newgoals (p1 P) VDecls NewGoals :- build_newgoals P VDecls NewGoals.
+build_newgoals (p2 P) VDecls NewGoals :- build_newgoals P VDecls NewGoals.
+
+build_newgoals (elim_setSigma P T F) VDecls NewGoals :-
+    build_newgoals P VDecls NP
+    of P (sum A B) _,
+    copy_from_type A A', copy_from_type B B',
+    get_fresh_name sig_v1 N1 VDecls, get_fresh_name sig_v2 N2 VDecls,
+    append VDecls [vdecl N1 A', vdecl N2 B'] L,
+    pi x y\ build_newgoals (F x y) L NF,
+    append NP NF NewGoals.
+
+build_newgoals (elim_setSigma N1 N2 P T F) VDecls NewGoals :-
+    build_newgoals P VDecls NP
+    of P (sum A B) _,
+    copy_from_type A A', copy_from_type B B',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
+    append VDecls [vdecl N1 A', vdecl N2 B'] L,
+    pi x y\ build_newgoals (F x y) L NF,
+    append NP NF NewGoals.
+
+% ---- SETSUM ---- %
+
+build_newgoals (inl _ _ L) VDecls NewGoals :- build_newgoals L VDecls NewGoals.
+build_newgoals (inr _ _ R) VDecls NewGoals :- build_newgoals R VDecls NewGoals.
+
+build_newgoals (elim_setSum T W Cl Cr) VDecls NewGoals :-
+    build_newgoals W VDecls NGW,
+    of W (setSum A B) _,
+    copy_from_type A A', copy_from_type B B',
+    get_fresh_name sum_vl VDecls N1, get_fresh_name sum_vr VDecls N2,
+    append VDecls [vdecl N1 A'] VDL, append VDecls [vdecl N2 B'] VDR,
+    (pi x\ build_newgoals (Cl x) VDL NGL),
+    (pi y\ build_newgoals (Cr y) VDR NGR),
+    append NGW NGL Tmp, append Tmp NGR NewGoals.
+
+build_newgoals (elim_setSum N1 N2 T W Cl Cr) VDecls NewGoals :-
+    build_newgoals W VDecls NGW,
+    of W (setSum A B) _,
+    copy_from_type A A', copy_from_type B B',
+    not_a_dup N1 VDecls, not_a_dup N2 VDecls,
+    append VDecls [vdecl N1 A'] VDL, append VDecls [vdecl N2 B'] VDR,
+    (pi x\ build_newgoals (Cl x) VDL NGL),
+    (pi y\ build_newgoals (Cr y) VDR NGR),
+    append NGW NGL Tmp, append Tmp NGR NewGoals.
+
+% ---- SINGLETON ---- %
+
+build_newgoals star _ [].
+
+build_newgoals (elim_singleton S _ M) VDecls NewGoals :-
+    build_newgoals S VDecls NGS,
+    build_newgoals M VDecls NGM,
+    append NGS NGM NewGoals.
+
+% ---- DEFAULT ---- %
+
+% FVars (or const?)
+%build_newgoals FVar _ [] :- name FVar.
+build_newgoals Name _ [].   % Name is either an eigenvar or an atom
+
+
+mode (get_fresh_name i i o).
+mode (get_fresh_name_aux i i i o).
+get_fresh_name Prefix VDecls Name :-
+    get_fresh_name_aux Prefix VDecls 0 Name.
+get_fresh_name_aux Prefix [] N Name :- create_name Prefix N Name.
+get_fresh_name_aux Prefix [vdecl Prefix' _|Vs] N Name :-
+    term_to_string Prefix' SP,
+    create_name Prefix N MaybeSP,
+    term_to_string MaybeSP SMSP,
+    SP is SMSP,
+    N' is N + 1,
+    get_fresh_name_aux Prefix Vs N' Name.
+get_fresh_name_aux Prefix [_|Vs] N Name :- get_fresh_name_aux Prefix Vs N Name.
+
+mode (create_name i i o).
+create_name Prefix N Name :-
+    term_to_string Prefix SP, term_to_string N SN,
+    SName is SP ^ "_" ^ SN,
+    string_to_term SName Name.

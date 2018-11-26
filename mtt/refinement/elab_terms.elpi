@@ -30,21 +30,21 @@ of (elim_setSum N1 N2 C W Cl Cr) T (elim_setSum N1 N2 C W' Cl' Cr') IE :-
 
 % ---- CONVERSION ---- %
 
-dconv (elim_exist _ _ P T F) (elim_exist _ _ P' T' F') :- !,
-    dconv (elim_exist P T F) (elim_exist P' T' F').
-dconv (forall_lam _ A F) (forall_lam _ A' F') :- !,
-    dconv (forall_lam A F) (forall_lam A' F').
-dconv (impl_lam _ A F) (impl_lam _ A' F') :- !,
-    dconv (impl_lam A F) (impl_lam A' F').
-dconv (elim_list N1 N2 N3 L List LA LL) (elim_list N1 N2 N3 L' List' LA' LL') :- !,
-    dconv (elim_list L List LA LL) (elim_list L' List' LA' LL').
-dconv (elim_or _ _ T W Cl Cr) (elim_or _ _ T' W' Cl' Cr') :- !,
-    dconv (elim_or T W Cl Cr) (elim_or T' W' Cl' Cr').
-dconv (elim_id _ P C F) (elim_id _ P' C' F') :- !,
-    dconv (elim_id P C F) (elim_id P' C' F').
-dconv (lambda _ A F) (lambda _ A' F') :- !,
-    dconv (lambda A F) (lambda A' F').
-dconv (elim_setSigma _ _ P C F) (elim_setSigma _ _ P' C' F') :- !,
-    dconv (elim_setSigma P C F) (elim_setSigma P' C' F').
-dconv (elim_setSum _ _ C W Cl Cr) (elim_setSum _ _ C' W' Cl' Cr') :- !,
-    dconv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr').
+conv (elim_exist _ _ P T F) (elim_exist _ _ P' T' F') :- !,
+    conv (elim_exist P T F) (elim_exist P' T' F').
+conv (forall_lam _ A F) (forall_lam _ A' F') :- !,
+    conv (forall_lam A F) (forall_lam A' F').
+conv (impl_lam _ A F) (impl_lam _ A' F') :- !,
+    conv (impl_lam A F) (impl_lam A' F').
+conv (elim_list N1 N2 N3 L List LA LL) (elim_list N1 N2 N3 L' List' LA' LL') :- !,
+    conv (elim_list L List LA LL) (elim_list L' List' LA' LL').
+conv (elim_or _ _ T W Cl Cr) (elim_or _ _ T' W' Cl' Cr') :- !,
+    conv (elim_or T W Cl Cr) (elim_or T' W' Cl' Cr').
+conv (elim_id _ P C F) (elim_id _ P' C' F') :- !,
+    conv (elim_id P C F) (elim_id P' C' F').
+conv (lambda _ A F) (lambda _ A' F') :- !,
+    conv (lambda A F) (lambda A' F').
+conv (elim_setSigma _ _ P C F) (elim_setSigma _ _ P' C' F') :- !,
+    conv (elim_setSigma P C F) (elim_setSigma P' C' F').
+conv (elim_setSum _ _ C W Cl Cr) (elim_setSum _ _ C' W' Cl' Cr') :- !,
+    conv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr').

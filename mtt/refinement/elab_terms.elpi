@@ -9,22 +9,31 @@ isa (app Lam dots) T O IE :- !,
     isa Lam (setPi _ _) _ _),
     isa (app (app Lam Arg) dots) T O IE.
 
+% Named to unnamed
 of (elim_exist N1 N2 P T F) T (elim_exist N1 N2 P' T F') IE :-
     of (elim_exist P T F) T (elim_exist P' T F') IE.
+
 of (forall_lam N A F) T (forall_lam N A F') IE :-
     of (forall_lam A F) T (forall_lam A F') IE.
+
 of (impl_lam N A F) T (impl_lam N A F') IE :-
     of (impl_lam A F) T (impl_lam A F') IE.
+
 of (elim_list N1 N2 N3 L List LA LL) T (elim_list N1 N2 N3 L List' LA' LL') IE :-
     of (elim_list L List LA LL) T (elim_list L List' LA' LL') IE.
+
 of (elim_or N1 N2 T W Cl Cr) T (elim_or N1 N2 T W' Cl' Cr') IE :-
     of (elim_or T W Cl Cr) T (elim_or T W' Cl' Cr') IE.
+
 of (elim_id N P C F) T (elim_id N P' C F') IE :- 
     of (elim_id P C F) T (elim_id P' C F') IE.
+
 of (lambda N A F) T (lambda N A F') IE :-
     of (lambda A F) T (lambda A F') IE.
+
 of (elim_setSigma N1 N2 P C F) T (elim_setSigma N1 N2 P' C F') IE :-
     of (elim_setSigma P C F) T (elim_setSigma P' C F') IE.
+
 of (elim_setSum N1 N2 C W Cl Cr) T (elim_setSum N1 N2 C W' Cl' Cr') IE :-
     of (elim_setSum C W Cl Cr) T (elim_setSum C W' Cl' Cr') IE.
 
@@ -32,19 +41,48 @@ of (elim_setSum N1 N2 C W Cl Cr) T (elim_setSum N1 N2 C W' Cl' Cr') IE :-
 
 conv (elim_exist _ _ P T F) (elim_exist _ _ P' T' F') :- !,
     conv (elim_exist P T F) (elim_exist P' T' F').
+
 conv (forall_lam _ A F) (forall_lam _ A' F') :- !,
     conv (forall_lam A F) (forall_lam A' F').
+
 conv (impl_lam _ A F) (impl_lam _ A' F') :- !,
     conv (impl_lam A F) (impl_lam A' F').
+
 conv (elim_list N1 N2 N3 L List LA LL) (elim_list N1 N2 N3 L' List' LA' LL') :- !,
     conv (elim_list L List LA LL) (elim_list L' List' LA' LL').
+
 conv (elim_or _ _ T W Cl Cr) (elim_or _ _ T' W' Cl' Cr') :- !,
     conv (elim_or T W Cl Cr) (elim_or T' W' Cl' Cr').
+
 conv (elim_id _ P C F) (elim_id _ P' C' F') :- !,
     conv (elim_id P C F) (elim_id P' C' F').
+
 conv (lambda _ A F) (lambda _ A' F') :- !,
     conv (lambda A F) (lambda A' F').
+
 conv (elim_setSigma _ _ P C F) (elim_setSigma _ _ P' C' F') :- !,
     conv (elim_setSigma P C F) (elim_setSigma P' C' F').
+
 conv (elim_setSum _ _ C W Cl Cr) (elim_setSum _ _ C' W' Cl' Cr') :- !,
     conv (elim_setSum C W Cl Cr) (elim_setSum C' W' Cl' Cr').
+
+% ---- HSTEP ---- %
+
+hstep (elim_exist _ _ W _M MM) Res :- hstep (elim_exist W _M MM) Res.
+
+hstep (forall_app Lam X) Res :-
+    hnf Lam (forall_lam _ _ F), hstep (forall_app (forall_lam _ F) X) Res.
+hstep (impl_app Lam X) Res
+    hnf Lam (impl_lam _ _ F), hstep (impl_app (impl_lam _ F) X) Res.
+
+hstep (elim_list _ _ _ _ List LA LL) Res :- hstep (elim_id _ List LA LL) Res.
+
+hstep (elim_or _ _ _ W Cl Cr) Res :- hstep (elim_or _ W Cl Cr) Res.
+
+hstep (elim_id _ Id _ F) Res :- hstep (elim_id Id _ F) Res.
+
+hstep (app Lam X) Res :- hnf Lam (lambda _ _ F), hstep (app (lambda _ F)) Res.
+
+hstep (elim_setSigma _ _ Pair _ F) Res :- hstep (elim_setSigma Pair _ F) Res.
+
+hstep (elim_setSum _ _ _ W Cl Cr) Res :- hstep (elim_setSum _ W Cl Cr) Res.

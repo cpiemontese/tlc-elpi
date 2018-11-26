@@ -2,6 +2,14 @@
 
 % ---- TYPING ---- %
 
+% XXX: in teoria ci sono tante applicazioni (forall, impl, ...?), si potrebbe
+%      estendere il controllo dell'isa della Lam ad accettare anche altri tipi
+%      magari chiedere a Coen
+isa (app Lam dots) T O IE :- isa Lam T O IE.
+isa (app Lam dots) T O IE :- !,
+    isa Lam (setPi _ _) _ _,
+    isa (app (app Lam Arg) dots) T O IE.
+
 of (elim_exist N1 N2 P T F) T (elim_exist N1 N2 P' T F') IE :-
     of (elim_exist P T F) T (elim_exist P' T F') IE.
 of (forall_lam N A F) T (forall_lam N A F') IE :-

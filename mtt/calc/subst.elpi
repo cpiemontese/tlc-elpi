@@ -50,6 +50,13 @@ copy (elim_or C W Cl Cr) (elim_or D W' Cl' Cr') :-
 copy (propEq A M N) (propEq B P Q) :- copy A B, copy M P, copy N Q.
 copy (eq A X) (eq B Y) :- copy A B, copy X Y.
 
+% ---- PROPID ---- %
+
+copy (propId A M N) (propId B P Q) :- copy A B, copy M P, copy N Q.
+copy (id A X) (id B Y) :- copy A B, copy X Y.
+copy (elim_id P C F) (elim_id Q D G) :-
+    copy P Q, (pi x y\ copy (C x y) (D x y)), pi x\ copy (F x) (G x).
+
 % ---- SETPI ---- %
 copy (setPi A B) (setPi T S) :-
     copy A T, pi x\ copy (B x) (S x).

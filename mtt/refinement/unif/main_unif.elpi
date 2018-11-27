@@ -5,18 +5,6 @@
 % INVARIANT: here we only deal with terms without names since conversion takes
 %            them out before arriving here
 
-% TODO:
-% v is_stuck deve considerare anche forall_app e impl_app
-% v conv_constraint sulle altre app
-% v is_closed sui termini mtt
-% v stop reductions per i termini che calcolano
-% v riduzione controllata per tutti i termini che calcolano
-% v mimica tipi
-% v unwind con applicazioni eterogenee
-% v lambda per applicazioni eterogenee
-% - use_var per i termini su cui ha senso
-% v mimica per i termini
-
 mode (is_stuck i).
 is_stuck uvar.
 is_stuck (app M _) :- is_stuck M.

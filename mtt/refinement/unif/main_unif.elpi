@@ -98,17 +98,17 @@ rewind_app_aux App [implApp|ATs] [L|Ls] Out :-
 unify (multi_app (uvar as X) [setPiApp|ATs]) [L|Ls] T L' :- !, 
     print "lam" X L T L',
     of L LTy _ _, X = lambda LTy F,
-    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+    pi x\ (locDecl x LTy, copy x L) => unify (multi_app (F x) ATs) Ls T L'.
 
 unify (multi_app (uvar as X) [forallApp|ATs]) [L|Ls] T L' :- !, 
     print "flam" X L T L',
     of L LTy _ _, X = forall_lam LTy F,
-    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+    pi x\ (locDecl x LTy, copy x L) => unify (multi_app (F x) ATs) Ls T L'.
 
 unify (multi_app (uvar as X) [implApp|ATs]) [L|Ls] T L' :- !, 
     print "ilam" X L T L',
     of L LTy _ _, X = impl_lam LTy F,
-    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+    pi x\ (locDecl x LTy, copy x L) => unify (multi_app (F x) ATs) Ls T L'.
 
 % Erase multi_app for non applied terms
 unify (multi_app X []) [] T L :- !, unify X [] T L.

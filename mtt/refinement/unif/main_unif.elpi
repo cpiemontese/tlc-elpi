@@ -11,7 +11,9 @@
 % v is_closed sui termini mtt
 % v stop reductions per i termini che calcolano
 % v riduzione controllata per tutti i termini che calcolano
-% - mimica tipi
+% v mimica tipi
+% v unwind con applicazioni eterogenee
+% v lambda per applicazioni eterogenee
 % - use_var per i termini su cui ha senso
 % - mimica per i termini
 
@@ -25,8 +27,13 @@ is_stuck (impl_app M _) :- is_stuck M.
 mode (conv i i).
 conv X Y :- print (conv X Y), fail.
 conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
-conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
+conv X Y :- (is_stuck X, !; is_stuck Y), !,
+    unwind_app X XApp XArgs , unwind_app Y YApp YArgs,
+    unify XApp XArgs YApp YArgs.
+% If X or Y isn't stuck then it will become a `multi_app X/Y []` and later the
+% multi_app will be removed.
 
+% Get the uvars that made A and B stuck and put a conversion constraint on them
 mode (conv_constraint i i).
 conv_constraint (app M _) S A B :- conv_constraint M S A B.
 conv_constraint T (app M _) A B :- conv_constraint T M A B. 
@@ -42,7 +49,7 @@ accumulate catch_redexes.
 % ---- UNIFICATION ---- %
 % --------------------- %
 
-unify T S :- unify T [] S [].
+macro @unify T S :- unify T [] S [].
 
 mode (unify i i i i).
 unify A B C D :- print (unify A B C D), fail.
@@ -54,24 +61,55 @@ unify (uvar as X) [] (uvar as Y) [] :- !,
 accumulate unify_redexes.
 
 % unwind app
-unify (app X Y) L T L' :- !,
-    append [Y] L LY,
-    unify X LY T L'.
-unify T L' (app X Y) L :- !,
-    append [Y] L LY,
-    unify T L' X LY.
+mode (unwind_app i o o).
+unwind_app X Out Args :-
+    unwind_app_aux X [] [] Out.
+
+mode (unwind_app_aux i i i o).
+unwind_app_aux (uvar as X) AppTypes [] (multi_app X AppTypes).
+unwind_app_aux (app X Y) AppType Args Out :- !,
+    append Args' [Y] Args,
+    append [setPiApp] AppTypes AppTypes',
+    unwind_app X AppType' Args' Out.
+unwind_app_aux (forall_app X Y) AppTypes Args Out :- !,
+    append Args' [Y] Args,
+    append [forallApp] AppTypes AppTypes',
+    unwind_app X Args' AppType'.
+unwind_app_aux (impl_app X Y) AppTypes Args Out :- !,
+    append Args' [Y] Args,
+    append [implApp] AppTypes AppTypes',
+    unwind_app X Args' AppType'.
 
 mode (rewind_app i i o).
-rewind_app A [] A.
-rewind_app T [L|Ls] A :-
-    rewind_app (app T L) Ls A.
+rewind_app (multi_app X AppTypes) Args Out :-
+    rewind_app_aux X AppTypes Args Out. 
+mode (rewind_app_aux i i i o).
+rewind_app_aux App [] [] App.
+rewind_app_aux App [setPiApp|ATs] [L|Ls] Out :-
+    rewind_app_aux (app App L) ATs Ls Out.
+rewind_app_aux App [forallApp|ATs] [L|Ls] Out :-
+    rewind_app_aux (forall_app App L) ATs Ls Out.
+rewind_app_aux App [implApp|ATs] [L|Ls] Out :-
+    rewind_app_aux (impl_app App L) ATs Ls Out.
 
-% Meta with args is a lambda
-unify (uvar as X) [L|Ls] T L' :- !, 
-    print "inst" X L T L',
-    of L LTy _,
-    X = lam LTy F,
-    pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
+% Meta with args is a lambda/forall_lam/impl_lam
+unify (multi_app (uvar as X) [setPiApp|ATs]) [L|Ls] T L' :- !, 
+    print "lam" X L T L',
+    of L LTy _ _, X = lambda LTy F,
+    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+
+unify (multi_app (uvar as X) [forallApp|ATs]) [L|Ls] T L' :- !, 
+    print "flam" X L T L',
+    of L LTy _ _, X = forall_lam LTy F,
+    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+
+unify (multi_app (uvar as X) [implApp|ATs]) [L|Ls] T L' :- !, 
+    print "ilam" X L T L',
+    of L LTy _ _, X = impl_lam LTy F,
+    pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
+
+% Erase multi_app for non applied metas
+unify (multi_app (uvar as X) []) [] T L' :- !, unify X [] T L'.
 
 % ---- TYPE UNIFICATION ---- %
 

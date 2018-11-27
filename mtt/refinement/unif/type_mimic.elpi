@@ -1,0 +1,34 @@
+unify (uvar as X) [] (and A B) [] :- !,
+    X = and M N, unify M [] A [], unify N [] B [].
+
+unify (uvar as X) [] (exist A B) [] :- !,
+    X = exist M N, unify M [] A [], pi x\ unify (N x) [] (B x) [].
+
+unify (uvar as X) [] (forall A B) [] :- !,
+    X = forall M N, unify M [] A [], pi x\ unify (N x) [] (B x) [].
+
+unify (uvar as X) [] (implies A B) [] :- !,
+    X = implies M N, unify M [] A [], unify N [] B [].
+
+unify (uvar as X) [] (list C) [] :- !,
+    X = list M, unify M [] C [].
+
+unify (uvar as X) [] (or A B) [] :- !,
+    X = or M N, unify M [] A [], unify N [] B [].
+
+unify (uvar as X) [] (propEq A X Y) :- !,
+    X = propEq A' X' Y',
+    unify A' [] A [], unify X' [] X [], unify Y' [] Y [].
+
+unify (uvar as X) [] (propId A X Y) :- !,
+    X = propId A' X' Y',
+    unify A' [] A [], unify X' [] X [], unify Y' [] Y [].
+
+unify (uvar as X) [] (setPi A B) [] :- !,
+    X = setPi M N, unify M [] A [], pi x\ unify (N x) [] (B x) [].
+
+unify (uvar as X) [] (setSigma A B) [] :- !,
+    X = setSigma M N, unify M [] A [], pi x\ unify (N x) [] (B x) [].
+
+unify (uvar as X) [] (setSum A B) [] :- !,
+    X = setSum M N, unify M [] A [], unify N [] B [].

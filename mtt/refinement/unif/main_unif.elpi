@@ -10,7 +10,7 @@
 % v conv_constraint sulle altre app
 % v is_closed sui termini mtt
 % v stop reductions per i termini che calcolano
-% - riduzione controllata per tutti i termini che calcolano
+% v riduzione controllata per tutti i termini che calcolano
 % - mimica tipi
 % - use_var per i termini su cui ha senso
 % - mimica per i termini
@@ -73,23 +73,9 @@ unify (uvar as X) [L|Ls] T L' :- !,
     X = lam LTy F,
     pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
 
-%unify T L' (uvar as X) [L|Ls] :- !, 
-%    print "inst",
-%    of L LTy _,
-%    X = lam LTy F,
-%    pi x\ (of x LTy x, copy x L) => unify T L' (F x) Ls.
-
 % ---- TYPE UNIFICATION ---- %
 
-unify (uvar as X) [] nat        [] :- !, X = nat.
-unify (uvar as X) [] (prod M N) [] :- !,
-    X = prod P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
-unify (uvar as X) [] (sum M N)  [] :- !,
-    X = sum P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
-unify (uvar as X) [] (id A M N) [] :- !,
-    X = id A M' N', unify M' [] M [], unify N' [] N [].
-unify (uvar as X) [] (list A) [] :- !, X = list A.
-
+accumulate type_mimic.
 
 % ---- TERM UNIFICATION ---- %
 
@@ -99,8 +85,8 @@ unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term A
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
 try_projection X [V|Vs] App :-
-    %declare_constraint (read-copies) [], print_constraints, print, print X,
-    (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn); try_projection X Vs App.
+    (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn);
+    try_projection X Vs App.
 
 mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].
@@ -118,6 +104,9 @@ use_var V (pair A B) S O :-
 use_var V T S V :- conv T S.
 
 % MIMIC
+
+accumulate term_mimic.
+
 % Prod
 unify (uvar as X) [] T [A|As] :-
     print "app" X T [A|As],

@@ -1,0 +1,160 @@
+% Unification code to perform controlled reduction
+
+% ---- EXIST
+unify (elim_exist (pair A B P Q) C F) L T L' :- !,
+    pi p q\ (locDecl p A, locDecl q (B p), copy p P, copy q Q) =>
+        unify (F p q) L T L'.
+unify T L (elim_exist (pair A B P Q) C F) L' :- !,
+    pi p q\ (locDecl p A, locDecl q (B p), copy p P, copy q Q) =>
+        unify T L (F p q) L'.
+
+unify (elim_exist Pair C F) L T L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = (pair A B P Q),
+    pi p q\ (locDecl p A, locDecl q (B p), copy p P, copy q Q, forbid Pair) =>
+        unify (F p q) L T L'.
+unify T L (elim_exist Pair C F) L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = (pair A B P Q),
+    pi p q\ (locDecl p A, locDecl q (B p), copy p P, copy q Q, forbid Pair) =>
+        unify T L (F p q) L'.
+
+% ---- FORALL
+unify (forall_app (forall_lam A F) X) L T L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify (F x) L T L'.
+unify T L (forall_app (forall_lam A F) X) L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify T L (F x) L'.
+
+unify (forall_app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = forall_lam A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify (F x) L T L'.
+unify T L (forall_app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = forall_lam A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify T L (F x) L'.
+
+% ---- IMPLIES
+unify (impl_app (impl_lam A F) X) L T L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify (F x) L T L'.
+unify T L (impl_app (impl_lam A F) X) L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify T L (F x) L'.
+
+unify (impl_app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = impl_lam A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify (F x) L T L'.
+unify T L (impl_app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = impl_lam A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify T L (F x) L'.
+
+% ---- LIST
+unify (elim_list C (list_cons X Xs) LA RecFun) L T L' :- !,
+    of X A _,
+    pi x y z\ (locDecl x A, locDecl y (list A), locDecl z (C y),
+               copy x X, copy y Xs, copy z (elim_list C Xs LA RecFun))
+                => unify (RecFun x y z) L T L'.
+unify T L (elim_list C (list_cons X Xs) LA RecFun) L' :- !,
+    of X A _,
+    pi x y z\ (locDecl x A, locDecl y (list A), locDecl z (C y),
+               copy x X, copy y Xs, copy z (elim_list C Xs LA RecFun))
+                => unify T L (RecFun x y z) L'.
+
+unify (elim_list C ListCons LA RecFun) L T L' :- !,
+    name ListCons, get_copy ListCons LC, LC = list_cons X Xs,
+    of X A _,
+    pi x y z\ (locDecl x A, locDecl y (list A), locDecl z (C y),
+               copy x X, copy y Xs, copy z (elim_list C Xs LA RecFun),
+               forbid ListCons) => unify (RecFun x y z) L T L'.
+unify T L (elim_list C ListCons LA RecFun) L' :- !,
+    name ListCons, get_copy ListCons LC, LC = list_cons X Xs,
+    of X A _,
+    pi x y z\ (locDecl x A, locDecl y (list A), locDecl z (C y),
+               copy x X, copy y Xs, copy z (elim_list C Xs LA RecFun),
+               forbid ListCons) => unify T L (RecFun x y z) L'.
+
+% --- OR
+unify (elim_or C (inl_or A B Inl) Cl Cr) L T L' :-
+    pi l\ (locDecl l A, copy l Inl) => unify (Cl l) L T L'.
+unify T L (elim_or C (inl_or A B Inl) Cl Cr) L' :-
+    pi l\ (locDecl l A, copy l Inl) => unify T L (Cl l) L'.
+unify (elim_or C (inr_or A B Inr) Cl Cr) L T L' :-
+    pi r\ (locDecl r B, copy r Inr) => unify (Cr r) L T L'.
+unify T L (elim_or C (inr_or A B Inr) Cl Cr) L' :-
+    pi r\ (locDecl r B, copy r Inr) => unify T L (Cr r) L'.
+
+unify (elim_or C Inl Cl Cr) L T L' :-
+    name Inl, get_copy Inl Inl', Inl' = inl_or A B LL,
+    pi l\ (locDecl l A, copy l LL, forbid Inl) => unify (Cl l) L T L'.
+unify T L (elim_or C Inl Cl Cr) L' :-
+    name Inl, get_copy Inl Inl', Inl' = inl_or A B LL,
+    pi l\ (locDecl l A, copy l LL, forbid Inl) => unify T L (Cl l) L'.
+unify (elim_or C Inr Cl Cr) L T L' :-
+    name Inr, get_copy Inr Inr', Inr' = inr_or A B RR,
+    pi r\ (locDecl r B, copy r RR, forbid Inr) => unify (Cr r) L T L'.
+unify T L (elim_or C Inr Cl Cr) L' :-
+    name Inr, get_copy Inr Inr', Inr' = inr_or A B RR,
+    pi r\ (locDecl r B, copy r RR, forbid Inr) => unify T L (Cr r) L'.
+
+% ---- PROPID
+
+unify (elim_id (id A X) C F) L T L' :-
+    pi i\ (locDecl i A, copy i X) => (F i) L T L'.
+unify T L (elim_id (id A X) C F) L' :-
+    pi i\ (locDecl i A, copy i X) => T L (F i) L'.
+
+unify (elim_id Id C F) L T L' :-
+    name Id, get_copy Id Id', Id' = id A X,
+    pi i\ (locDecl i A, copy i X, forbid Id) => (F i) L T L'.
+unify T L (elim_id Id C F) L' :-
+    name Id, get_copy Id Id', Id' = id A X,
+    pi i\ (locDecl i A, copy i X, forbid Id) => T L (F i) L'.
+
+% ---- SETPI
+unify (app (lambda A F) X) L T L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify (F x) L T L'.
+unify T L (app (lambda A F) X) L' :- !,
+    pi x\ (locDecl x A, copy x X) => unify T L (F x) L'.
+
+unify (app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = lambda A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify (F x) L T L'.
+unify T L (app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = lambda A F,
+    pi x\ (locDecl x A, copy x X, forbid Lam) => unify T L (F x) L'.
+
+% ---- SETSIGMA
+unify (elim_setSigma (pair A B P Q) C F) L T L' :-
+    pi x y\ (locDecl x A, locDecl y (B x), copy x P, copy y Q) =>
+        unify (F x y) L T L'.
+unify T L (elim_setSigma (pair A B P Q) C F) L' :-
+    pi x y\ (locDecl x A, locDecl y (B x), copy x P, copy y Q) =>
+        unify T L (F x y) L'.
+
+unify (elim_setSigma Pair C F) L T L' :-
+    name Pair, get_copy Pair Pair', Pair' = pair A B P Q,
+    pi x y\ (locDecl x A, locDecl y (B x), copy x P, copy y Q, forbid Pair) =>
+        unify (F x y) L T L'.
+unify T L (elim_setSigma Pair C F) L' :-
+    name Pair, get_copy Pair Pair', Pair' = pair A B P Q,
+    pi x y\ (locDecl x A, locDecl y (B x), copy x P, copy y Q, forbid Pair) =>
+        unify T L (F x y) L'.
+
+% ---- SETSUM
+
+unify (elim_setSum C (inl A B Inl) Cl Cr) L T L' :-
+    pi l\ (locDecl l A, copy l Inl) => unify (Cl l) L T L'.
+unify T L (elim_setSum C (inl A B Inl) Cl Cr) L' :-
+    pi l\ (locDecl l A, copy l Inl) => unify T L (Cl l) L'.
+unify (elim_setSum C (inr A B Inr) Cl Cr) L T L' :-
+    pi r\ (locDecl r B, copy r Inr) => unify (Cr r) L T L'.
+unify T L (elim_setSum C (inr A B Inr) Cl Cr) L' :-
+    pi r\ (locDecl r B, copy r Inr) => unify T L (Cr r) L'.
+
+unify (elim_setSum C Inl Cl Cr) L T L' :-
+    name Inl, get_copy Inl Inl', Inl' = inl A B LL,
+    pi l\ (locDecl l A, copy l LL, forbid Inl) => unify (Cl l) L T L'.
+unify T L (elim_setSum C Inl Cl Cr) L' :-
+    name Inl, get_copy Inl Inl', Inl' = inl A B LL,
+    pi l\ (locDecl l A, copy l LL, forbid Inl) => unify T L (Cl l) L'.
+unify (elim_setSum C Inr Cl Cr) L T L' :-
+    name Inr, get_copy Inr Inr', Inr' = inr A B RR,
+    pi r\ (locDecl r B, copy r RR, forbid Inr) => unify (Cr r) L T L'.
+unify T L (elim_setSum C Inr Cl Cr) L' :-
+    name Inr, get_copy Inr Inr', Inr' = inr A B RR,
+    pi r\ (locDecl r B, copy r RR, forbid Inr) => unify T L (Cr r) L'.

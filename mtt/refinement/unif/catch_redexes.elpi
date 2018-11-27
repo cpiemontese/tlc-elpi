@@ -121,3 +121,64 @@ conv T (elim_setSum C W Cl Cr) :-
     conv W (inl A B Wl as Inl),
     (pi l\ not (is_closed (Cl l))), !,
     unify (elim_or C Inl Cl Cr) T.
+
+
+% ---- CLOSED CHECK ---- %
+
+mode (is_closed i).
+
+is_closed uvar :- !, fail.
+
+% ---- AND
+is_closed (pair_and _ _ P Q) :- is_closed P, is_closed Q.
+is_closed (p1_and P) :- is_closed P.
+is_closed (p2_and P) :- is_closed P.
+
+% ---- EXIST
+is_closed (pair_exist _ _ P Q) :- is_closed P, is_closed Q.
+is_closed (elim_exist P _ F) :- is_closed P, pi x y\ is_closed (F x y).
+
+% ---- FORALL
+is_closed (forall_lam _ F) :- pi x\ is_closed (F x) (G x).
+is_closed (forall_app L X) :- is_closed L, is_closed X.
+
+% ---- IMPLIES
+is_closed (impl_lam A F) :- pi x\ is_closed (F x) (G x).
+is_closed (impl_app L X) :- is_closed L, is_closed X.
+
+% ---- LIST
+is_closed (list_empty C).
+is_closed (list_cons _ H T) :- is_closed H, is_closed T.
+is_closed (elim_list _ L LA LL) :-
+    is_closed L, is_closed LA, pi x y z\ is_closed (LL x y z).
+
+% ---- OR
+is_closed (inr_or _ _ R) :- is_closed R.
+is_closed (inl_or _ _ L) :- is_closed L.
+is_closed (elim_or _ W Cl Cr) :-
+    is_closed W, (pi x\ is_closed (Cl x)), (pi y\ is_closed (Cr y)).
+
+% ---- PROPEQ
+is_closed (eq _ X) :- is_closed X.
+
+% ---- SETPI
+is_closed (lambda _ F) :- pi x\ is_closed (F x).
+is_closed (app L X) :- is_closed L.
+
+% ---- SETSIGMA
+is_closed (pair _ _ P Q) :- is_closed P, is_closed Q.
+is_closed (p1 P) :- is_closed P.
+is_closed (p2 P) :- is_closed P.
+is_closed (elim_setSigma P _ F) :- is_closed P, pi x y\ is_closed (F x y).
+
+% ---- SETSUM
+is_closed (inr _ _ R) :- is_closed R.
+is_closed (inl _ _ L) :- is_closed L.
+is_closed (elim_setSum _ W Cl Cr) :-
+    is_closed W, (pi x\ is_closed (Cl x)), (pi y\ is_closed (Cr y)).
+
+% ---- SINGLETON
+is_closed (elim_singleton T C X) (elim_singleton S D Y) :-
+    is_closed T S, (pi x\ is_closed (C x) (D x)), is_closed X Y.
+
+is_closed M.

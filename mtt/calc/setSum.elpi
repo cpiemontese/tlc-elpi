@@ -30,7 +30,7 @@ of (elim_setSum C W Cl Cr) C_W (elim_setSum C W' Cl' Cr') IE
         spy(isa (Cl x) C_inl (Cl' x) IE),
         pi l\ (locDecl l (setSum A B), copy l (inl A B x)) => conv (C l) C_inl
        ) 
-     , spy (pi y\ locDecl y B =>
+     , spy (pi y\ locDecl y B => % XXX: non dipendente su x: A?
         isa (Cr y) C_inr (Cr' y) IE,
         pi r\ (locDecl r (setSum A B), copy r (inr A B y)) => conv (C r) C_inr
        ) 

@@ -8,8 +8,8 @@
 % TODO:
 % v is_stuck deve considerare anche forall_app e impl_app
 % v conv_constraint sulle altre app
-% - is_closed sui termini mtt
-% - stop reductions per i termini che calcolano
+% v is_closed sui termini mtt
+% v stop reductions per i termini che calcolano
 % - riduzione controllata per tutti i termini che calcolano
 % - mimica tipi
 % - use_var per i termini su cui ha senso
@@ -51,74 +51,7 @@ unify A B C D :- print (unify A B C D), fail.
 unify (uvar as X) [] (uvar as Y) [] :- !,
     declare_constraint (unify X [] Y []) [X, Y].
 
-% catch β-redex
-unify (app (lam A F) X) L T L' :- !,
-    pi x\ (of x A x, copy x X) => unify (F x) L T L'.
-unify T L (app (lam A F) X) L' :- !,
-    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
-
-% β-redex through copy
-unify (app Lam X) L T L' :-
-    name Lam, get_copy Lam Lam', Lam' = lam A F,
-    pi x\ (of x A x, copy x X, forbid Lam) => unify (F x) L T L'.
-unify T L (app Lam X) L' :-
-    name Lam, get_copy Lam Lam', Lam' = lam A F,
-    pi x\ (of x A x, copy x X, forbid Lam) => unify T L (F x) L'.
-
-% catch split-redex
-unify (split (pair P Q) F) L T L' :- !,
-    of (pair P Q) (sum A B) _,
-    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify (F x y) L T L'.
-unify T L (split (pair P Q) F) L' :- !,
-    of (pair P Q) (sum A B) _,
-    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify T L (F x y) L'.
-
-% split-redex through copy
-unify (split Pair F) L T L' :- !,
-    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
-    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify (F x y) L T L'.
-unify T L (split Pair F) L' :- !,
-    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
-    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify T L (F x y) L'.
-
-% catch natrec-redex
-unify (natrec (succ N) ZE RF) L T L' :- !,
-    of (natrec N ZE RF) S _,
-    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => unify (RF x y) L T L'.
-unify T L (natrec (succ N) ZE RF) L' :- !,
-    %conv (natrec N ZE RF) R,
-    of (natrec N ZE RF) S _,
-    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => T L unify (RF x y) L'.
-% natrec-redex through copy
-unify (natrec Succ ZE RF) L T L' :- !,
-    name Succ, get_copy Succ Succ', Succ' = (succ N),
-    of (natrec N ZE RF) S _,
-    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF), forbid Succ) => unify (RF x y) L T L'.
-unify T L (natrec Succ ZE RF) L' :- !,
-    name Succ, get_copy Succ Succ', Succ' = (succ N),
-    of (natrec N ZE RF) S _,
-    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF), forbid Succ) => T L unify (RF x y) L'.
-
-% catch listrec-redex
-unify (listrec S (cns X Y) D E) L T L' :- !,
-    of X A _,
-    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
-               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
-unify (listrec S (cns X Y) D E) L T L' :- !,
-    of X A _,
-    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
-               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
-
-% listrec-redex through copy
-unify (listrec S Cons D E) L T L' :- !,
-    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
-    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
-               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
-unify (listrec S (cns X Y) D E) L T L' :- !,
-    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
-    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
-               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
-
+accumulate unify_redexes.
 
 % unwind app
 unify (app X Y) L T L' :- !,

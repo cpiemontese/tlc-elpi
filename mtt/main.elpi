@@ -1,3 +1,6 @@
+accumulate calc/all, refinement/all.
+accumulate "../itp".
+
 %
 type fixMe A -> B -> C.
 type k_propId mttType -> mttTerm.
@@ -554,7 +557,7 @@ in_library P :-
     impliesLib Limpl,
     forallLib Lforall,
     propEqLib LpropEq,
-    concat [L1,L2,L3,L4 ,L5, L6, Lforall, Limpl, LpropEq] L,
+    concat [L1, L2, L3, L4 , L5, L6, Lforall, Limpl, LpropEq] L,
     process_library L P.
 
 kind libraryEntry type.
@@ -598,19 +601,42 @@ verify_arg_order N
     ,  spy(verify_arg_order_ N RVars)
     .
 
+% Caso di definizione senza termine -> lo devi dimostrare
+process_entry (locDefL N TY) Hyp :-
+    spy(verify_arg_order N),
+    spy(isaType TY _ int),
+    erase_var_app TY TY',
+    spy(of TE TY' RTE Tint),
+    %erase_var_app RTE RTE',
+    % TE non e' dato -> meta -> prova
+    prove TE TY' RTE _,
+    Hyp = locDef N TY RTE,
+    print "## New definition: " N.
+% Caso di prova con uno script (completo o meno) in input
+process_entry (locDefL N TY (script S)) Hyp :-
+    spy(verify_arg_order N),
+    spy(isaType TY _ int),
+    erase_var_app TY TY',
+    spy(of TE TY' RTE Tint),
+    %erase_var_app RTE RTE',
+    % TE non e' dato -> meta -> prova
+    prove TE TY' RTE S _,
+    Hyp = locDef N TY RTE,
+    print "## New definition: " N.
+
 process_entry (locTypeDefL N KIND TY) Hyp :-
-   spy(verify_arg_order N),
-   spy(ofType TY KIND int),
-   erase_var_app TY TY',
-   Hyp = locTypeDef N KIND TY',
-   print "## New type definition: " N.
+    spy(verify_arg_order N),
+    spy(ofType TY KIND int),
+    erase_var_app TY TY',
+    Hyp = locTypeDef N KIND TY',
+    print "## New type definition: " N.
 process_entry (locDefL N TY TE) Hyp :-
-   spy(verify_arg_order N),
-   spy(isaType TY _ int),
-   spy(isa TE TY RTE Tint),
-   erase_var_app RTE RTE',
-   Hyp = locDef N TY RTE',
-   print "## New definition: " N.
+    spy(verify_arg_order N),
+    spy(isaType TY _ int),
+    spy(isa TE TY RTE Tint),
+    erase_var_app RTE RTE',
+    Hyp = locDef N TY RTE',
+    print "## New definition: " N.
    
 process_entry (univPi F) Hyp2 :-
    spy (pi Bi \ ofType Bi set int => spy (process_entry (F Bi) (Hyp Bi))),

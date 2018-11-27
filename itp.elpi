@@ -1,4 +1,4 @@
-accumulate utils.
+%accumulate utils.
 accumulate itp_components/all.
 
 % ------------------- %
@@ -23,9 +23,9 @@ prove_goal (goal X _ _ _ as G) OG S :-
 
 % Old
 prove X Type ProofTerm OutScript :-
-    prove X Type [] ProofTerm OutScript.
+    prove X Type ProofTerm [] OutScript.
 
-prove X Type InScript ProofTerm OutScript :-
+prove X Type ProofTerm InScript OutScript :-
     of X Type ProofTerm,
     itp_loop X (state [(1, goal X Type ProofTerm [])] [] [] 1) InScript _ OutScript.
 

@@ -326,7 +326,8 @@ exec_tac_aux Tac (goal X T Y D as G) [] FVars NG :-
 exec_tac_aux Tac (goal X T Y D) [vdecl N TN|VDecls] FVars NG :-
     pi x\ copy_var x N => (
         copy_to_type TN TN',
-        of x TN' x =>
+        %of x TN' x =>
+        locDecl x TN' =>
             exec_tac_aux Tac (goal (X x) T (Y x) D) VDecls [(x, N)|FVars] NG
     ).
 
@@ -359,7 +360,8 @@ intro_and_build_aux Y V [] FVars NG :-
 intro_and_build_aux Y V [vdecl N TN|VDecls] FVars NG :-
     pi x\ copy_var x N => (
         copy_to_type TN TN',
-        of x TN' x =>
+        %of x TN' x =>
+        locDecl x TN' =>
             intro_and_build_aux (Y x) V VDecls [(x, N)|FVars] NG
     ).
 
@@ -470,8 +472,8 @@ not_a_dup N [vdecl _ _|VDecls] :- not_a_dup N VDecls.
 mode (lookdown i i i i).
 lookdown (uvar K L as X) VDecls Y T :- declare_constraint (read-refined X VDecls Y T) [X].
 
-constraint isa read-evar read-refined of {
-     rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y))
+constraint i _sa read-evar read-refined of {
+     rule (E1 : Ctx ?- isa (uvar K L1) Ty (uvar O L1' as Y) _)
         \ (E2 : read-refined (uvar O L2) VDecls X T)
         | (%print "align-debug: " K L1 "-" O L1' "-" O L2,
           L1 = L1',

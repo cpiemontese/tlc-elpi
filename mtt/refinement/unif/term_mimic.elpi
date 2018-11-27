@@ -1,0 +1,102 @@
+% NOTE: during mimic no fresh variable is typed nor copied to anything, here
+%       fresh variables stand for themselves and nothing else and thus they
+%       can't be used in use_var (and thus need no type).
+
+% ---- AND
+unify (uvar as X) [] (pair_and A B P Q) [] :- !,
+    X = pair_and A B M N, @unify M P, @unify N Q.
+
+unify (uvar as X) [] (p1_and P) [] :- !, X = p1_and M, @unify M P.
+unify (uvar as X) [] (p2_and P) [] :- !, X = p2_and M, @unify M P.
+
+% ---- EXIST
+unify (uvar as X) [] (pair_exist A B P Q) [] :- !,
+    X = pair_exist A B M N, @unify M P, @unify N Q.
+
+unify (uvar as X) [] (elim_exist P C F) [] :- !,
+    X = elim_exist M C G, @unify M P, pi x y\ @unify (G x y) (F x y).
+
+% ---- FORALL
+unify (uvar as X) [] (forall_lam A F) [] :- !,
+    X = forall_lam A G, pi x\ @unify (G x) (F x).
+
+% Invariant: a multi_app always has args
+unify (uvar as X) [] (multi_app T [forallLam|ATs]) Args :- !,
+    X = forall_app M N,
+    append Body [Tail] Args,
+    unify M [] (multi_app T ATs) Body,
+    @unify N Tail.
+    
+% ---- IMPLIES
+unify (uvar as X) [] (impl_lam A F) [] :- !,
+    X = impl_lam A G, pi x\ @unify (G x) (F x).
+
+% Invariant: a multi_app always has args
+unify (uvar as X) [] (multi_app T [implApp|ATs]) Args :- !,
+    X = impl_app M N,
+    append Body [Tail] Args,
+    unify M [] (multi_app T ATs) Body,
+    @unify N Tail.
+
+% ---- LIST
+unify (uvar as X) [] (list_empty A) [] :- !, X = list_empty A.
+unif_orl (uvar as X) [] (list_cons A Hd Tl) :- !,
+    X = list_cons A M N, @unify M Hd, @unify N Tl.
+unify (uvar as X) [] (elim_list L List LA RecFun) :- !,
+    X = elim_list L List' LA' RecFun',
+    @unify List' List, @unify LA' LA,
+    pi x y z\ @unify (RecFun' x y z) (RecFun x y z).
+
+% ---- OR
+unify (uvar as X) [] (inr_or A B R) [] :- !,
+    X = inr_or A B R', @unify R' R.
+unify (uvar as X) [] (inl_or A B L) [] :- !,
+    X = inl_or A B L', @unify L' L.
+unify (uvar as X) [] (elim_or C W Cl Cr) [] :- !,
+    X = elim_or C W' Cl' Cr',
+    @unify W' W, (pi x\ @unify (Cl' x) (Cl x)), (pi x\ @unify (Cr' x) (Cr x)).
+
+% ---- PROPEQ
+unify (uvar as X) [] (eq A X) [] :- !, X = eq A Y, @unify Y X.
+
+% ---- PROPID
+unify (uvar as X) [] (id A X) [] :- !, X = id A Y, @unify Y X.
+unify (uvar as X) [] (elim_id P C F) :- !,
+    X = elim_id Q C G, @unify Q P, pi x\ @unify (G x) (F x).
+
+% ---- SETPI
+unify (uvar as X) [] (lambda A F) [] :- !,
+    X = lambda A G, pi x\ @unify (G x) (F x).
+
+% Invariant: a multi_app always has args
+unify (uvar as X) [] (multi_app T [setPiApp|ATs]) Args :- !,
+    X = app M N,
+    append Body [Tail] Args,
+    unify M [] (multi_app T ATs) Body,
+    @unify N Tail.
+
+% ---- SETSIGMA
+unify (uvar as X) [] (pair A B P Q) [] :- !,
+    X = pair A B M N, @unify M P, @unify N Q.
+
+unify (uvar as X) [] (p1 P) [] :- !, X = p1 M, @unify M P.
+unify (uvar as X) [] (p2 P) [] :- !, X = p2 M, @unify M P.
+
+unify (uvar as X) [] (elim_setSigma P C F) [] :- !,
+    X = elim_setSigma Q C G, @unify Q P, pi x y\ @unify (G x y) (F x y).
+
+% ---- SETSUM
+unify (uvar as X) [] (inr A B R) [] :- !,
+    X = inr A B R', @unify R' R.
+unify (uvar as X) [] (inl A B L) [] :- !,
+    X = inl A B L', @unify L' L.
+unify (uvar as X) [] (elim_setSum C W Cl Cr) [] :- !,
+    X = elim_setSum C W' Cl' Cr',
+    @unify W' W, (pi x\ @unify (Cl' x) (Cl x)), (pi x\ @unify (Cr' x) (Cr x)).
+
+% ---- SINGLETON
+unify (uvar as X) [] star [] :- !, X = star.
+unify (uvar as X) [] (elim_singleton S C F) [] :- !,
+    X = elim_singleton S' C F', @unify S' S, @unify F' F.
+
+unify (uvar as X) [] () [] :- !,

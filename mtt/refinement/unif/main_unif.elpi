@@ -66,7 +66,6 @@ unwind_app X Out Args :-
     unwind_app_aux X [] [] Out.
 
 mode (unwind_app_aux i i i o).
-unwind_app_aux (uvar as X) AppTypes [] (multi_app X AppTypes).
 unwind_app_aux (app X Y) AppType Args Out :- !,
     append Args' [Y] Args,
     append [setPiApp] AppTypes AppTypes',
@@ -79,10 +78,13 @@ unwind_app_aux (impl_app X Y) AppTypes Args Out :- !,
     append Args' [Y] Args,
     append [implApp] AppTypes AppTypes',
     unwind_app X Args' AppType'.
+unwind_app_aux X AppTypes [] (multi_app X AppTypes).
 
 mode (rewind_app i i o).
 rewind_app (multi_app X AppTypes) Args Out :-
     rewind_app_aux X AppTypes Args Out. 
+%rewind_app X [] X. % if something wasn't a multi_app then just return it
+
 mode (rewind_app_aux i i i o).
 rewind_app_aux App [] [] App.
 rewind_app_aux App [setPiApp|ATs] [L|Ls] Out :-
@@ -108,8 +110,10 @@ unify (multi_app (uvar as X) [implApp|ATs]) [L|Ls] T L' :- !,
     of L LTy _ _, X = impl_lam LTy F,
     pi x\ (locDecl x LTy, copy x L) => unify (F x) Ls T L'.
 
-% Erase multi_app for non applied metas
-unify (multi_app (uvar as X) []) [] T L' :- !, unify X [] T L'.
+% Erase multi_app for non applied terms
+unify (multi_app X []) [] T L :- !, unify X [] T L.
+unify T L (multi_app X []) [] :- !, unify T L X [].
+% Invariant: from here on only actual applications will have multi_app
 
 % ---- TYPE UNIFICATION ---- %
 
@@ -118,7 +122,12 @@ accumulate type_mimic.
 % ---- TERM UNIFICATION ---- %
 
 % PROJECTION
-unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term Arg App, try_projection X Vs App.
+% Invariant: Term is not a multi_app
+unify (uvar _ Vs as X) [] Term [] :- print "proj_term" X Term Args,
+    try_projection X Vs Term.
+% Invariant: Term is a multi_app -> non-empty args
+unify (uvar _ Vs as X) [] Term Args :- print "proj_app" X Term Args,
+    rewind_app Term Args App, try_projection X Vs App.
 
 mode (try_projection i i i).
 try_projection _ [] _ :- fail.
@@ -144,54 +153,6 @@ use_var V T S V :- conv T S.
 % MIMIC
 
 accumulate term_mimic.
-
-% Prod
-unify (uvar as X) [] T [A|As] :-
-    print "app" X T [A|As],
-    X = app M N,
-    append Body [Tail] [A|As],
-    unify M [] T Body,
-    unify N [] Tail [].
-unify (uvar as X) [] (lam T F) [] :-
-    print "lam",
-    X = lam T G, pi x\ of x T x => unify (G x) [] (F x) [].
-
-% Sum
-unify (uvar as X) [] (pair M N) [] :- !,
-    print "pair",
-    X = pair P Q, unify P [] M [], unify Q [] N [].
-unify (uvar as X) [] (fst P) [] :- !,
-    print "fst",
-    X = fst Q, unify Q [] P [].
-unify (uvar as X) [] (snd P) [] :- !,
-    print "snd",
-    X = snd Q, unify Q [] P [].
-unify (uvar as X) [] (split P F) [] :- !,
-    of P (sum A _) _,
-    X = split Q G,
-    unify Q [] P [],
-    pi x\ of x A x => unify (G x) [] (F x) [].
-
-% Nat
-unify (uvar as X) [] (succ Y) [] :- !,
-    print "succ",
-    X = succ N, unify N [] Y [].
-unify (uvar as X) [] (natrec N ZE RF) [] :- !,
-    print "natrec",
-    of (natrec N ZE RF) S _,
-    X = natrec N' ZE' RF',
-    unify N' [] N [], unify ZE' [] ZE [],
-    pi x y\ (of x nat x, of y (S x) y) => unify (RF' x y) [] (RF x y) [].
-
-% List
-unify (uvar as X) [] (cns M N) [] :- !,
-    X = cns P Q,
-    unify P [] M [], unify Q [] N [].
-unify (uvar as X) [] (listrec S C D E) [] :- !,
-    of C A _,
-    X = listrec S C' D' E',
-    unify C' [] C [], unify D' [] D [],
-    pi x y z\ (of x A x, of y (list A) y, of z (S y) z) => unify (E' x y z) [] (E x y z) [].
 
 % Const
 unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.

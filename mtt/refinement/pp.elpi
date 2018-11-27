@@ -1,0 +1,121 @@
+% Invariant: only named terms are assigned in tactics, so only named terms are
+%            considered
+
+mode (pp i o).
+
+%pp A B :- print (pp A B), fail.
+
+% ---- AND
+pp (and A B) S :- pp A S1, pp B S2, S is S1 ^ " ∧ " ^ S2.
+pp (pair_and _ _ P Q) S :-
+    pp P S1, pp Q S2, S is "<" ^ S1 ^ ", " ^ S2 ^ ">".
+pp (p1_and P) S :- pp P SP, S is "π₁(" ^ SP ^ ")".
+pp (p2_and P) S :- pp P SP, S is "π₂(" ^ SP ^ ")".
+
+% ---- EXIST
+pp (exist A B) :-
+    pp A S1, pi x\ pp x Sx => pp (B x) S2,
+    S is "∃" ^ Sx ^ ": " ^ S1 ^ ".(" ^ Sx ^ ")" ^ S2. 
+pp (pair_exist _ _ P Q) S :-
+    pp P S1, pp Q S2, S is "<" ^ S1 ^ ", " ^ S2 ^ ">".
+pp (elim_exist N1 N2 P _ F) S :-
+    pp N1 SN1, pp N2 SN2, pp P SP,
+    pi x y\ (pp x SN1, pp y SN2) => pp (F x y) SF,
+    S is "El_∃(" ^ SP ^ ", (" ^ SN1 ^ ", " ^ SN2 ")" ^ SF ^ ")".
+
+% ---- FORALL
+pp (forall A B) S :-
+    pp A S1, pi x\ pp x Sx => pp (B x) S2,
+    S is "∀" ^ Sx ^ ": " ^ S1 ^ ".(" ^ Sx ^ ")" ^ S2. 
+pp (forall_lam N A F) S :-
+    pp A SA, pp N SN, pi x\ pp x SN => pp (F x) SF,
+    S is "λ" ^ SN ^ ": " ^ SA ^ ". " SF.
+pp (forall_app Lam Arg) S :-
+    pp Lam S1, pp Arg S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+
+% ---- IMPLIES
+pp (implies A B) S :- pp A SA, pp B SB, S is SA ^ " ⇒ " SB.
+pp (impl_lam N A F) S :-
+    pp A SA, pp N SN, pi x\ pp x SN => pp (F x) SF,
+    S is "λ" ^ SN ^ ": " ^ SA ^ ". " SF.
+pp (impl_app Lam Arg) S :-
+    pp Lam S1, pp Arg S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+
+% ---- LIST
+pp (list C) S :- pp C SC, S is "list " ^ SC.
+pp (list_empty _) "[]".
+pp (list_cons _ Hd Tl) S :- pp Hd SHd, pp Tl STl, S is SHd ^ "::" ^ STl.
+pp (elim_list N1 N2 N3 _ List LA RecFun) S :-
+    pp List SList, pp LA SA, pp N1 SN1, pp N2 SN2, pp N3 SN3,
+    (pi x y z\ (pp x SN1, pp y SN2, pp z SN3) => pp (RecFun x y z) SRF),
+    S is "El_list(" ^ SList ^ ", " ^ SA ^ ", ("
+        ^ SN1 ", " ^ SN2 ^ ", " ^ SN3 ^ ")" ^ SRF ^ ")".
+
+% ---- OR
+pp (or A B) S :- pp A SA, pp B SB, S is SA ^ " ∨ " ^ SB.
+pp (inr_or _ _ R) S :- pp R SR, S is "inr_∨ " ^ SR.
+pp (inl_or _ _ L) S :- pp L SL, S is "inl_∨ " ^ SL.
+pp (elim_or N1 N2 _ W Cl Cr) S :-
+    pp N1 SN1, pp N2 SN2, pp W SW,
+    (pi x\ pp x SN1 => pp (Cl x) SCl), (pi y\ pp y SN2 => pp (Cr y) SCr),
+    S is "El_∨(" ^ SW ^ ", (" ^ SN1 ^ ")" ^ SCl ^ ", (" ^ SN2 ^ ")" ^ SCr ^ ")". 
+
+% ---- PROPEQ
+pp (propEq A X Y) S :-
+    pp A SA, pp X SX, pp Y SY, S is "Eq(" ^ SA ^ ", " ^ SX ^ ", " ^ SY ^ ")".
+pp (eq A X) S :- pp A SA, pp X SX, S is "eq " ^ SA ^ " " ^ SX.
+
+% ---- PROPID
+pp (propId A X Y) S :-
+    pp A SA, pp X SX, pp Y SY, S is "Id(" ^ SA ^ ", " ^ SX ^ ", " ^ SY ^ ")".
+pp (id A X) S :- pp A SA, pp X SX, S is "id " ^ SA ^ " " ^ SX.
+pp (elim_id N P _ F) S :-
+    pp P SP, pp N SN, (pi x\ pp x SN => pp (F x) SF),
+    S is "El_id(" ^ SP ^ ", (" SN ^ ")" ^ SF ^ ")". 
+
+% ---- SETPI
+pp (setPi T1 T2) S :-
+    pp T1 S1, (pi x\ pp x Sx => pp (T2 x) S2),
+    S is "∏(" ^ S1 ^ ", (" ^ Sx ^ ")" ^ S2 ^ ")".
+pp (lambda N T F) S :-
+    pp N SN, (pi x\ pp x SN => pp (F x) SF), pp T ST,
+    S is "λ" ^ SN ^ ":" ^ ST ^ "." ^ SF.
+pp (app Lam Arg) S :- pp Lam S1, pp Arg S2, S is "(" ^ S1 ^ " " ^ S2 ^ ")".
+pp dots "…".
+
+% ---- SETSIGMA
+pp (setSigma T1 T2) S :-
+    pp T1 S1, (pi x\ pp x Sx => pp (T2 x) S2),
+    S is "Σ(" ^ S1 ^ ", (" ^ Sx ^ ")" ^ S2 ^ ")".
+pp (pair _ _Left Right) S :-
+    pp Left SLeft, pp Right SRight, S is "<" ^ SLeft ^ ", " ^ SRight ^ ">".
+pp (fst Pair) S :- pp Pair SPair, S is "π₁(" ^ SPair ^ ")".
+pp (snd Pair) S :- pp Pair SPair, S is "π₂(" ^ SPair ^ ")".
+pp (elim_setSigma N1 N2 Pair _ Func) S :-
+    pp Pair SPair, pp N1 SN1, pp N2 SN2,
+    (pi x y\ (pp x SN1, pp y SN2) => pp (Func x y) SFunc),
+    S is "El_Σ(" ^ SPair  ^ ", (" ^ SN1 ^ ", " ^ SN2 ^ ")" ^ SFunc ^ ")".
+
+% ---- SETSUM
+pp (setSum A B) S :- pp A SA, pp B SB, S is SA ^ " + " SB.
+pp (inr _ _ R) S :- pp R SR, S is "inr_+ " ^ SR.
+pp (inl _ _ L) S :- pp L SL, S is "inl_+ " ^ SL.
+pp (elim_setSum N1 N2 _ W Cl Cr) S :-
+    pp N1 SN1, pp N2 SN2, pp W SW,
+    (pi x\ pp x SN1 => pp (Cl x) SCl), (pi y\ pp y SN2 => pp (Cr y) SCr),
+    S is "El_∨(" ^ SW ^ ", (" ^ SN1 ^ ")" ^ SCl ^ ", (" ^ SN2 ^ ")" ^ SCr ^ ")". 
+
+% ---- SINGLETON
+pp singleton "〈〉".
+pp star "∗".
+pp (elim_singleton Star _ T) S :-
+    pp Star SStar, pp T ST, S is "El_singl(" ^ SStar ^ ", " ^ ST ^ ")".
+
+pp [] "".
+pp [L] PPL  :- pp L PPL.
+pp [L|Ls] S :- pp L PPL, pp Ls PPLs, S is PPL ^ ", " ^ PPLs.
+pp (uvar K L) S :-
+    term_to_string K SK,
+    pp L PPL, S is SK ^ " [" ^ PPL ^ "]".
+pp N S :- name N, name_of N S.
+pp Term S :- term_to_string Term S. % no special rules, just print the term

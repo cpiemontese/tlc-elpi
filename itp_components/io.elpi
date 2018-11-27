@@ -26,7 +26,7 @@ print_actives Active :-
     print_goals "" Active.
 
 print_n_open_goals N :-
-    term_to_string N SN,
+    pp N SN,
     (N is 1, Q is "goal", !; Q is "goals"),
     P is "you got " ^ SN ^ " open " ^ Q,
     print P.
@@ -38,14 +38,15 @@ print_goal Prefix N (goal X T Y V as Goal) :- print_goal_aux Prefix N Goal V.
 print_goal_aux Prefix N (goal PTerm Type _ VDecls) [] :-
     pp Type TypePP,
     vdecls_to_string VDecls VDString,
-    term_to_string N SN,
+    pp N SN,
     pp PTerm SPTerm,
     S is Prefix ^ SN ^ ") [" ^ VDString ^ "] |- " ^ SPTerm ^ ": " ^ TypePP,
     print S.
 
 print_goal_aux Prefix N (goal PTerm Type _ VDecls) [vdecl Name _|VDecls'] :-
-    term_to_string Name SName,
-    pi x\ name_of x SName => print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
+    pp Name SName,
+    %pi x\ name_of x SName => print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
+    pi x\ pp x SName => print_goal_aux Prefix N (goal (PTerm x) Type _ VDecls) VDecls'.
 
 mode (print_goals i i).
 %print_goals A B :- print (print_goals A B), fail.
@@ -58,12 +59,12 @@ print_ctx _ _ [].
 print_ctx Prefix N [(_, (_, empty_goal))|Ctxs] :-
     print_ctx Prefix N Ctxs.
 print_ctx Prefix N [(N, (O, Goal))|Ctxs] :-
-    term_to_string N NS,
+    pp N NS,
     Prefix' is Prefix ^ "> " ^ NS ^ "° - ",
     print_goal Prefix' O Goal,
     print_ctx Prefix N Ctxs.
 print_ctx Prefix N [(M, (O, Goal))|Ctxs] :-
-    term_to_string M MS,
+    pp M MS,
     Prefix' is Prefix ^ " " ^ MS ^ "° - ",
     print_goal Prefix' O Goal,
     print_ctx Prefix N Ctxs.
@@ -71,8 +72,7 @@ print_ctx Prefix N [(M, (O, Goal))|Ctxs] :-
 vdecls_to_string [] "".
 vdecls_to_string [vdecl N T|VDecls] S :-
     vdecls_to_string VDecls S',
-    pp T TPP,
-    term_to_string N SN,
+    pp T TPP, pp N SN,
     (S' is "", S is "(" ^ SN ^ ": " ^ TPP ^ ")", !;
     S is "(" ^ SN ^ ": " ^ TPP ^ "), " ^ S'), !.
 

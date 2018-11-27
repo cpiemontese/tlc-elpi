@@ -8,8 +8,6 @@
 
 mode (copy_from_type i o).
 
-copy_from_type X Y :- copy X Y.
-
 % ---- AND ---- %
 copy_from_type (and A B) (and T S) :- copy_from_type A T, copy_from_type B S.
 copy_from_type (pair_and A B P Q) (pair_and T S M N) :-
@@ -19,8 +17,10 @@ copy_from_type (p1_and P) (p1_and Q) :- copy_from_type P Q.
 copy_from_type (p2_and P) (p2_and Q) :- copy_from_type P Q.
 
 % ---- EXIST ---- %
-copy_from_type (exist A B) (exist T S) :-
+copy_from_type (exist A (uvar as B)) (exist T S) :-
     copy_from_type A T, copy_from_type B S.
+copy_from_type (exist A B) (exist T S) :-
+    copy_from_type A T, pi x\ copy_from_type (B x) (S x).
 copy_from_type (pair_exist A B P Q) (pair_exist T S M N) :-
     copy_from_type A T, copy_from_type B S,
     copy_from_type P M, copy_from_type Q N.
@@ -37,8 +37,10 @@ copy_from_type (elim_exist P T F) (elim_exist Q S G) :-
     pi x y\ copy_from_type (F x y) (G x y).
 
 % ---- FORALL ---- %
-copy_from_type (forall A B) (forall T S) :-
+copy_from_type (forall A (uvar as B)) (forall T S) :-
     copy_from_type A T, copy_from_type B S.
+copy_from_type (forall A B) (forall T S) :-
+    copy_from_type A T, pi x\ copy_from_type (B x) (S x).
 
 % Named case
 copy_from_type (forall_lam N A F) (forall_lam N B G) :-
@@ -128,7 +130,26 @@ copy_from_type (propEq A M N) (propEq B P Q) :-
     copy_from_type A B, copy_from_type M P, copy_from_type N Q.
 copy_from_type (eq A X) (eq B Y) :- copy_from_type A B, copy_from_type X Y.
 
+% ---- PROPID ---- %
+copy_from_type (propId A X Y) (propId B M N) :-
+    copy_from_type A B, copy_from_type X M, copy_from_type Y N.
+copy_from_type (id A X) (id B Y) :- copy_from_type A B, copy_from_type X Y.
+copy_from_type (elim_id P (uvar as C) (uvar as F)) (elim_id Q D G) :-
+    copy_from_type P Q, copy_from_type C D, copy_from_type F G.
+copy_from_type (elim_id P (uvar as C) F) (elim_id Q D G) :-
+    copy_from_type P Q, copy_from_type C D, pi x\ copy_from_type (F x) (G x).
+copy_from_type (elim_id P C (uvar as F)) (elim_id Q D G) :-
+    copy_from_type P Q,
+    (pi x y\ copy_from_type (C x y) (D x y)),
+    copy_from_type F G.
+copy_from_type (elim_id P C (uvar as F)) (elim_id Q D G) :-
+    copy_from_type P Q,
+    (pi x y\ copy_from_type (C x y) (D x y)),
+    pi x\ copy_from_type (F x) (G x).
+
 % ---- SETPI ---- %
+copy_from_type (setPi A (uvar as B)) (setPi T S) :-
+    copy_from_type A T, copy_from_type B S.
 copy_from_type (setPi A B) (setPi T S) :-
     copy_from_type A T, pi x\ copy_from_type (B x) (S x).
 
@@ -146,10 +167,15 @@ copy_from_type (app L X) (app J Y) :-
     copy_from_type L J, copy_from_type X Y.
 
 % ---- SETSIGMA ---- %
+copy_from_type (setSigma A (uvar as B)) (setSigma T S) :-
+    copy_from_type A T, copy_from_type B S.
 copy_from_type (setSigma A B) (setSigma T S) :-
     copy_from_type A T, pi x\ copy_from_type (B x) (S x).
 copy_from_type (p1 P) (p1 Q) :- copy_from_type P Q.
 copy_from_type (p2 P) (p2 Q) :- copy_from_type P Q.
+copy_from_type (pair A (uvar as B) P Q) (pair T S M N) :-
+    copy_from_type A T, copy_from_type B S,
+    copy_from_type P M, copy_from_type Q N.
 copy_from_type (pair A B P Q) (pair T S M N) :-
     copy_from_type A T, (pi x\ copy_from_type (B x) (S x)),
     copy_from_type P M, copy_from_type Q N.
@@ -175,11 +201,11 @@ copy_from_type (elim_setSigma P T F) (elim_setSigma Q S G) :-
 
 % ---- SETSUM ---- %
 copy_from_type (setSum A B) (setSum T S) :-
-    copy_from_type A T, pi x\ copy_from_type (B x) (S x).
+    copy_from_type A T, copy_from_type B S.
 copy_from_type (inr A B R) (inr T S R') :-
-    copy_from_type A T, (pi x\ copy_from_type (B x) (S x)), copy_from_type R R'.    
+    copy_from_type A T, copy_from_type B S, copy_from_type R R'.    
 copy_from_type (inl A B L) (inl T S L') :-
-    copy_from_type A T, (pi x\ copy_from_type (B x) (S x)), copy_from_type L L'.    
+    copy_from_type A T, copy_from_type B S, copy_from_type L L'.    
 
 % Named case
 copy_from_type (elim_setSum N1 N2 C W Cl Cr) (elim_setSum N1 N2 D W' Cl' Cr') :-

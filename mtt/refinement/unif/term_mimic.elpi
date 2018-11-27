@@ -98,5 +98,3 @@ unify (uvar as X) [] (elim_setSum C W Cl Cr) [] :- !,
 unify (uvar as X) [] star [] :- !, X = star.
 unify (uvar as X) [] (elim_singleton S C F) [] :- !,
     X = elim_singleton S' C F', @unify S' S, @unify F' F.
-
-unify (uvar as X) [] () [] :- !,

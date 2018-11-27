@@ -516,6 +516,11 @@ propLib L :-
          (forall_lam Xi _ \ forall_lam Xi _ \ impl_lam trueT _ \ mk_trueT))))
  ].
 
+%type length list A -> int -> prop.
+
+length [] 0.
+length [_|TL] L :- length TL L', L is L' + 1.
+
 type append list A -> list A -> list A -> prop.
 
 append [] L L.
@@ -526,12 +531,15 @@ type concat list (list A) -> list A -> prop.
 concat [] [].
 concat [H|TL] R :- concat TL L, append H L R.
 
-type reverse_ list A -> list A -> list A -> prop.
+%type reverse_ list A -> list A -> list A -> prop.
 type reverse list A -> list A -> prop.
 
-reverse_ [] A A.
-reverse_ [H|TL] A R :- reverse_ TL [H|A] R.
-reverse L R :- reverse_ L [] R.
+%reverse_ [] A A.
+%reverse_ [H|TL] A R :- reverse_ TL [H|A] R.
+%reverse L R :- reverse_ L [] R.
+
+reverse [] [].
+reverse [X|XS] L :- reverse XS L', append L' [X] L.
 
 get_elem [H|_] 0 H.
 get_elem [_|TL] I R :- I1 is (I - 1), get_elem TL I1 R.

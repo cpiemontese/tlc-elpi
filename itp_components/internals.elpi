@@ -484,3 +484,11 @@ constraint isa read-evar read-refined of {
 mode (create_copy_hyps i i o).
 create_copy_hyps [] [] [].
 create_copy_hyps [V|Vs] [vdecl W _|Ws] [copy_var V W|Hyps] :- create_copy_hyps Vs Ws Hyps.
+
+% ------------------------- %
+% ---- TACTICS HELPERS ---- %
+% ------------------------- %
+
+get_named N [(X, N)|_] X.
+get_named N [_|TL] X :-
+    get_named N TL X.

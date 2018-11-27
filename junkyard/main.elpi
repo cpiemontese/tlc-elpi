@@ -1,6 +1,48 @@
-%
+accumulate calc/all, debug.
+
+/* Osservazioni
+- hnf -> steps
+- hstep -> step
+- conv -> conv
+- regole interessanti:
+    - ofType di default cerca locTypeDef
+        ofType A KIND _IE :- locTypeDef A KIND _.
+
+    - isaType e isa sono definite come ci si aspetta
+        isaType Type Kind IE 
+            :- spy(ofType Type Kind' IE)
+            ,  spy(pts_leq  Kind' Kind)
+            .
+
+        isa Term TY IE 
+            :- spy(of Term TY' IE)
+            ,  spy(conv TY' TY)
+            .
+    - of X Y e' definito in base a locDecl
+        of X Y _ :-  locDecl X Y .
+    - locDecl dipenden da definizione
+        locDecl X Y :- locDef X Y _.
+    - hstep dipende da definizione (nel pa io aggiungevo uno step cosi che si
+      poteva trasformare un nome nel suo termine, ma con questa regola basta
+      lasciare la locDef/locTypeDef)
+        hstep X Y :- locDef X _ Y.
+        hstep X Y :- locTypeDef X _ Y.
+- dconv e' usato al posto di conv per definire la roba ma poi la definizione si
+  rifa sempre a conv e conv si rifa' a dconv dopo hstep, non capisco il perche'
+  di questo giro dell'oca
+- per dimostrare che qualcosa vale per ogni qualcosa si fa precedere una locDef
+  da una serie di univRoba che praticamente vengono processati correttamente
+*/
+
+
 type fixMe A -> B -> C.
 type k_propId mttType -> mttTerm.
+
+%%-- local definitions: letIn
+%this may soon change as it is still to be decided how this should look like
+type letIn mttType -> mttTerm -> (mttTerm -> mttTerm) -> mttTerm.
+
+
 
 /* UNITYPED COMPUTATIONAL PREDICATES */
 type hstep, dconv, hnf,  conv, interp A -> A -> prop.
@@ -29,19 +71,11 @@ type ofType             mttType -> mttKind -> mttLevel -> prop.
 
 %% "of" computes the type of a term
 %% "isa" checks if a term has type T, that is, if it is of some type T' such that T converts to T' (via conv)
-%type of, isa            mttTerm -> mttType -> mttLevel -> prop.
 type of, isa            mttTerm -> mttType -> mttTerm -> mttLevel -> prop.
 
 %% local definitions and type definitions
 type locDef         mttTerm -> mttType -> mttTerm -> prop.
 type locTypeDef     mttType -> mttKind -> mttType -> prop.
-
-%% application of a variable
-type # (mttTerm -> A) -> mttTerm -> A.
-%hstep (# A B) (A B).
-
-of (# A B) Type VApp IE :- of (A B) Type VApp IE.
-ofType (# A B) Kind IE :- ofType (A B) Kind IE.
 
 %% conversion to (weak) head-normal form WHNF
 hnf A B :- (hstep A C), !, (hnf C B).
@@ -56,7 +90,7 @@ hnf A A.
 conv A A :- ! .
 conv A B :- (locDecl _ (propEq _ A B) ), !.
 conv A B :- (locDecl _ (propEq _ B A) ), !.
-conv A B :- (hnf A A'), (hnf B B'), (dconv A' B').
+conv A B :- (hnf A A'), ( hnf B B'), spy( dconv A' B').
 
 %conv A B :- spy(hnf A A'), spy( hnf B B'), spy(locDecl _ (propEq _ A1 B1)), spy(hnf A1 A2), spy(hnf B1 B2), spy((A' = A2, B' = B2) ; (A' = B2 , B' = A2)). 
 
@@ -100,18 +134,6 @@ pts_fun _ _ col.
 pts_for A props props :- pts_leq A set, !.
 pts_for _ B propc :- pts_leq B propc.
 
-/*
-mode (of i o o).
-mode (ofType i o o).
-mode (isa i i o).
-mode (isaType i o o).
-
-of uvar _ _ :- print "ERROR: Flexible of!", fail.
-ofType uvar _ _ :- print "ERROR: Flexible ofType!", fail.
-isa uvar _ _, isa _ uvar _ :- print "ERROR: Flexible isa!", fail.
-isaType uvar _ _, isaType _ uvar _ :- print "ERROR: Flexible isaType!", fail.
-*/
-
 mode (of i o o o).
 mode (ofType i o o).
 mode (isa i i o o).
@@ -121,6 +143,8 @@ of (uvar as X) T Y IE :- declare_constraint (of X T Y IE) [X, Y].
 ofType (uvar as X) K IE :- declare_constraint (ofType X K IE) [X].
 isa (uvar as X) T Y IE :- declare_constraint (isa X T Y IE) [X, Y].
 isaType (uvar as X) K IE :- declare_constraint (isaType X K IE) [X].
+
+ofType A KIND _IE :- locTypeDef A KIND _.
 
 %% !!!DEBUG mock typing of term M, returns chosen type T
 of (fixMe M T ) T int 
@@ -180,19 +204,16 @@ isaType Type Kind IE
 
 isa Term TY Term' IE 
     :- spy(of Term TY' Term' IE)
-    , erase_var_app TY TYe
-    , erase_var_app TY' TYe'
-    ,  spy(conv TYe' TYe)
+    ,  spy(conv TY' TY)
     .
 
-ofType X KIND _ :- locTypeDef X KIND _.
 
 of X T X _ :- locDecl X T.
 
 %% the universe of small propositions
 ofType propS col _IE.
 of (encode T) propS (encode T) IE :- spy (ofType T props IE).
-ofType (decode T) props (decode T') IE :- spy (of T propS T' IE).
+ofType (decode T) props IE :- spy (of T propS IE).
 hstep (encode T) S :- hnf T (decode S).
 hstep (decode T) S :- hnf T (encode S).
 dconv (encode S1) (encode S2) :- conv S1 S2.
@@ -240,13 +261,13 @@ tau_eq P1 P2 F
     ,  ofType P2 K2 ext
     ,  pts_leq K1 propc
     ,  pts_leq K2 propc
-    ,  conv P1 P2  % CSC: use erase_var_app here?
+    ,  conv P1 P2
     ,  F = (_\_\_\ id singleton star)
     .
 
 proof_eq A1 A2 T H
-    :- isa A1 T _ ext
-    ,  isa A2 T _ ext
+    :- isa A1 T ext
+    ,  isa A2 T ext
     ,  ofType T K ext
     ,  pts_leq K propc
     ,  H = id singleton star
@@ -254,8 +275,8 @@ proof_eq A1 A2 T H
 
 %interpret X:_ext T in un Xi di tipo Ti
 interp_isa X T Xi 
-        :- spy(of X T_inf X' ext)
-        ,  spy(interp X' Xi')
+        :- spy(of X T_inf ext)
+        ,  spy(interp X Xi')
         ,  spy(tau T_inf T F)
         ,  spy(Xi = F Xi')
         .
@@ -344,14 +365,14 @@ locDecl X Y :- locDef X Y _.
 hstep X Y :- locDef X _ Y.
 hstep X Y :- locTypeDef X _ Y.
 
-type lib_app any -> any -> any.
+%type process_library list libraryEntry -> prop -> prop.
 
-type process_library list libraryEntry -> prop -> prop.
-
+pred process_library i:list libraryEntry, i:prop.
+process_library [] (uvar as K) :- declare_constraint (process_library [] K) [K].
 process_library [] K :- K.
 process_library [Entry|TL] K :-
-   spy(process_entry Entry Hyp),
-   spy(Hyp => process_library TL K).
+    spy(process_entry Entry Hyp),
+    spy(Hyp => process_library TL K).
 
 type in_library prop -> prop.
 
@@ -366,7 +387,7 @@ type setoidDepCast mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
 type proof_trasp  mttType -> (mttTerm -> mttType) -> mttTerm -> mttTerm.
 translateLib L1 :-
  L1 = [
-   (univCol X \ locTypeDefL (lib_app setoid X) col
+   (univCol X \ locTypeDefL (setoid X) col
      (setSigma
        % setoid_rel
        (setPi X _ \ setPi X _ \ propS)
@@ -377,103 +398,103 @@ translateLib L1 :-
 				(decode (app (app rel x) z)))))
               % setoid_symmL
 	      (forall X x1\ forall X x2\ implies (decode (app (app rel x1) x2))  (decode (app (app rel x2) x1))))))
- , (univPi X \ locDefL (lib_app setoid_rel X) (setPi (lib_app setoid X) _ \ setPi X _ \ setPi X _ \ propS)
-     (lambda (lib_app setoid X) R \
+ , (univPi X \ locDefL (setoid_rel X) (setPi (setoid X) _ \ setPi X _ \ setPi X _ \ propS)
+     (lambda (setoid X) R \
        elim_setSigma R (_ \ setPi X _ \ setPi X _ \ propS) (x\y\x)))
  ,
-  (univPi X \ locDefL (lib_app setoid_reflL X) (setPi (lib_app setoid X) R \ forall X x \ decode (app (app (app (lib_app setoid_rel X) R) x) x))
-     (lambda (lib_app setoid X) R \ 
-       (elim_setSigma R (c \ forall X x \ decode (app (app (app (lib_app setoid_rel X) c) x) x))
+  (univPi X \ locDefL (setoid_reflL X) (setPi (setoid X) R \ forall X x \ decode (app (app (app (setoid_rel X) R) x) x))
+     (lambda (setoid X) R \ 
+       (elim_setSigma R (c \ forall X x \ decode (app (app (app (setoid_rel X) c) x) x))
 		      (w1\w2\ p1_and (p1_and w2)))))
 					   
- , (univPi X\ locDefL (lib_app setoid_symmL X) (setPi (lib_app setoid X) R\ forall X x1\ forall X x2\
-                                               implies (decode (app (app (app (lib_app setoid_rel X) R) x1) x2))
-					        (decode (app (app (app (lib_app setoid_rel X) R) x2) x1)))
-     (lambda (lib_app setoid X) R\
-       (elim_setSigma R (c\ forall X x1\ forall X x2\ implies (decode (app (app (app (lib_app setoid_rel X) c) x1) x2))
-                                                            (decode (app (app (app (lib_app setoid_rel X) c) x2) x1)))
+ , (univPi X\ locDefL (setoid_symmL X) (setPi (setoid X) R\ forall X x1\ forall X x2\
+                                               implies (decode (app (app (app (setoid_rel X) R) x1) x2))
+					        (decode (app (app (app (setoid_rel X) R) x2) x1)))
+     (lambda (setoid X) R\
+       (elim_setSigma R (c\ forall X x1\ forall X x2\ implies (decode (app (app (app (setoid_rel X) c) x1) x2))
+                                                            (decode (app (app (app (setoid_rel X) c) x2) x1)))
 	 (w1\w2\ p2_and w2 ))))
-, (univPi X\ locDefL (lib_app setoid_tranL X) (setPi (lib_app setoid X) R\ forall X x\ forall X y\ forall X z\
-  	     	      implies (decode (app (app (app (lib_app setoid_rel X) R) x) y))
-		       (implies (decode (app (app (app (lib_app setoid_rel X) R) y) z)) (decode (app (app (app (lib_app setoid_rel X) R) x) z))))
-		     (lambda (lib_app setoid X) R\
-		      (elim_setSigma R (c\ forall X x\ forall X y\ forall X z\ implies (decode (app (app (app (lib_app setoid_rel X) c) x) y))
-		       		  (implies (decode (app (app (app (lib_app setoid_rel X) c) y) z)) (decode (app (app (app (lib_app setoid_rel X) c) x) z))))
+, (univPi X\ locDefL (setoid_tranL X) (setPi (setoid X) R\ forall X x\ forall X y\ forall X z\
+  	     	      implies (decode (app (app (app (setoid_rel X) R) x) y))
+		       (implies (decode (app (app (app (setoid_rel X) R) y) z)) (decode (app (app (app (setoid_rel X) R) x) z))))
+		     (lambda (setoid X) R\
+		      (elim_setSigma R (c\ forall X x\ forall X y\ forall X z\ implies (decode (app (app (app (setoid_rel X) c) x) y))
+		       		  (implies (decode (app (app (app (setoid_rel X) c) y) z)) (decode (app (app (app (setoid_rel X) c) x) z))))
 				     (w1\w2\ p2_and (p1_and w2)))))
 
  , (univPi B\
     (univDepPi B C\
-     (univPiT (lib_app setoid B) bS\
-       locTypeDefL (lib_app (lib_app (lib_app setoidDep B) C) bS) col
-        (setSigma (setSigma (setPi B x\ lib_app setoid (# C x)) _\
+     (univPiT (setoid B) bS\
+       locTypeDefL (setoidDep B C bS) col
+        (setSigma (setSigma (setPi B x\ setoid (C x)) _\
 		  	    (setPi B x1\ setPi B x2\
-	            	      setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\
-		     	    	setPi (# C x1) _\ # C x2)) cc\
+	            	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    	setPi (C x1) _\ C x2)) cc\
 		  (setPi B x1\ setPi B x2\
-		    setPi (# C x1) y1\ setPi (# C x1) y2\
-		     setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) d1\
-		      setPi (decode (app (app (app (lib_app setoid_rel (# C x1))
-		      	    	    (app (elim_setSigma cc (_\ (setPi B x\ lib_app setoid (# C x))) (x\y\x)) x1)) y1) y2)) d2\
-		       (decode (app (app (app (lib_app setoid_rel (# C x2))
-		       	       	    	 (app (elim_setSigma cc (_\ (setPi B x\ lib_app setoid (# C x))) (x\y\x)) x2))
+		    setPi (C x1) y1\ setPi (C x1) y2\
+		     setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+		      setPi (decode (app (app (app (setoid_rel (C x1))
+		      	    	    (app (elim_setSigma cc (_\ (setPi B x\ setoid (C x))) (x\y\x)) x1)) y1) y2)) d2\
+		       (decode (app (app (app (setoid_rel (C x2))
+		       	       	    	 (app (elim_setSigma cc (_\ (setPi B x\ setoid (C x))) (x\y\x)) x2))
 					 (app (app (app (app (elim_setSigma cc
 					      	   	     		    (_\ (setPi B x1\ setPi B x2\
-	            	      						    	setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\
-		     	    							setPi (# C x1) _\ # C x2))
+	            	      						    	setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    							setPi (C x1) _\ C x2))
 									    (x\y\y)) x1) x2) d1) y1))
 					 (app (app (app (app (elim_setSigma cc
 					      	   	     		    (_\ (setPi B x1\ setPi B x2\
-	            	      						    	setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\
-		     	    							setPi (# C x1) _\ # C x2))
+	            	      						    	setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+		     	    							setPi (C x1) _\ C x2))
 									    (x\y\y)) x1) x2) d1) y2))))))))
 	  
 , (univPi B\
    (univDepPi B C\
-    (univPiT (lib_app setoid B) bS\
-     (locDefL (lib_app (lib_app (lib_app setoidDepCarrier B) C) bS)
-       (setPi (lib_app (lib_app (lib_app setoidDep B) C) bS) s\ setPi B x\ lib_app setoid (# C x))
-       (lambda (lib_app (lib_app (lib_app setoidDep B) C) bS) s\
-         elim_setSigma s (_\ (setPi B x\ lib_app setoid (# C x)))
-	   	       (w1\w2\ elim_setSigma w1 (_\ (setPi B x\ lib_app setoid (# C x))) (x\y\x)))))))
+    (univPiT (setoid B) bS\
+     (locDefL (setoidDepCarrier B C bS)
+       (setPi (setoidDep B C bS) s\ setPi B x\ setoid (C x))
+       (lambda (setoidDep B C bS) s\
+         elim_setSigma s (_\ (setPi B x\ setoid (C x)))
+	   	       (w1\w2\ elim_setSigma w1 (_\ (setPi B x\ setoid (C x))) (x\y\x)))))))
 	  
 
 , (univPi B\
    (univDepPi B C\
-    (univPiT (lib_app setoid B) bS\
-     locDefL (lib_app (lib_app (lib_app setoidDepCast B) C) bS)
-      (setPi (lib_app (lib_app (lib_app setoidDep B) C) bS) s\
+    (univPiT (setoid B) bS\
+     locDefL (setoidDepCast B C bS)
+      (setPi (setoidDep B C bS) s\
        (setPi B x1\ setPi B x2\
-         setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\
-	  setPi (# C x1) _\ # C x2))
-     (lambda (lib_app (lib_app (lib_app setoidDep B) C) bS) s\
-       elim_setSigma s (_\ setPi B x1\ setPi B x2\ setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\ setPi (# C x1) _\ # C x2)
+         setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\
+	  setPi (C x1) _\ C x2))
+     (lambda (setoidDep B C bS) s\
+       elim_setSigma s (_\ setPi B x1\ setPi B x2\ setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\ setPi (C x1) _\ C x2)
        		     (w1\w2\
 			elim_setSigma w1 (_\ setPi B x1\ setPi B x2\
-				      	     setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) _\ setPi (# C x1) _\ # C x2) (x\y\y))))))
+				      	     setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) _\ setPi (C x1) _\ C x2) (x\y\y))))))
 ,
    (univPi B\
    (univDepPi B C\
-    (univPiT (lib_app setoid B) bS\
-     locDefL (lib_app (lib_app (lib_app proof_trasp B) C) bS)
-      (setPi (lib_app (lib_app (lib_app setoidDep B) C) bS) s\
+    (univPiT (setoid B) bS\
+     locDefL (proof_trasp B C bS)
+      (setPi (setoidDep B C bS) s\
        (setPi B x1\ setPi B x2\
-	     setPi (# C x1) y1\ setPi (# C x1) y2\
-	      setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) d1\
-	       setPi (decode (app (app (app (lib_app setoid_rel (# C x1)) (app (app (lib_app (lib_app (lib_app setoidDepCarrier B) C) bS) s) x1)) y1) y2)) d2\
-	        (decode (app (app (app (lib_app setoid_rel (# C x2))
-			     (app (app (lib_app (lib_app (lib_app setoidDepCarrier B) C) bS) s) x2))
-			     (app (app (app (app (app (lib_app (lib_app (lib_app setoidDepCast B) C) bS) s) x1) x2) d1) y1))
-			     (app (app (app (app (app (lib_app (lib_app (lib_app setoidDepCast B) C) bS) s) x1) x2) d1) y2)))))
-      (lambda (lib_app (lib_app (lib_app setoidDep B) C) bS) s\
+	     setPi (C x1) y1\ setPi (C x1) y2\
+	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+	       setPi (decode (app (app (app (setoid_rel (C x1)) (app (app (setoidDepCarrier B C bS) s) x1)) y1) y2)) d2\
+	        (decode (app (app (app (setoid_rel (C x2))
+			     (app (app (setoidDepCarrier B C bS) s) x2))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y1))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y2)))))
+      (lambda (setoidDep B C bS) s\
         (elim_setSigma s
 	  (s\ (setPi B x1\ setPi B x2\
-	     setPi (# C x1) y1\ setPi (# C x1) y2\
-	      setPi (decode (app (app (app (lib_app setoid_rel B) bS) x1) x2)) d1\
-	       setPi (decode (app (app (app (lib_app setoid_rel (# C x1)) (app (app (lib_app (lib_app (lib_app setoidDepCarrier B) C) bS) s) x1)) y1) y2)) d2\
-	        (decode (app (app (app (lib_app setoid_rel (# C x2))
-			     (app (app (lib_app (lib_app (lib_app setoidDepCarrier B) C) bS) s) x2))
-			     (app (app (app (app (app (lib_app (lib_app (lib_app setoidDepCast B) C) bS) s) x1) x2) d1) y1))
-			     (app (app (app (app (app (lib_app (lib_app (lib_app setoidDepCast B) C) bS) s) x1) x2) d1) y2)))))
+	     setPi (C x1) y1\ setPi (C x1) y2\
+	      setPi (decode (app (app (app (setoid_rel B) bS) x1) x2)) d1\
+	       setPi (decode (app (app (app (setoid_rel (C x1)) (app (app (setoidDepCarrier B C bS) s) x1)) y1) y2)) d2\
+	        (decode (app (app (app (setoid_rel (C x2))
+			     (app (app (setoidDepCarrier B C bS) s) x2))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y1))
+			     (app (app (app (app (app (setoidDepCast B C bS) s) x1) x2) d1) y2)))))
 	 (x\y\y))))))
  ].
 
@@ -496,7 +517,7 @@ propLib L :-
  [
 % prop_setoid (to be used for all propositions, i.e. and, implies, or, ...)
   (univProp Xi \
-    locDefL (lib_app prop_setoid Xi) (lib_app setoid Xi)
+    locDefL (prop_setoid Xi) (setoid Xi)
      (pair
        (setPi Xi _ \ setPi Xi _ \ propS)
        (rel \ (and (and (forall Xi x \ decode (app (app rel x) x))
@@ -526,27 +547,22 @@ type concat list (list A) -> list A -> prop.
 concat [] [].
 concat [H|TL] R :- concat TL L, append H L R.
 
-type reverse_ list A -> list A -> list A -> prop.
-type reverse list A -> list A -> prop.
-
-reverse_ [] A A.
-reverse_ [H|TL] A R :- reverse_ TL [H|A] R.
-reverse L R :- reverse_ L [] R.
-
-get_elem [H|_] 0 H.
-get_elem [_|TL] I R :- I1 is (I - 1), get_elem TL I1 R.
-
+mode (in_library i).
 in_library P :-
     translateLib L1,
     trueLib L2,
     propLib L3,
+    /*
     singletonLib L4,
     setSigmaLib L5,
+    print "here",
     setPiLib L6,
     impliesLib Limpl,
     forallLib Lforall,
     propEqLib LpropEq,
     concat [L1,L2,L3,L4 ,L5, L6, Lforall, Limpl, LpropEq] L,
+    */
+    concat [L1, L2, L3] L,
     process_library L P.
 
 kind libraryEntry type.
@@ -570,38 +586,18 @@ type conv_trans mttTerm -> mttTerm -> mttTerm -> prop.
 type conv_trans_symm mttTerm -> mttTerm -> mttTerm -> prop.
 type conv_symm mttTerm -> mttTerm -> prop.
 
-type advance_arg_list any -> list any -> list any -> prop.
-advance_arg_list A [H|TL] TL :- A = H.
-advance_arg_list A [_|TL] Result :- advance_arg_list A TL Result.
-
-type verify_arg_order_ A -> list any -> prop.
-verify_arg_order_ (lib_app H A) Vars
-    :- !
-    ,  spy(advance_arg_list A Vars Vars')
-    ,  spy(verify_arg_order_ H Vars')
-    ,  !
-    .
-verify_arg_order_ _ _.
-
-type verify_arg_order A -> prop.
-verify_arg_order N
-    :- names Vars
-    ,  reverse Vars RVars
-    ,  spy(verify_arg_order_ N RVars)
-    .
-
+/* XXX: mancano
+    - definizioni con solo tipo -> dimostrazione
+    - definizioni con solo termine -> inferenza
+*/
 process_entry (locTypeDefL N KIND TY) Hyp :-
-   spy(verify_arg_order N),
    spy(ofType TY KIND int),
-   erase_var_app TY TY',
-   Hyp = locTypeDef N KIND TY',
+   Hyp = locTypeDef N KIND TY,
    print "## New type definition: " N.
 process_entry (locDefL N TY TE) Hyp :-
-   spy(verify_arg_order N),
    spy(isaType TY _ int),
-   spy(isa TE TY RTE Tint),
-   erase_var_app RTE RTE',
-   Hyp = locDef N TY RTE',
+   spy(isa TE TY TE' int),
+   Hyp = locDef N TY TE',
    print "## New definition: " N.
    
 process_entry (univPi F) Hyp2 :-
@@ -617,14 +613,14 @@ process_entry (univProp F) Hyp2 :-
    Hyp2 = (pi Bi \ Hyp Bi :- spy (isaType Bi props int)).
 
 process_entry (univDepPi Bi F) Hyp2 :-
-   spy (pi Ci \ (pi x \ ofType (Ci x) set int :- isa x Bi x int) =>
+   spy (pi Ci \ (pi x \ ofType (Ci x) set int :- of x Bi x int) =>
                 (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
                 spy (process_entry (F Ci) (Hyp Ci))),
    Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) set int :- of x Bi x int))
                 % , spy(pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y)  % This should not be needed, right?
           ).
 process_entry (univDepProp Bi F) Hyp2 :-
-   spy (pi Ci \ (pi x \ ofType (Ci x) props int :- isa x Bi x int) =>
+   spy (pi Ci \ (pi x \ ofType (Ci x) props int :- of x Bi x int) =>
                 (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
                 spy (process_entry (F Ci) (Hyp Ci))),
    Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) props int :- of x Bi x int))
@@ -632,7 +628,7 @@ process_entry (univDepProp Bi F) Hyp2 :-
           ).
 	  
 process_entry (univDepCol Bi F) Hyp2 :-
-   spy (pi Ci \ (pi x \ ofType (Ci x) col int :- isa x Bi x int) =>
+   spy (pi Ci \ (pi x \ ofType (Ci x) col int :- of x Bi x int) =>
                 (pi x \ pi y \ dconv (Ci x) (Ci y) :- conv x y) =>
                 spy (process_entry (F Ci) (Hyp Ci))),
    Hyp2 = (pi Ci \ Hyp Ci :- spy (pi x \ (isaType (Ci x) col int :- of x Bi x int))
@@ -645,22 +641,18 @@ process_entry (univPiT T F) Hyp2 :-
    Hyp2 = (pi x \ Hyp x :- spy(isa x T x int)).
 
 process_entry (univDepPiT Ai Bi F) Hyp2 :-
-   spy (pi t\   (pi x \ ofType (Bi x) set int :- isa x Ai x int) =>
+   spy (pi t\   (pi x \ ofType (Bi x) set int :- of x Ai x int) =>
                 (pi x \ pi y \ dconv (Bi x) (Bi y) :- conv x y) =>
-                (pi x\ of (t x) (Bi x) (t x) int :- isa x Ai x int) =>
+                % XXX: forse (subst t [x] T_x, of T_x (Bi x) T_x' int) :- of x Ai x int
+                (pi x\ of (t x) (Bi x) (t x) int :- of x Ai x int) =>
 		spy(process_entry (F t) (Hyp t))),
    Hyp2 = (pi t\ Hyp t :-   spy (pi x\ (isaType (Bi x) set int :- of x Ai x int)),  %this should hold already?
    	      	     	    spy(pi x\ isa (t x) (Bi x) (t x) int  :- of x Ai x int)).
 
-process_entry (hyp H1g H2g Eg) Hyp2 :-
-   erase_var_app H1g H1,
-   erase_var_app H2g H2,
-   erase_var_app Eg E,
+process_entry (hyp H1 H2 E) Hyp2 :-
    spy (H1 => process_entry E Hyp),
    Hyp2 = (Hyp :- spy(H2)).
-process_entry (cut Hg Eg) Hyp2 :-
-   erase_var_app Hg H,
-   erase_var_app Eg E,
+process_entry (cut H E) Hyp2 :-
    spy(process_cut H Hyp),
    spy (Hyp => process_entry E Hyp2).
 

@@ -1,0 +1,123 @@
+% ---- CATCH REDEXES IN CONV --- %
+
+% Invariant: only terms without names
+% Invariant: eta-reduction is in place
+
+% ---- EXIST
+conv (elim_exist PE C F) T :-
+    (pi x y\ not (is_closed (F x y))), !,
+    conv PE (pair_exist A B P Q as Pair),
+    unify (elim_exist Pair C F) T.
+
+conv T (elim_exist PE C F) :-
+    (pi x y\ not (is_closed (F x y))), !,
+    conv PE (pair_exist A B P Q as Pair),
+    unify (elim_exist Pair C F) T.
+
+% ---- FORALL
+conv (forall_app Lam X) T :-
+    conv Lam (forall_lam A F as FLam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (forall_app FLam X) T.
+
+conv T (forall_app Lam X) :-
+    conv Lam (forall_lam A F as FLam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (forall_app FLam X) T.
+
+% ---- IMPLIES 
+conv (impl_app Lam X) T :-
+    conv Lam (impl_lam A F as ILam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (impl_app ILam X) T.
+
+conv T (impl_app Lam X) :-
+    conv Lam (impl_lam A F as ILam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (impl_app ILam X) T.
+
+% ---- LIST
+conv (elim_list L ListCons LA RecFun) T :-
+    (pi x y z\ not (is_closed (RecFun x y z))), !,
+    conv ListCons (list_cons X Xs as Cons),
+    unify (elim_list L Cons LA RecFun) T.
+
+conv T (elim_list L ListCons LA RecFun) :-
+    (pi x y z\ not (is_closed (RecFun x y z))), !,
+    conv ListCons (list_cons X Xs as Cons),
+    unify (elim_list L Cons LA RecFun) T.
+
+% ---- OR
+conv (elim_or C W Cl Cr) T :-
+    conv W (inr_or A B Wr as Inr),
+    (pi r\ not (is_closed (Cr r))), !,
+    unify (elim_or C Inr Cl Cr) T.
+
+conv T (elim_or C W Cl Cr) :-
+    conv W (inr_or A B Wr as Inr),
+    (pi r\ not (is_closed (Cr r))), !,
+    unify (elim_or C Inr Cl Cr) T.
+
+conv (elim_or C W Cl Cr) T :-
+    conv W (inl_or A B Wl as Inl),
+    (pi l\ not (is_closed (Cl l))), !,
+    unify (elim_or C Inl Cl Cr) T.
+
+conv T (elim_or C W Cl Cr) :-
+    conv W (inl_or A B Wl as Inl),
+    (pi l\ not (is_closed (Cl l))), !,
+    unify (elim_or C Inl Cl Cr) T.
+
+% ---- PROPID
+conv (elim_id Id C F) T :-
+    (pi i\ not (is_closed (F i))), !,
+    conv Id (id A X as IId),
+    unify (elim_id IId C F) T.
+
+conv T (elim_id Id C F) :-
+    (pi i\ not (is_closed (F i))), !,
+    conv Id (id A X as IId),
+    unify (elim_id IId C F) T.
+
+% ---- SETPI
+conv (app Lam X) T :-
+    conv Lam (lambda A F as PLam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (app PLam X) T.
+
+conv T (app Lam X) :-
+    conv Lam (lambda A F as PLam),
+    (pi x\ not (is_closed (F x))), !,
+    unify (app PLam X) T.
+
+% ---- SETSIGMA
+conv (elim_setSigma P C F) T :-
+    (pi x y\ not (is_closed (F x y))), !,
+    conv P (pair A B P Q as SPair),
+    unify (elim_setSigma SPair C F) T.
+
+conv T (elim_setSigma P C F) :-
+    (pi x y\ not (is_closed (F x y))), !,
+    conv P (pair A B P Q as SPair),
+    unify (elim_setSigma SPair C F) T.
+
+% ---- SETSUM
+conv (elim_setSum C W Cl Cr) T :-
+    conv W (inr A B Wr as Inr),
+    (pi r\ not (is_closed (Cr r))), !,
+    unify (elim_or C Inr Cl Cr) T.
+
+conv T (elim_setSum C W Cl Cr) :-
+    conv W (inr A B Wr as Inr),
+    (pi r\ not (is_closed (Cr r))), !,
+    unify (elim_or C Inr Cl Cr) T.
+
+conv (elim_setSum C W Cl Cr) T :-
+    conv W (inl A B Wl as Inl),
+    (pi l\ not (is_closed (Cl l))), !,
+    unify (elim_or C Inl Cl Cr) T.
+
+conv T (elim_setSum C W Cl Cr) :-
+    conv W (inl A B Wl as Inl),
+    (pi l\ not (is_closed (Cl l))), !,
+    unify (elim_or C Inl Cl Cr) T.

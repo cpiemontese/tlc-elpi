@@ -1,0 +1,257 @@
+% ------------------------ %
+% ---- CONV EXTENSION ---- %
+% ------------------------ %
+
+% INVARIANT: here we only deal with terms without names since conversion takes
+%            them out before arriving here
+
+% TODO:
+% v is_stuck deve considerare anche forall_app e impl_app
+% v conv_constraint sulle altre app
+% - is_closed sui termini mtt
+% - stop reductions per i termini che calcolano
+% - riduzione controllata per tutti i termini che calcolano
+% - mimica tipi
+% - use_var per i termini su cui ha senso
+% - mimica per i termini
+
+mode (is_stuck i).
+is_stuck uvar.
+is_stuck (app M _) :- is_stuck M.
+is_stuck (forall_app M _) :- is_stuck M.
+is_stuck (impl_app M _) :- is_stuck M.
+%is_stuck _ :- fail.
+
+mode (conv i i).
+conv X Y :- print (conv X Y), fail.
+conv X Y :- is_stuck X, is_stuck Y, !, conv_constraint X Y X Y.
+conv X Y :- (is_stuck X, !; is_stuck Y), !, unify X [] Y [].
+
+mode (conv_constraint i i).
+conv_constraint (app M _) S A B :- conv_constraint M S A B.
+conv_constraint T (app M _) A B :- conv_constraint T M A B. 
+conv_constraint (forall_app M _) S A B :- conv_constraint M S A B.
+conv_constraint T (forall_app M _) A B :- conv_constraint T M A B. 
+conv_constraint (impl_app M _) S A B :- conv_constraint M S A B.
+conv_constraint T (impl_app M _) A B :- conv_constraint T M A B. 
+conv_constraint (uvar as X) (uvar as Y) A B :- !, declare_constraint (conv A B) [X, Y].
+
+accumulate catch_redexes.
+
+% --------------------- %
+% ---- UNIFICATION ---- %
+% --------------------- %
+
+unify T S :- unify T [] S [].
+
+mode (unify i i i i).
+unify A B C D :- print (unify A B C D), fail.
+
+% delay flex-flex
+unify (uvar as X) [] (uvar as Y) [] :- !,
+    declare_constraint (unify X [] Y []) [X, Y].
+
+% catch β-redex
+unify (app (lam A F) X) L T L' :- !,
+    pi x\ (of x A x, copy x X) => unify (F x) L T L'.
+unify T L (app (lam A F) X) L' :- !,
+    pi x\ (of x A x, copy x X) => unify T L (F x) L'.
+
+% β-redex through copy
+unify (app Lam X) L T L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unify (F x) L T L'.
+unify T L (app Lam X) L' :-
+    name Lam, get_copy Lam Lam', Lam' = lam A F,
+    pi x\ (of x A x, copy x X, forbid Lam) => unify T L (F x) L'.
+
+% catch split-redex
+unify (split (pair P Q) F) L T L' :- !,
+    of (pair P Q) (sum A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify (F x y) L T L'.
+unify T L (split (pair P Q) F) L' :- !,
+    of (pair P Q) (sum A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q) => unify T L (F x y) L'.
+
+% split-redex through copy
+unify (split Pair F) L T L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify (F x y) L T L'.
+unify T L (split Pair F) L' :- !,
+    name Pair, get_copy Pair Pair', Pair' = pair P Q, of Pair' (sum A B) _,
+    pi x y\ (of x A x, of y (B x) y, copy x P, copy y Q, forbid Pair) => unify T L (F x y) L'.
+
+% catch natrec-redex
+unify (natrec (succ N) ZE RF) L T L' :- !,
+    of (natrec N ZE RF) S _,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => unify (RF x y) L T L'.
+unify T L (natrec (succ N) ZE RF) L' :- !,
+    %conv (natrec N ZE RF) R,
+    of (natrec N ZE RF) S _,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF)) => T L unify (RF x y) L'.
+% natrec-redex through copy
+unify (natrec Succ ZE RF) L T L' :- !,
+    name Succ, get_copy Succ Succ', Succ' = (succ N),
+    of (natrec N ZE RF) S _,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF), forbid Succ) => unify (RF x y) L T L'.
+unify T L (natrec Succ ZE RF) L' :- !,
+    name Succ, get_copy Succ Succ', Succ' = (succ N),
+    of (natrec N ZE RF) S _,
+    pi x y\ (of x nat x, of y (S x) y, copy x N, copy y (natrec N ZE RF), forbid Succ) => T L unify (RF x y) L'.
+
+% catch listrec-redex
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+
+% listrec-redex through copy
+unify (listrec S Cons D E) L T L' :- !,
+    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+unify (listrec S (cns X Y) D E) L T L' :- !,
+    name Cons, get_copy Cons Cons', Cons' = (cns X Y), of X A _,
+    pi x y z\ (of x A x, of y (list A) y, of z (T y) z,
+               copy x X, copy y Y, copy z (cns X Y)) => unify (E x y z) L T L'.
+
+
+% unwind app
+unify (app X Y) L T L' :- !,
+    append [Y] L LY,
+    unify X LY T L'.
+unify T L' (app X Y) L :- !,
+    append [Y] L LY,
+    unify T L' X LY.
+
+mode (rewind_app i i o).
+rewind_app A [] A.
+rewind_app T [L|Ls] A :-
+    rewind_app (app T L) Ls A.
+
+% Meta with args is a lambda
+unify (uvar as X) [L|Ls] T L' :- !, 
+    print "inst" X L T L',
+    of L LTy _,
+    X = lam LTy F,
+    pi x\ (of x LTy x, copy x L) => unify (F x) Ls T L'.
+
+%unify T L' (uvar as X) [L|Ls] :- !, 
+%    print "inst",
+%    of L LTy _,
+%    X = lam LTy F,
+%    pi x\ (of x LTy x, copy x L) => unify T L' (F x) Ls.
+
+% ---- TYPE UNIFICATION ---- %
+
+unify (uvar as X) [] nat        [] :- !, X = nat.
+unify (uvar as X) [] (prod M N) [] :- !,
+    X = prod P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
+unify (uvar as X) [] (sum M N)  [] :- !,
+    X = sum P Q, unify P [] M [], pi x\ unify (Q x) [] (N x) [].
+unify (uvar as X) [] (id A M N) [] :- !,
+    X = id A M' N', unify M' [] M [], unify N' [] N [].
+unify (uvar as X) [] (list A) [] :- !, X = list A.
+
+
+% ---- TERM UNIFICATION ---- %
+
+% PROJECTION
+unify (uvar _ Vs as X) [] Term Arg :- print "proj" X Term Arg, rewind_app Term Arg App, try_projection X Vs App.
+
+mode (try_projection i i i).
+try_projection _ [] _ :- fail.
+try_projection X [V|Vs] App :-
+    %declare_constraint (read-copies) [], print_constraints, print, print X,
+    (not (forbid V), get_copy V T', use_var V T' App Asgn, X = Asgn); try_projection X Vs App.
+
+mode (get_copy i o).
+get_copy V X :- declare_constraint (copy V X) [X].
+
+mode (use_var i i i o).
+use_var A B C D :- print (use_var A B C D), fail.
+use_var V (pair A _) S O :- use_var (fst V) A S O.
+use_var V (pair _ B) S O :- use_var (snd V) B S O.
+use_var V (pair A B) S O :-
+    of (pair A B) (sum T S) _,
+    pi x y\ (of x T x, of y (S x) y, copy x A, copy y B, forbid V) => use_var (split V F) (F x y) S O.
+%use_var V (succ N) S O :-
+%    of (natrec N ZE RF) A _,
+%    pi x y\ (of x nat x, of y (A x) y, copy x (succ N), copy y (natrec N ZE RF), forbid V) => use_var (natrec V ZE RF) (RF x y) S O.
+use_var V T S V :- conv T S.
+
+% MIMIC
+% Prod
+unify (uvar as X) [] T [A|As] :-
+    print "app" X T [A|As],
+    X = app M N,
+    append Body [Tail] [A|As],
+    unify M [] T Body,
+    unify N [] Tail [].
+unify (uvar as X) [] (lam T F) [] :-
+    print "lam",
+    X = lam T G, pi x\ of x T x => unify (G x) [] (F x) [].
+
+% Sum
+unify (uvar as X) [] (pair M N) [] :- !,
+    print "pair",
+    X = pair P Q, unify P [] M [], unify Q [] N [].
+unify (uvar as X) [] (fst P) [] :- !,
+    print "fst",
+    X = fst Q, unify Q [] P [].
+unify (uvar as X) [] (snd P) [] :- !,
+    print "snd",
+    X = snd Q, unify Q [] P [].
+unify (uvar as X) [] (split P F) [] :- !,
+    of P (sum A _) _,
+    X = split Q G,
+    unify Q [] P [],
+    pi x\ of x A x => unify (G x) [] (F x) [].
+
+% Nat
+unify (uvar as X) [] (succ Y) [] :- !,
+    print "succ",
+    X = succ N, unify N [] Y [].
+unify (uvar as X) [] (natrec N ZE RF) [] :- !,
+    print "natrec",
+    of (natrec N ZE RF) S _,
+    X = natrec N' ZE' RF',
+    unify N' [] N [], unify ZE' [] ZE [],
+    pi x y\ (of x nat x, of y (S x) y) => unify (RF' x y) [] (RF x y) [].
+
+% List
+unify (uvar as X) [] (cns M N) [] :- !,
+    X = cns P Q,
+    unify P [] M [], unify Q [] N [].
+unify (uvar as X) [] (listrec S C D E) [] :- !,
+    of C A _,
+    X = listrec S C' D' E',
+    unify C' [] C [], unify D' [] D [],
+    pi x y z\ (of x A x, of y (list A) y, of z (S y) z) => unify (E' x y z) [] (E x y z) [].
+
+% Const
+unify (uvar as X) [] T [] :- !, print "const" X T, not (name T), X = T.
+
+% Simmetric case
+unify T L' (uvar as X) L :- !, unify X L T L'.
+
+
+constraint read-copies copy {
+    rule (Ctx ?- read-copies)
+    | (print "copies: " Ctx).
+
+    rule (E: Ctx ?- copy V R)
+    | (climb_telescope Ctx V V', print Ctx V V' R)
+    <=> (E: Ctx ?- R = V').
+}
+
+mode (climb_telescope i i o).
+climb_telescope A B C :- print (climb_telescope A B C), fail.
+climb_telescope [] V V.
+climb_telescope [copy X Y|Ctx] X Y :- not (name Y).
+climb_telescope [copy X Y|Ctx] X R :- !, climb_telescope Ctx Y R.
+climb_telescope [_|Ctx] V R :- !, climb_telescope Ctx V R.

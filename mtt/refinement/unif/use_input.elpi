@@ -1,0 +1,57 @@
+% use_var tries to use an eigenvariable to unify with a term through
+% computation on that variable (and based on the ter)
+%   ex. app X (pair a b) a -> X = (lam T (x\ fst x))
+% In other words: try to unify by using an eliminator on a term
+% Some terms are not suitable, for instance trying to use inductive types such
+% as lists or nats leads to loops
+% Input: fresh var, term to convert, term to convert to, assignment
+
+use_var A B C D :- print (use_var A B C D), fail.
+
+% ---- AND
+use_var V (pair_and _ _ P _) S O :- use_var (p1_and V) P S O.
+use_var V (pair_and _ _ _ Q) S O :- use_var (p2_and V) Q S O.
+
+% ---- EXIST
+use_var V (pair_exist A B P Q) S O :-
+    pi x y\ (locDecl x A, locDecl y (B x), copy x A, copy y B, forbid V) =>
+        use_var (elim_exist V C F) (F x y) S O.
+
+% ---- LIST
+%use_var V (list_empty C) S O :- use_var (elim_list D V LA RecFun) LA S O.
+% XXX: loops
+%use_var V (list_cons C Hd Tl) S O :-
+%    pi x y z\ (locDecl x C, locDecl y (list C), locDecl z (D y), forbid V,
+%               copy x Hd, copy y Tl, copy z (elim_list D Tl LA RecFun)) =>
+%                use_var (elim_list D V LA RecFun) (RecFun x y z) S O.
+
+% ---- OR
+use_var V (inl_or A _ L) S O :-
+    pi l\ (locDecl l A, copy l L, forbid V) =>
+        use_var (elim_or C V Cl Cr) (Cl l) S O.
+use_var V (inr_or + B R) S O :-
+    pi r\ (locDecl r B, copy r R, forbid V) =>
+        use_var (elim_or C V Cl Cr) (Cr r) S O.
+
+% ---- PROPID
+use_var V (id A X) S O :-
+    pi i\ (locDecl i A, copy i X, forbid V) =>
+        use_var (elim_id V C F) (F i) S O.
+
+% ---- SETSIGMA
+use_var V (pair _ _ P _) S O :- use_var (p1 V) P S O.
+use_var V (pair _ _ _ Q) S O :- use_var (p2 V) Q S O.
+use_var V (pair A B P Q) S O :-
+    pi x y\ (locDecl x A, locDecl y (B x), copy x P, copy Q, forbid V) =>
+        use_var (elim_setSigma V C F) (F x y) S O.
+
+% ---- SETSUM
+use_var V (inl A _ L) S O :-
+    pi l\ (locDecl l A, copy l L, forbid V) =>
+        use_var (elim_setSum C V Cl Cr) (Cl l) S O.
+use_var V (inr _ B R) S O :-
+    pi r\ (locDecl r B, copy r R, forbid V) =>
+        use_var (elim_setSum C V Cl Cr) (Cr r) S O.
+
+% ---- SINGLETON
+%use_var V star S O :- use_var (elim_singleton V C R) R S O.

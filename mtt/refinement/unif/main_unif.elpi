@@ -15,7 +15,7 @@
 % v unwind con applicazioni eterogenee
 % v lambda per applicazioni eterogenee
 % - use_var per i termini su cui ha senso
-% - mimica per i termini
+% v mimica per i termini
 
 mode (is_stuck i).
 is_stuck uvar.
@@ -139,15 +139,7 @@ mode (get_copy i o).
 get_copy V X :- declare_constraint (copy V X) [X].
 
 mode (use_var i i i o).
-use_var A B C D :- print (use_var A B C D), fail.
-use_var V (pair A _) S O :- use_var (fst V) A S O.
-use_var V (pair _ B) S O :- use_var (snd V) B S O.
-use_var V (pair A B) S O :-
-    of (pair A B) (sum T S) _,
-    pi x y\ (of x T x, of y (S x) y, copy x A, copy y B, forbid V) => use_var (split V F) (F x y) S O.
-%use_var V (succ N) S O :-
-%    of (natrec N ZE RF) A _,
-%    pi x y\ (of x nat x, of y (A x) y, copy x (succ N), copy y (natrec N ZE RF), forbid V) => use_var (natrec V ZE RF) (RF x y) S O.
+accumulate use_input.
 use_var V T S V :- conv T S.
 
 % MIMIC

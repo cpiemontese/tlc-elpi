@@ -54,3 +54,110 @@ dconv (elim_id P C CC) (elim_id P' C' CC')
     ,  pi x\ pi y\ locDecl x A => locDecl y A => conv (C x y) (C' x y)
     ,  pi x\ locDecl x A => conv (CC x) (CC' x)
     .
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                 ESTRAZIONE                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Starification
+
+starify_type (propId A AA1 AA2) LibMap Result
+    :- starify_term AA1 LibMap AA1'
+    ,  starify_term AA2 LibMap AA2'
+    ,  starify_type A LibMap A'
+    ,  spy(Result = (propId A' AA1' AA2'))
+    ,  !
+    .
+
+starify_term (id A AA) LibMap Result
+    :- starify_term AA LibMap AA'
+    ,  starify_type A LibMap A'
+    ,  spy(Result = (id A' AA'))
+    ,  !
+    .
+
+starify_term (elim_id P C CC) LibMap Result
+    :- starify_term P LibMap P'
+    ,  isa P (propId A _ _) int
+    ,  ((pi x\ locDecl x A => (name (C x), C' = C))
+        , !; pi x\ locDecl x A => pi y\ locDecl y A => starify_type (C x y) LibMap (C' x y))
+    ,  ((name CC, CC' = CC)
+        , !; pi x\ locDecl x A => starify_term (CC x) LibMap (CC' x))
+    ,  spy(Result = (elim_id P' C' CC'))
+    ,  !
+    .
+
+%% Extraction
+
+collapse_type (propId A _AA1 _AA2) Result _ []
+    :- conv A extractor_singleton
+    ,  Result = extractor_singleton
+    ,  !
+    .
+
+extract_type (propId A AA1 AA2) Result Context SetList
+    :- extract_term AA1 _ Context AA1List
+    ,  extract_term AA2 _ Context AA2List
+    ,  extract_type A _ Context AList
+    ,  spy(concat [AA2List, AA1List, AList] SetList)
+    ,  spy(collapse_type (propId extractor_singleton extractor_star extractor_star) Result Context [])
+    ,  !
+    .
+
+%% C 1  ==>  1
+collapse_term (id A _AA) Result _ []
+    :- conv A extractor_singleton
+    ,  Result = extractor_star
+    ,  !
+    .
+
+%% A' -> C A'  ==>  A' -> C 1
+extract_term (id A AA) Result Context SetList
+    :- spy(extract_type A _ Context AList)
+    ,  spy(extract_term AA _ Context AAList)
+    ,  spy(concat [AAList, AList] SetList)
+    ,  spy(collapse_term (id extractor_singleton extractor_star) Result Context [])
+    ,  !
+    .
+
+%% 1 -> 1  ==>  1
+collapse_term (elim_id P C _CC) Result _ []
+    :- isa P extractor_singleton int
+    ,  conv (C extractor_star extractor_star) extractor_singleton
+    ,  Result = extractor_star
+    ,  !
+    .
+
+%% C 1 -> 1  ==>  1
+collapse_term (elim_id P C _CC) Result _ []
+    :- isa P (propId extractor_singleton _ _) int
+    ,  conv (C extractor_star extractor_star) extractor_singleton
+    ,  Result = extractor_star
+    ,  !
+    .
+
+extract_term (elim_id P C CC) Result Context SetList
+    :- Context = (context Vars VarMap LibMap)
+    ,  extract_term P P' Context IdList
+    ,  isa P (propId A _ _) int
+    ,  ((isa P' extractor_singleton int
+        ,    A' = extractor_singleton)
+        , !; isa P' (propId A' _ _) int)
+    ,  ((pi x\ locDecl x A => pi a\ locDecl a A' =>
+            (name (C x), map_var (C x) VarMap (C' a), CList = []))
+        , !; pi x\ locDecl x A => pi y\ locDecl y A => pi a\ locDecl a A' => pi b\ locDecl b A' =>
+            extract_type (C x y) (C' a b)
+            (context [var_term _ b|[var_term _ a|[var_term _ y|[var_term _ x|Vars]]]]
+                     [var_mapping y b|[var_mapping x a|VarMap]]
+                     LibMap)
+            CList)
+    ,  ((name CC, map_var CC VarMap CC', CCList = [])
+        , !; pi x\ locDecl x A => pi a\ locDecl a A' =>
+            extract_term (CC x) (CC' a)
+            (context [var_term _ a|[var_term _ x|Vars]] [var_mapping x a|VarMap] LibMap)
+            CCList)
+    ,  spy(collapse_term (elim_id P' C' CC') Result Context ElimList)
+    ,  concat [ElimList, CCList, CList, IdList] SetList
+    ,  !
+    .

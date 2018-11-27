@@ -81,6 +81,7 @@ interp (elim_singleton T C CC) (elim_singleton Ti Ci CCi)
     ,  spy(interp CC CCi)
     ,  spy(pi x\ locDecl x singleton => spy(interp (C x) (Ci x)))
     .
+
 /* SINGLETON NEW INTERPRETATION AND LIBRARY */
 new_interp_type singleton singleton_setoid.
 
@@ -94,7 +95,7 @@ new_interp_dep_type B (x \ singleton) O :-
 singletonLib L :-
  L =
  [
-   (locDefL singleton_setoid (setoid singleton)
+   (locDefL singleton_setoid (lib_app setoid singleton)
     (pair
       (setPi singleton x \ setPi singleton y \ propS) 
       (rel \ and  (and (forall singleton x \ decode (app (app rel x) x))
@@ -131,33 +132,123 @@ singletonLib L :-
 	   )))
  ,
   (univPi Bi \
-    (univPiT (setoid Bi) bS\
+    (univPiT (lib_app setoid Bi) bS\
 
-     (locDefL (singleton_setoidDep Bi bS) (setoidDep Bi (x \ singleton) bS)
-       (pair (setSigma (setPi Bi _\ setoid singleton) _\
+     (locDefL (lib_app (lib_app singleton_setoidDep Bi) bS) (lib_app (lib_app (lib_app setoidDep Bi) (x \ singleton)) bS)
+       (pair (setSigma (setPi Bi _\ lib_app setoid singleton) _\
              	       (setPi Bi x \ setPi Bi x' \
-		       	      setPi (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
+		       	      setPi (decode (app (app (app (lib_app setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
 	     (cc\ (setPi Bi x1\ setPi Bi x2\
 	     	setPi singleton y1\ setPi singleton y2\
-	          setPi (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) d1\
-	            setPi (decode (app (app (app (setoid_rel singleton)
-		    	  	       (app (elim_setSigma cc (_\ (setPi Bi _\ setoid singleton)) (x\y\x)) x1)) y1) y2)) d2\
-	              (decode (app (app (app (setoid_rel singleton)
-			      (app (elim_setSigma cc (_\ (setPi Bi _\ setoid singleton)) (x\y\x)) x2))
+	          setPi (decode (app (app (app (lib_app setoid_rel Bi) bS) x1) x2)) d1\
+	            setPi (decode (app (app (app (lib_app setoid_rel singleton)
+		    	  	       (app (elim_setSigma cc (_\ (setPi Bi _\ lib_app setoid singleton)) (x\y\x)) x1)) y1) y2)) d2\
+	              (decode (app (app (app (lib_app setoid_rel singleton)
+			      (app (elim_setSigma cc (_\ (setPi Bi _\ lib_app setoid singleton)) (x\y\x)) x2))
 			      (app (app (app (app (elim_setSigma cc
-			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (setoid_rel Bi) bS) x) x'))
+			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (lib_app setoid_rel Bi) bS) x) x'))
 						    	       _ \ setPi singleton _ \ singleton)) (x\y\y)) x1) x2) d1) y1))
 			      (app (app (app (app (elim_setSigma cc
-			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (setoid_rel Bi) bS) x) x'))
+			      	   	     	    (_\ (setPi Bi x \ setPi Bi x' \ setPi (decode (app (app (app (lib_app setoid_rel Bi) bS) x) x'))
 						    	       _ \ setPi singleton _ \ singleton)) (x\y\y)) x1) x2) d1) y2)))))
-      	     (pair (setPi Bi _\ setoid singleton)
+      	     (pair (setPi Bi _\ lib_app setoid singleton)
 	     	   (_\ (setPi Bi x \ setPi Bi x' \
-		       	      setPi (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
+		       	      setPi (decode (app (app (app (lib_app setoid_rel Bi) bS) x) x')) _ \ setPi singleton _ \ singleton))
 	           (lambda Bi x \ singleton_setoid)
-		   (lambda Bi x \ lambda Bi x' \ lambda (decode (app (app (app (setoid_rel Bi) bS) x) x')) _ \ lambda singleton y \ y))
+		   (lambda Bi x \ lambda Bi x' \ lambda (decode (app (app (app (lib_app setoid_rel Bi) bS) x) x')) _ \ lambda singleton y \ y))
 	     (lambda Bi x1\ lambda Bi x2\ lambda singleton y1\ lambda singleton y2\
-	       lambda (decode (app (app (app (setoid_rel Bi) bS) x1) x2)) d1\
-	        lambda (decode (app (app (app (setoid_rel singleton) (app (lambda Bi x \ singleton_setoid) x1)) y1) y2)) d2\
+	       lambda (decode (app (app (app (lib_app setoid_rel Bi) bS) x1) x2)) d1\
+	        lambda (decode (app (app (app (lib_app setoid_rel singleton) (app (lambda Bi x \ singleton_setoid) x1)) y1) y2)) d2\
 		 d2))	 
     )))
  ].
+
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                   ESTRAZIONE                                   %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Starification
+
+starify_term (elim_singleton Star C CC) LibMap Result 
+    :- starify_term Star LibMap Star'
+    ,  ((name C, C' = C)
+        , !; pi s\ locDecl s singleton => starify_type (C s) LibMap (C' s))
+    ,  starify_term CC LibMap CC'
+    ,  spy(Result = (elim_singleton Star' C' CC'))
+    ,  !
+    .
+
+%% Extraction
+
+extract_type singleton singleton _ [] :- !.
+
+extract_term star star _ [] :- !.
+
+%% 1 -> 1  ==>  1
+collapse_term (elim_singleton Star C _CC) Result _ []
+    :- conv (C Star) extractor_singleton
+    ,  Result = extractor_star
+    ,  !
+    .
+
+extract_term (elim_singleton Star C CC) Result Context SetList
+    :- Context = (context Vars VarMap LibMap)
+    ,  extract_term Star Star' Context StarList
+    ,  ((name C, map_var C VarMap C')
+        , !; pi s\ locDecl s singleton => extract_type (C s) (C' s)
+                                          (context [var_term _ s|Vars] VarMap LibMap)
+                                          CList)
+    ,  extract_term CC CC' Context CCList
+    ,  concat [CCList, CList, StarList] SetList
+    ,  spy(collapse_term (elim_singleton Star' C' CC') Result Context [])
+    ,  !
+    .
+
+%% Translation
+
+translate_singleton_to ocaml Result
+    :- Result is "unit"
+    ,  !
+    .
+translate_singleton_to haskell Result
+    :- Result is "()"
+    ,  !
+    .
+
+translate_type singleton _ Result
+    :- translate_singleton_to @language Result
+    ,  !
+    .
+
+translate_type extractor_singleton _ Result
+    :- translate_singleton_to @language Result
+    ,  !
+    .
+
+
+translate_star_to ocaml Result
+    :- Result is "()"
+    ,  !
+    .
+translate_star_to haskell Result
+    :- Result is "()"
+    ,  !
+    .
+
+translate_term star _ Result
+    :- translate_star_to @language Result
+    ,  !
+    .
+
+translate_term extractor_star _ Result
+    :- translate_star_to @language Result
+    ,  !
+    .
+
+
+translate_term (elim_singleton _Star _C CC) LibMap Result
+    :- translate_term CC LibMap CC'
+    ,  Result is CC'
+    ,  !
+    .

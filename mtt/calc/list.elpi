@@ -3,9 +3,8 @@
 type list mttType -> mttType.
 type list_empty mttType -> mttTerm.
 type list_cons mttType -> mttTerm -> mttTerm -> mttTerm.
-type elim_list (mttTerm -> mttType)
-             -> mttTerm -> mttTerm
-             -> (mttTerm -> mttTerm -> mttTerm -> mttTerm) -> mttTerm.
+type elim_list (mttTerm -> mttType) -> mttTerm -> mttTerm ->
+               (mttTerm -> mttTerm -> mttTerm -> mttTerm) -> mttTerm.
 
 ofType (list C) set IE
     :- ofType C Kind IE
@@ -47,9 +46,7 @@ hstep (elim_list L List LA LL) Res
     .
 
 
-dconv (list C) (list C')
-    :- conv C C'
-    .
+dconv (list C) (list C') :- conv C C'.
 
 dconv (list_empty C) (list_empty C')
     :- conv C C'
@@ -68,3 +65,175 @@ dconv (elim_list L List LA LL) (elim_list L' List' LA' LL')
     ,  conv LA LA'
     ,  pi y\ locDecl y C => pi x\ locDecl x (list C) => pi z\ locDecl z (L x) => 
         conv (LL y x z) (LL' y x z)
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%                                 ESTRAZIONE                                 %%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+%% Starification
+
+starify_type (list C) LibMap Result
+    :- starify_type C LibMap C'
+    ,  Result = (list C')
+    ,  !
+    .
+
+starify_term (list_empty C) LibMap Result
+    :- starify_type C LibMap C'
+    ,  Result = (list_empty C')
+    ,  !
+    .
+
+starify_term (list_cons C Head Tail) LibMap Result
+    :- starify_type C LibMap C'
+    ,  starify_term Head LibMap Head'
+    ,  starify_term Tail LibMap Tail'
+    ,  Result = (list_cons C' Head' Tail')
+    ,  !
+    .
+
+starify_term (elim_list L List LA LL) LibMap Result
+    :- starify_term List LibMap List'
+    ,  isa List (list C) @level
+    , ((name L, L' = L)
+        , !; pi z\ locDecl z (list C) => starify_type (L z) LibMap (L' z))
+    ,  spy(starify_term LA LibMap LA')
+    ,  ((pi y\ locDecl y C => pi x\ locDecl x (list C) => (name (LL y x), LL' = LL))
+        , !; pi y\ locDecl y C => pi x\ locDecl x (list C) => pi z\ locDecl z (L x) => 
+            starify_term (LL y x z) LibMap (LL' y x z))
+    ,  Result = (elim_list L' List' LA' LL')
+    ,  !
+    .
+
+%% Extraction
+
+extract_type (list C) Result Context SetList
+    :- extract_type C C' Context SetList
+    ,  collapse_type (list C') Result Context []
+    ,  !
+    .
+
+extract_term (list_empty C) Result Context SetList
+    :- spy(extract_type C C' Context SetList)
+    ,  spy(collapse_term (list_empty C') Result Context [])
+    ,  !
+    .
+
+extract_term (list_cons C Head Tail) Result Context SetList
+    :- spy(extract_type C C' Context CList)
+    ,  spy(extract_term Head Head' Context HeadList)
+    ,  spy(extract_term Tail Tail' Context TailList)
+    ,  concat [TailList, HeadList, CList] SetList
+    ,  spy(collapse_term (list_cons C' Head' Tail') Result Context [])
+    ,  !
+    .
+
+%% N -> 1  ==>  1
+collapse_term (elim_list L List _LA _LL) Result _ []
+    :- conv (L List) extractor_singleton
+    ,  Result = extractor_star
+    ,  !
+    .
+
+extract_term (elim_list L List LA LL) Result Context SetList
+    :- Context = (context Vars VarMap LibMap)
+    ,  extract_term List List' Context ListList
+    ,  isa List (list C) @level
+    ,  isa List' (list C') @level
+    , ((name L, map_var L VarMap L', LList = [])
+        , !; pi z\ locDecl z (list C) => pi s\ locDecl s (list C') => 
+            extract_type (L z) (L' s)
+            (context [var_term _ s|[var_term _ z|Vars]] [var_mapping z s|VarMap] LibMap)
+            LList)
+    ,  spy(extract_term LA LA' Context LAList)
+    ,  ((pi y\ locDecl y C => pi x\ locDecl x (list C) =>
+         pi b\ locDecl b C' => pi a\ locDecl a (list C') =>
+            (name (LL y x), map_var (LL y x) VarMap (LL' b a), LLList = []))
+        , !; pi y\ locDecl y C => pi x\ locDecl x (list C) => pi z\ locDecl z (L x) => 
+             pi b\ locDecl b C' => pi a\ locDecl a (list C') => pi c\ locDecl c (L' a) =>
+            extract_term (LL y x z) (LL' b a c)
+            (context [var_term _ z|[var_term _ x|[var_term _ y|[var_term _ c|[var_term _ a|[var_term _ b|Vars]]]]]]
+                     [var_mapping z c|[var_mapping x a|[var_mapping y b|VarMap]]]
+                     LibMap)
+            LLList)
+    ,  spy(collapse_term (elim_list L' List' LA' LL') Result Context ElimList)
+    ,  spy(concat [ElimList, LLList, LAList, LList, ListList] SetList)
+    ,  !
+    .
+
+%% Translation
+
+translate_list_to ocaml C' Result
+    :- Result is C' ^ " list"
+    ,  !
+    .
+translate_list_to haskell C' Result
+    :- Result is "[ (" ^ C' ^ ") ]"
+    ,  !
+    .
+
+translate_type (list C) LibMap Result
+    :- translate_type C LibMap C'
+    ,  translate_list_to @language C' Result
+    ,  !
+    .
+
+
+translate_list_empty_to ocaml Result
+    :- Result is "[]"
+    ,  !
+    .
+translate_list_empty_to haskell Result
+    :- Result is "[]"
+    ,  !
+    .
+
+translate_term (list_empty _C) _LibMap Result
+    :- translate_list_empty_to @language Result
+    ,  !
+    .
+
+
+translate_list_cons_to ocaml Head' Tail' Result
+    :- Result is "(" ^ Head' ^ "::" ^ Tail' ^ ")"
+    ,  !
+    .
+translate_list_cons_to haskell Head' Tail' Result
+    :- Result is "(" ^ Head' ^ ":" ^ Tail' ^ ")"
+    ,  !
+    .
+
+translate_term (list_cons _C Head Tail) LibMap Result
+    :- translate_term Head LibMap Head'
+    ,  translate_term Tail LibMap Tail'
+    ,  translate_list_cons_to @language Head' Tail' Result
+    ,  !
+    .
+
+translate_elim_list_abs_to ocaml SLL Sy Sx Sz Result
+    :- Result is "(fun " ^ Sy ^ " " ^ Sx ^ " " ^ Sz ^ " -> " ^ SLL ^ ")"
+    ,  !
+    .
+translate_elim_list_abs_to haskell SLL Sy Sx Sz Result
+    :- Result is "(\\" ^ Sy ^ " " ^ Sx ^ " " ^ Sz ^ " -> " ^ SLL ^ ")"
+    ,  !
+    .
+translate_elim_list_to ocaml List' LA' LL' Result
+    :- Result is "(let rec elim_list = (fun list -> match list with | [] -> " ^ LA' ^ " | h::t -> " ^ LL' ^ " h t (elim_list t)) in elim_list " ^ List' ^ ")"
+    ,  !
+    .
+translate_elim_list_to haskell List' LA' LL' Result
+    :- Result is "(let elim_list = (\\list -> case list of {[] -> " ^ LA' ^ "; h:t -> " ^ LL' ^ " h t (elim_list t)}) in elim_list " ^ List' ^ ")"
+    ,  !
+    .
+
+translate_term (elim_list L List LA LL) LibMap Result
+    :- translate_term List LibMap List'
+    ,  isa List (list C) @level
+    ,  translate_term LA LibMap LA'
+    ,  ((name LL, term_to_string LL LL')
+        , !; pi y\ locDecl y C => pi x\ locDecl x (list C) => pi z\ locDecl z (L x) => (translate_term (LL y x z) LibMap SLL, translate_term y LibMap Sy, translate_term x LibMap Sx, translate_term z LibMap Sz)
+            , translate_elim_list_abs_to @language SLL Sy Sx Sz Result)
+    ,  translate_elim_list_to @language List' LA' LL' Result
+    ,  !
+    .
